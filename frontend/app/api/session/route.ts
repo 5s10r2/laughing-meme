@@ -1,3 +1,6 @@
+// Edge Runtime: no 10-second function timeout — needed when Render cold-starts (30-90s).
+export const runtime = "edge";
+
 import { NextResponse } from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";

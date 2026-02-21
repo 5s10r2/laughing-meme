@@ -118,67 +118,86 @@ async def chat(session_id: str, body: ChatRequest):
         user_message = INITIAL_PROMPT
 
     async def generate():
-        # Send an immediate SSE comment — establishes the stream before any proxy timeout fires.
-        # Cloudflare / Render close idle SSE connections after ~10 s with no data.
-        yield ": connected\n\n"
+        """
+        SSE generator using a Queue bridge so that:
+          1. The chat logic runs in a background asyncio.Task (no timeout issues).
+          2. This generator drains the queue and sends keepalives every 2 s while waiting.
+          3. A None sentinel signals end-of-stream.
 
-        # Acquire the per-session query lock — prevents concurrent queries on same client
-        async with session_manager.query_lock(session_id):
+        This avoids exception-propagation quirks between asyncio tasks and async
+        generators driven by uvicorn's ASGI machinery.
+        """
+        # Immediate keepalive so the proxy sees data before its idle timer fires.
+        yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
+
+        queue: asyncio.Queue[dict | None] = asyncio.Queue()
+
+        async def _run_chat() -> None:
+            """Full chat logic in a background task — puts events into the queue."""
+            async with session_manager.query_lock(session_id):
+                try:
+                    current_session = await db.get_session(session_id)
+                    if not current_session:
+                        await queue.put({"type": "error", "message": "Session not found"})
+                        return
+
+                    logger.info("Connecting Claude CLI for session %s", session_id)
+                    client = await session_manager.get_or_create_client(session_id)
+                    logger.info("Connected. Sending query for session %s", session_id)
+
+                    await client.query(user_message)
+
+                    captured_sdk_id: str | None = None
+
+                    async for msg in client.receive_response():
+                        if isinstance(msg, AssistantMessage):
+                            for block in msg.content:
+                                if isinstance(block, TextBlock) and block.text:
+                                    await queue.put({"type": "text", "text": block.text})
+                        elif isinstance(msg, ResultMessage):
+                            captured_sdk_id = msg.session_id
+
+                    if captured_sdk_id and not current_session.get("sdk_session_id"):
+                        await db.update_sdk_session_id(session_id, captured_sdk_id)
+                        logger.info(
+                            "Saved sdk_session_id %s for session %s",
+                            captured_sdk_id,
+                            session_id,
+                        )
+
+                    await queue.put({"type": "done"})
+
+                except Exception:
+                    logger.exception("Error in chat task for session %s", session_id)
+                    await session_manager.remove_client(session_id)
+                    await queue.put({"type": "error", "message": "An error occurred. Please try again."})
+                finally:
+                    await queue.put(None)  # sentinel — always signals end
+
+        task = asyncio.create_task(_run_chat())
+        try:
+            while True:
+                try:
+                    item = await asyncio.wait_for(queue.get(), timeout=2.0)
+                except asyncio.TimeoutError:
+                    # No message yet — send keepalive and wait again
+                    yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
+                    continue
+
+                if item is None:
+                    break  # sentinel — stream is done
+
+                event_str = json.dumps(item, ensure_ascii=False)
+                yield f"data: {event_str}\n\n"
+
+                if item.get("type") in ("done", "error"):
+                    break
+        finally:
+            task.cancel()
             try:
-                # Re-fetch session inside the lock so sdk_session_id check is always current
-                current_session = await db.get_session(session_id)
-                if not current_session:
-                    yield f"data: {json.dumps({'type': 'error', 'message': 'Session not found'})}\n\n"
-                    return
-
-                # Connect to Claude CLI in the background; yield data keepalives every 5 s so
-                # the proxy does not time out during the CLI cold-start (can take 20-40 s).
-                logger.info("Starting get_or_create_client for session %s", session_id)
-                connect_task = asyncio.create_task(
-                    session_manager.get_or_create_client(session_id)
-                )
-                keepalive_count = 0
-                while not connect_task.done():
-                    done, _ = await asyncio.wait({connect_task}, timeout=2.0)
-                    if not done:
-                        keepalive_count += 1
-                        logger.info("Keepalive #%d for session %s (still connecting)", keepalive_count, session_id)
-                        yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
-
-                logger.info("connect_task completed for session %s", session_id)
-                client = connect_task.result()  # re-raises on exception
-                logger.info("Got client for session %s, sending query", session_id)
-
-                await client.query(user_message)
-
-                captured_sdk_id: str | None = None
-
-                async for msg in client.receive_response():
-                    if isinstance(msg, AssistantMessage):
-                        for block in msg.content:
-                            if isinstance(block, TextBlock) and block.text:
-                                yield f"data: {json.dumps({'type': 'text', 'text': block.text}, ensure_ascii=False)}\n\n"
-                    elif isinstance(msg, ResultMessage):
-                        captured_sdk_id = msg.session_id
-
-                # Persist sdk_session_id on first successful exchange
-                # Use current_session (fetched inside the lock) — not the outer snapshot
-                # which could be stale if sdk_session_id was just set by a concurrent request.
-                if captured_sdk_id and not current_session.get("sdk_session_id"):
-                    await db.update_sdk_session_id(session_id, captured_sdk_id)
-                    logger.info(
-                        "Saved sdk_session_id %s for session %s",
-                        captured_sdk_id,
-                        session_id,
-                    )
-
-                yield f"data: {json.dumps({'type': 'done'})}\n\n"
-
-            except Exception as exc:
-                logger.exception("Error in chat stream for session %s", session_id)
-                # Remove the broken client so next request creates a fresh one
-                await session_manager.remove_client(session_id)
-                yield f"data: {json.dumps({'type': 'error', 'message': 'An error occurred. Please try again.'})}\n\n"
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
 
     return StreamingResponse(
         generate(),

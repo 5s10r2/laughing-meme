@@ -329,9 +329,10 @@ async def queue_test():
 @app.get("/cli-test")
 async def cli_test():
     """
-    Diagnostic: start the CLI subprocess exactly like the SDK would,
-    send an initialize control request, and capture all stdout/stderr.
+    Lightweight diagnostic: start CLI in SDK mode for 3 seconds,
+    capture any stdout/stderr, check if process is alive or exited.
     """
+    import resource
     import uuid
     from pathlib import Path
 
@@ -341,19 +342,21 @@ async def cli_test():
     if not bundled.exists():
         return {"error": "CLI binary not found", "path": str(bundled)}
 
+    # Check current memory before starting
+    mem_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # KB on Linux
+
     cmd = [
         str(bundled),
         "--output-format", "stream-json",
         "--input-format", "stream-json",
         "--verbose",
-        "--system-prompt", "You are a test assistant.",
+        "--system-prompt", "test",
         "--model", "claude-sonnet-4-20250514",
         "--permission-mode", "bypassPermissions",
     ]
 
     env = {**os.environ, "CLAUDE_CODE_ENTRYPOINT": "sdk-py-client"}
-
-    result: dict = {"cmd": cmd[:6]}  # truncated for brevity
+    result: dict = {"mem_before_kb": mem_before}
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -365,57 +368,42 @@ async def cli_test():
         )
         result["pid"] = proc.pid
 
-        # Send the initialize control request (what the SDK sends)
-        init_request = json.dumps({
-            "type": "control_request",
-            "request_id": f"req_0_{uuid.uuid4().hex[:8]}",
-            "request": {"subtype": "initialize"},
-        }) + "\n"
-        proc.stdin.write(init_request.encode())
-        await proc.stdin.drain()
-        result["sent_initialize"] = True
+        # Wait just 3 seconds to see what happens
+        await asyncio.sleep(3)
 
-        # Wait up to 15 seconds for any output
-        stdout_lines = []
-        stderr_lines = []
+        result["alive_after_3s"] = proc.returncode is None
 
-        async def read_stdout():
-            while True:
-                line = await proc.stdout.readline()
-                if not line:
-                    break
-                stdout_lines.append(line.decode(errors="replace").rstrip())
-                if len(stdout_lines) >= 20:
-                    break
+        if proc.returncode is not None:
+            result["exit_code"] = proc.returncode
+            # Process already exited — read what it said
+            stdout = await proc.stdout.read(4096)
+            stderr = await proc.stderr.read(4096)
+            result["stdout"] = stdout.decode(errors="replace")[:1000]
+            result["stderr"] = stderr.decode(errors="replace")[:1000]
+        else:
+            # Process still alive — try to read any buffered output (non-blocking)
+            # Send initialize and wait 2 more seconds
+            init_req = json.dumps({
+                "type": "control_request",
+                "request_id": f"req_0_{uuid.uuid4().hex[:8]}",
+                "request": {"subtype": "initialize"},
+            }) + "\n"
+            proc.stdin.write(init_req.encode())
+            await proc.stdin.drain()
+            result["sent_initialize"] = True
 
-        async def read_stderr():
-            while True:
-                line = await proc.stderr.readline()
-                if not line:
-                    break
-                stderr_lines.append(line.decode(errors="replace").rstrip())
-                if len(stderr_lines) >= 50:
-                    break
+            await asyncio.sleep(2)
+            result["alive_after_5s"] = proc.returncode is None
 
-        try:
-            await asyncio.wait_for(
-                asyncio.gather(read_stdout(), read_stderr()),
-                timeout=15,
-            )
-        except asyncio.TimeoutError:
-            result["timed_out"] = True
-
-        result["stdout_lines"] = stdout_lines[:20]
-        result["stderr_lines"] = stderr_lines[:50]
-        result["process_alive"] = proc.returncode is None
-
-        # Clean up
-        try:
+            # Kill it and capture output
             proc.kill()
-            await asyncio.wait_for(proc.wait(), timeout=3)
-        except Exception:
-            pass
-        result["final_returncode"] = proc.returncode
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=3)
+            result["stdout"] = stdout.decode(errors="replace")[:1000]
+            result["stderr"] = stderr.decode(errors="replace")[:1000]
+            result["final_returncode"] = proc.returncode
+
+        mem_after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        result["mem_after_kb"] = mem_after
 
     except Exception as e:
         result["error"] = f"{type(e).__name__}: {e}"

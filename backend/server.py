@@ -74,6 +74,65 @@ class ChatRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# SSE queue-drain helper
+# ---------------------------------------------------------------------------
+
+async def _drain_queue_with_keepalives(
+    queue: "asyncio.Queue[dict | None]",
+    keepalive_interval: float = 2.0,
+):
+    """
+    Async generator that drains `queue` and yields SSE lines.
+
+    Strategy: use asyncio.wait (NOT asyncio.wait_for) so the queue.get()
+    future is REUSED across keepalive iterations without ever being cancelled.
+
+    asyncio.wait_for() cancels the wrapped coroutine on every timeout, which
+    causes subtle CancelledError propagation issues in Python 3.12+ inside
+    async generators driven by uvicorn's ASGI machinery.
+    asyncio.wait() simply checks whether the future is done — no cancellation.
+    """
+    get_task: asyncio.Task = asyncio.ensure_future(queue.get())
+    try:
+        while True:
+            logger.debug("[drain] calling asyncio.wait, timeout=%.1f", keepalive_interval)
+            done, _ = await asyncio.wait({get_task}, timeout=keepalive_interval)
+
+            if not done:
+                # Timeout — no item yet.  Send a keepalive and loop.
+                logger.debug("[drain] timeout — yielding keepalive")
+                yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
+                continue
+
+            # The future is done — retrieve the result.
+            item = get_task.result()
+            logger.debug("[drain] got item: %s", item)
+
+            if item is None:
+                # Sentinel — stream is finished.
+                logger.debug("[drain] received sentinel, stopping")
+                break
+
+            event_str = json.dumps(item, ensure_ascii=False)
+            yield f"data: {event_str}\n\n"
+
+            if item.get("type") in ("done", "error"):
+                break
+
+            # Queue up a new get() for the next item.
+            get_task = asyncio.ensure_future(queue.get())
+
+    finally:
+        # Cancel any outstanding get() so it doesn't leak.
+        if not get_task.done():
+            get_task.cancel()
+            try:
+                await get_task
+            except (asyncio.CancelledError, Exception):
+                pass
+
+
+# ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
@@ -121,11 +180,10 @@ async def chat(session_id: str, body: ChatRequest):
         """
         SSE generator using a Queue bridge so that:
           1. The chat logic runs in a background asyncio.Task (no timeout issues).
-          2. This generator drains the queue and sends keepalives every 2 s while waiting.
+          2. _drain_queue_with_keepalives() sends keepalives every 2 s while waiting.
+             It uses asyncio.wait (not asyncio.wait_for) to avoid CancelledError
+             propagation bugs in Python 3.12+ inside async generators.
           3. A None sentinel signals end-of-stream.
-
-        This avoids exception-propagation quirks between asyncio tasks and async
-        generators driven by uvicorn's ASGI machinery.
         """
         # Immediate keepalive so the proxy sees data before its idle timer fires.
         yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
@@ -183,24 +241,12 @@ async def chat(session_id: str, body: ChatRequest):
                 await queue.put(None)
 
         task = asyncio.create_task(_run_chat())
+        logger.info("[generate] background task created for session %s", session_id)
         try:
-            while True:
-                try:
-                    item = await asyncio.wait_for(queue.get(), timeout=2.0)
-                except asyncio.TimeoutError:
-                    # No message yet — send keepalive and wait again
-                    yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
-                    continue
-
-                if item is None:
-                    break  # sentinel — stream is done
-
-                event_str = json.dumps(item, ensure_ascii=False)
-                yield f"data: {event_str}\n\n"
-
-                if item.get("type") in ("done", "error"):
-                    break
+            async for sse_line in _drain_queue_with_keepalives(queue):
+                yield sse_line
         finally:
+            logger.info("[generate] generator finishing, cancelling task for session %s", session_id)
             task.cancel()
             try:
                 await task
@@ -225,9 +271,8 @@ async def health():
 
 @app.get("/sse-test")
 async def sse_test():
-    """Test SSE keepalive behavior on this host."""
+    """Test SSE keepalive behavior on this host (simple asyncio.sleep pattern)."""
     async def gen():
-        import asyncio
         for i in range(15):
             yield f"data: {json.dumps({'tick': i, 't': i*2})}\n\n"
             await asyncio.sleep(2)
@@ -240,13 +285,52 @@ async def sse_test():
     )
 
 
+@app.get("/queue-test")
+async def queue_test():
+    """
+    Test SSE using asyncio.Queue + asyncio.wait pattern (no Claude SDK).
+    Background task sleeps 20 seconds then puts text/done in queue.
+    If this works but /chat fails, the issue is Claude SDK specific.
+    If this also fails, the issue is the asyncio Queue pattern on this Python version.
+    """
+    async def gen():
+        # Immediate keepalive
+        yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
+
+        queue: asyncio.Queue[dict | None] = asyncio.Queue()
+
+        async def _mock_task():
+            logger.info("[queue-test] mock task started, sleeping 20s")
+            await asyncio.sleep(20)
+            logger.info("[queue-test] mock task awake, putting events")
+            await queue.put({"type": "text", "text": "Hello from the queue test! The asyncio.wait pattern works."})
+            await queue.put({"type": "done"})
+            await queue.put(None)
+            logger.info("[queue-test] mock task done")
+
+        task = asyncio.create_task(_mock_task())
+        try:
+            async for sse_line in _drain_queue_with_keepalives(queue):
+                yield sse_line
+        finally:
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @app.get("/diag")
 async def diag():
     """Diagnostic endpoint to verify the Claude CLI binary on this host."""
-    import asyncio
     import platform
     import shutil
-    import stat
     import sys
     from pathlib import Path
 

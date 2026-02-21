@@ -131,17 +131,23 @@ async def chat(session_id: str, body: ChatRequest):
                     yield f"data: {json.dumps({'type': 'error', 'message': 'Session not found'})}\n\n"
                     return
 
-                # Connect to Claude CLI in the background; yield keepalives every 5 s so
+                # Connect to Claude CLI in the background; yield data keepalives every 5 s so
                 # the proxy does not time out during the CLI cold-start (can take 20-40 s).
+                logger.info("Starting get_or_create_client for session %s", session_id)
                 connect_task = asyncio.create_task(
                     session_manager.get_or_create_client(session_id)
                 )
+                keepalive_count = 0
                 while not connect_task.done():
                     done, _ = await asyncio.wait({connect_task}, timeout=5.0)
                     if not done:
-                        yield ": keepalive\n\n"
+                        keepalive_count += 1
+                        logger.info("Keepalive #%d for session %s (still connecting)", keepalive_count, session_id)
+                        yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
 
+                logger.info("connect_task completed for session %s", session_id)
                 client = connect_task.result()  # re-raises on exception
+                logger.info("Got client for session %s, sending query", session_id)
 
                 await client.query(user_message)
 

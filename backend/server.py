@@ -326,6 +326,103 @@ async def queue_test():
     )
 
 
+@app.get("/cli-test")
+async def cli_test():
+    """
+    Diagnostic: start the CLI subprocess exactly like the SDK would,
+    send an initialize control request, and capture all stdout/stderr.
+    """
+    import uuid
+    from pathlib import Path
+
+    import claude_agent_sdk
+
+    bundled = Path(claude_agent_sdk.__file__).parent / "_bundled" / "claude"
+    if not bundled.exists():
+        return {"error": "CLI binary not found", "path": str(bundled)}
+
+    cmd = [
+        str(bundled),
+        "--output-format", "stream-json",
+        "--input-format", "stream-json",
+        "--verbose",
+        "--system-prompt", "You are a test assistant.",
+        "--model", "claude-sonnet-4-20250514",
+        "--permission-mode", "bypassPermissions",
+    ]
+
+    env = {**os.environ, "CLAUDE_CODE_ENTRYPOINT": "sdk-py-client"}
+
+    result: dict = {"cmd": cmd[:6]}  # truncated for brevity
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env,
+        )
+        result["pid"] = proc.pid
+
+        # Send the initialize control request (what the SDK sends)
+        init_request = json.dumps({
+            "type": "control_request",
+            "request_id": f"req_0_{uuid.uuid4().hex[:8]}",
+            "request": {"subtype": "initialize"},
+        }) + "\n"
+        proc.stdin.write(init_request.encode())
+        await proc.stdin.drain()
+        result["sent_initialize"] = True
+
+        # Wait up to 15 seconds for any output
+        stdout_lines = []
+        stderr_lines = []
+
+        async def read_stdout():
+            while True:
+                line = await proc.stdout.readline()
+                if not line:
+                    break
+                stdout_lines.append(line.decode(errors="replace").rstrip())
+                if len(stdout_lines) >= 20:
+                    break
+
+        async def read_stderr():
+            while True:
+                line = await proc.stderr.readline()
+                if not line:
+                    break
+                stderr_lines.append(line.decode(errors="replace").rstrip())
+                if len(stderr_lines) >= 50:
+                    break
+
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(read_stdout(), read_stderr()),
+                timeout=15,
+            )
+        except asyncio.TimeoutError:
+            result["timed_out"] = True
+
+        result["stdout_lines"] = stdout_lines[:20]
+        result["stderr_lines"] = stderr_lines[:50]
+        result["process_alive"] = proc.returncode is None
+
+        # Clean up
+        try:
+            proc.kill()
+            await asyncio.wait_for(proc.wait(), timeout=3)
+        except Exception:
+            pass
+        result["final_returncode"] = proc.returncode
+
+    except Exception as e:
+        result["error"] = f"{type(e).__name__}: {e}"
+
+    return result
+
+
 @app.get("/diag")
 async def diag():
     """Diagnostic endpoint to verify the Claude CLI binary on this host."""

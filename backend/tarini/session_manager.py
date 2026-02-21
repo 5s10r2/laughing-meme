@@ -79,7 +79,17 @@ class SessionManager:
                     sdk_session_id=sdk_session_id,
                 )
             )
-            await client.connect()
+            try:
+                await asyncio.wait_for(client.connect(), timeout=45)
+            except asyncio.TimeoutError:
+                logger.error(
+                    "client.connect() timed out after 45s for session %s", session_id
+                )
+                try:
+                    await client.disconnect()
+                except Exception:
+                    pass
+                raise RuntimeError("Claude SDK connect() timed out after 45 seconds")
 
             self._clients[session_id] = client
             self._last_used[session_id] = time.monotonic()

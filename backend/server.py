@@ -172,3 +172,54 @@ async def chat(session_id: str, body: ChatRequest):
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/diag")
+async def diag():
+    """Diagnostic endpoint to verify the Claude CLI binary on this host."""
+    import asyncio
+    import platform
+    import shutil
+    import stat
+    import sys
+    from pathlib import Path
+
+    import claude_agent_sdk
+
+    bundled = Path(claude_agent_sdk.__file__).parent / "_bundled" / "claude"
+    which_claude = shutil.which("claude")
+
+    info: dict = {
+        "python": sys.version,
+        "platform": platform.platform(),
+        "machine": platform.machine(),
+        "bundled_path": str(bundled),
+        "bundled_exists": bundled.exists(),
+        "bundled_executable": os.access(str(bundled), os.X_OK) if bundled.exists() else False,
+        "which_claude": which_claude,
+        "HOME": os.environ.get("HOME"),
+        "ANTHROPIC_API_KEY_set": bool(os.environ.get("ANTHROPIC_API_KEY")),
+    }
+
+    if bundled.exists():
+        m = bundled.stat().st_mode
+        info["bundled_mode"] = oct(m)
+
+    # Try running the bundled binary
+    if bundled.exists():
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                str(bundled), "--version",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=5)
+            info["bundled_run_returncode"] = proc.returncode
+            info["bundled_run_stdout"] = stdout.decode(errors="replace")[:500]
+            info["bundled_run_stderr"] = stderr.decode(errors="replace")[:500]
+        except asyncio.TimeoutError:
+            info["bundled_run_error"] = "timeout"
+        except Exception as e:
+            info["bundled_run_error"] = str(e)
+
+    return info

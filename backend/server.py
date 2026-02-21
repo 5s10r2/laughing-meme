@@ -41,10 +41,12 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Tarini server starting up")
+    await db.init_client()
     session_manager.start_eviction_task()
     yield
     logger.info("Tarini server shutting down — cleaning up sessions")
     await session_manager.cleanup()
+    await db.close_client()
 
 
 # ---------------------------------------------------------------------------

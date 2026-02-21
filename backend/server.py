@@ -11,6 +11,7 @@ SSE event format:
   data: {"type": "done"}
   data: {"type": "error", "message": "..."}
 """
+import asyncio
 import json
 import logging
 import os
@@ -117,6 +118,10 @@ async def chat(session_id: str, body: ChatRequest):
         user_message = INITIAL_PROMPT
 
     async def generate():
+        # Send an immediate SSE comment — establishes the stream before any proxy timeout fires.
+        # Cloudflare / Render close idle SSE connections after ~10 s with no data.
+        yield ": connected\n\n"
+
         # Acquire the per-session query lock — prevents concurrent queries on same client
         async with session_manager.query_lock(session_id):
             try:
@@ -126,7 +131,18 @@ async def chat(session_id: str, body: ChatRequest):
                     yield f"data: {json.dumps({'type': 'error', 'message': 'Session not found'})}\n\n"
                     return
 
-                client = await session_manager.get_or_create_client(session_id)
+                # Connect to Claude CLI in the background; yield keepalives every 5 s so
+                # the proxy does not time out during the CLI cold-start (can take 20-40 s).
+                connect_task = asyncio.create_task(
+                    session_manager.get_or_create_client(session_id)
+                )
+                while not connect_task.done():
+                    done, _ = await asyncio.wait({connect_task}, timeout=5.0)
+                    if not done:
+                        yield ": keepalive\n\n"
+
+                client = connect_task.result()  # re-raises on exception
+
                 await client.query(user_message)
 
                 captured_sdk_id: str | None = None

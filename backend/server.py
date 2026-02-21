@@ -134,45 +134,53 @@ async def chat(session_id: str, body: ChatRequest):
 
         async def _run_chat() -> None:
             """Full chat logic in a background task — puts events into the queue."""
-            async with session_manager.query_lock(session_id):
-                try:
-                    current_session = await db.get_session(session_id)
-                    if not current_session:
-                        await queue.put({"type": "error", "message": "Session not found"})
-                        return
+            logger.info("[_run_chat] STARTED for session %s", session_id)
+            try:
+                logger.info("[_run_chat] acquiring query_lock for session %s", session_id)
+                async with session_manager.query_lock(session_id):
+                    logger.info("[_run_chat] lock acquired for session %s", session_id)
+                    try:
+                        current_session = await db.get_session(session_id)
+                        if not current_session:
+                            await queue.put({"type": "error", "message": "Session not found"})
+                            return
 
-                    logger.info("Connecting Claude CLI for session %s", session_id)
-                    client = await session_manager.get_or_create_client(session_id)
-                    logger.info("Connected. Sending query for session %s", session_id)
+                        logger.info("[_run_chat] calling get_or_create_client for session %s", session_id)
+                        client = await session_manager.get_or_create_client(session_id)
+                        logger.info("[_run_chat] got client, sending query for session %s", session_id)
 
-                    await client.query(user_message)
+                        await client.query(user_message)
+                        logger.info("[_run_chat] query sent, reading response for session %s", session_id)
 
-                    captured_sdk_id: str | None = None
+                        captured_sdk_id: str | None = None
 
-                    async for msg in client.receive_response():
-                        if isinstance(msg, AssistantMessage):
-                            for block in msg.content:
-                                if isinstance(block, TextBlock) and block.text:
-                                    await queue.put({"type": "text", "text": block.text})
-                        elif isinstance(msg, ResultMessage):
-                            captured_sdk_id = msg.session_id
+                        async for msg in client.receive_response():
+                            if isinstance(msg, AssistantMessage):
+                                for block in msg.content:
+                                    if isinstance(block, TextBlock) and block.text:
+                                        await queue.put({"type": "text", "text": block.text})
+                            elif isinstance(msg, ResultMessage):
+                                captured_sdk_id = msg.session_id
 
-                    if captured_sdk_id and not current_session.get("sdk_session_id"):
-                        await db.update_sdk_session_id(session_id, captured_sdk_id)
-                        logger.info(
-                            "Saved sdk_session_id %s for session %s",
-                            captured_sdk_id,
-                            session_id,
-                        )
+                        logger.info("[_run_chat] response complete for session %s", session_id)
 
-                    await queue.put({"type": "done"})
+                        if captured_sdk_id and not current_session.get("sdk_session_id"):
+                            await db.update_sdk_session_id(session_id, captured_sdk_id)
+                            logger.info("Saved sdk_session_id %s for session %s", captured_sdk_id, session_id)
 
-                except Exception:
-                    logger.exception("Error in chat task for session %s", session_id)
-                    await session_manager.remove_client(session_id)
-                    await queue.put({"type": "error", "message": "An error occurred. Please try again."})
-                finally:
-                    await queue.put(None)  # sentinel — always signals end
+                        await queue.put({"type": "done"})
+
+                    except Exception:
+                        logger.exception("[_run_chat] ERROR in chat task for session %s", session_id)
+                        await session_manager.remove_client(session_id)
+                        await queue.put({"type": "error", "message": "An error occurred. Please try again."})
+                    finally:
+                        logger.info("[_run_chat] putting sentinel for session %s", session_id)
+                        await queue.put(None)  # sentinel — always signals end
+            except Exception:
+                logger.exception("[_run_chat] OUTER ERROR for session %s (lock acquisition failed?)", session_id)
+                await queue.put({"type": "error", "message": "Failed to start chat. Please try again."})
+                await queue.put(None)
 
         task = asyncio.create_task(_run_chat())
         try:

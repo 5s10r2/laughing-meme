@@ -1,43 +1,36 @@
 """
-Per-session ClaudeSDKClient lifecycle manager.
+Per-session conversation history manager.
+
+Manages in-memory message history for each session. No subprocess, no SDK client.
 
 Guarantees:
-  • One ClaudeSDKClient per session (created lazily, on first request).
-  • One asyncio.Lock per session for connection setup (prevents double-init).
-  • One asyncio.Lock per session for query serialisation (prevents concurrent queries).
+  • One message history list per session (created lazily).
+  • One asyncio.Lock per session for query serialisation.
   • Idle sessions are evicted after _IDLE_TTL_SECONDS (default 30 min).
-  • All four supporting dicts are pruned together on remove/cleanup — no leak.
-
-Thread safety:
-  _connect_lock serialises concurrent connect() calls for the same session.
-  query_lock serialises query()+receive_response() pairs — one at a time per session.
 """
 import asyncio
 import logging
 import time
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
 
-from claude_agent_sdk import ClaudeSDKClient
-
-from tarini.agent import build_options
-from tarini.db import client as db
+from tarini.agent import stream_chat
 
 logger = logging.getLogger(__name__)
 
-_IDLE_TTL_SECONDS = 30 * 60        # evict after 30 minutes of inactivity
-_EVICTION_INTERVAL_SECONDS = 5 * 60  # check every 5 minutes
+_IDLE_TTL_SECONDS = 30 * 60
+_EVICTION_INTERVAL_SECONDS = 5 * 60
 
 
 class SessionManager:
     def __init__(self) -> None:
-        # session_id → connected ClaudeSDKClient
-        self._clients: dict[str, ClaudeSDKClient] = {}
-        # Locks to prevent concurrent connect() for the same session
-        self._connect_locks: dict[str, asyncio.Lock] = {}
-        # Locks to serialise query+receive pairs (one at a time per session)
+        # session_id → list of conversation messages
+        self._histories: dict[str, list[dict]] = {}
+        # Locks to serialise queries (one at a time per session)
         self._query_locks: dict[str, asyncio.Lock] = {}
-        # Last-used monotonic timestamp per session (for idle eviction)
+        # Last-used timestamps for idle eviction
         self._last_used: dict[str, float] = {}
-        # Background eviction task handle
+        # Background eviction task
         self._eviction_task: asyncio.Task | None = None
 
     # ------------------------------------------------------------------
@@ -45,78 +38,43 @@ class SessionManager:
     # ------------------------------------------------------------------
 
     def start_eviction_task(self) -> None:
-        """Start the background idle-eviction loop. Call once at app startup."""
         self._eviction_task = asyncio.create_task(self._evict_idle_sessions())
         logger.info(
             "Session eviction task started (TTL=%ds, interval=%ds)",
-            _IDLE_TTL_SECONDS,
-            _EVICTION_INTERVAL_SECONDS,
+            _IDLE_TTL_SECONDS, _EVICTION_INTERVAL_SECONDS,
         )
 
-    async def get_or_create_client(self, session_id: str) -> ClaudeSDKClient:
-        """Return the active ClaudeSDKClient for this session, creating it if needed.
+    @asynccontextmanager
+    async def query_lock(self, session_id: str) -> AsyncIterator[None]:
+        """Acquire the per-session lock for query serialisation."""
+        lock = self._query_locks.setdefault(session_id, asyncio.Lock())
+        async with lock:
+            yield
 
-        Safe to call concurrently — the connect lock ensures only one connect() per session.
-        Touches _last_used on every call so idle TTL resets on activity.
+    async def chat(
+        self, session_id: str, user_message: str,
+    ) -> AsyncIterator[dict]:
         """
-        async with self._connect_lock(session_id):
-            if session_id in self._clients:
-                self._last_used[session_id] = time.monotonic()
-                return self._clients[session_id]
-
-            session = await db.get_session(session_id)
-            sdk_session_id = (session.get("sdk_session_id") or None) if session else None
-
-            logger.info(
-                "Creating ClaudeSDKClient for session %s (resume=%s)",
-                session_id,
-                sdk_session_id,
-            )
-
-            client = ClaudeSDKClient(
-                options=build_options(
-                    session_id=session_id,
-                    sdk_session_id=sdk_session_id,
-                )
-            )
-            try:
-                await asyncio.wait_for(client.connect(), timeout=45)
-            except asyncio.TimeoutError:
-                logger.error(
-                    "client.connect() timed out after 45s for session %s", session_id
-                )
-                try:
-                    await client.disconnect()
-                except Exception:
-                    pass
-                raise RuntimeError("Claude SDK connect() timed out after 45 seconds")
-
-            self._clients[session_id] = client
-            self._last_used[session_id] = time.monotonic()
-            return client
-
-    def query_lock(self, session_id: str) -> asyncio.Lock:
-        """Return the per-session query lock for use as an async context manager."""
-        return self._query_lock(session_id)
-
-    async def remove_client(self, session_id: str) -> None:
-        """Disconnect and remove ALL state for a session.
-
-        Pops from all four dicts so no orphaned locks or timestamps accumulate.
+        Send a message and stream SSE events. Manages history automatically.
+        Must be called inside a query_lock context.
         """
-        client = self._clients.pop(session_id, None)
-        self._connect_locks.pop(session_id, None)
+        history = self._histories.setdefault(session_id, [])
+        self._last_used[session_id] = time.monotonic()
+
+        async for event in stream_chat(session_id, user_message, history):
+            yield event
+
+        self._last_used[session_id] = time.monotonic()
+
+    def remove_session(self, session_id: str) -> None:
+        """Remove all state for a session."""
+        self._histories.pop(session_id, None)
         self._query_locks.pop(session_id, None)
         self._last_used.pop(session_id, None)
-        if client:
-            try:
-                await client.disconnect()
-            except Exception:
-                pass
-        logger.info("Removed client for session %s", session_id)
+        logger.info("Removed session %s", session_id)
 
     async def cleanup(self) -> None:
-        """Cancel eviction task and disconnect all active clients — called on shutdown."""
+        """Cancel eviction task and clear all sessions — called on shutdown."""
         if self._eviction_task is not None:
             self._eviction_task.cancel()
             try:
@@ -125,48 +83,26 @@ class SessionManager:
                 pass
             self._eviction_task = None
 
-        for session_id, client in list(self._clients.items()):
-            try:
-                await client.disconnect()
-            except Exception as exc:
-                logger.warning("Error disconnecting session %s: %s", session_id, exc)
-            logger.info("Disconnected client for session %s on shutdown", session_id)
-
-        self._clients.clear()
-        self._connect_locks.clear()
+        self._histories.clear()
         self._query_locks.clear()
         self._last_used.clear()
 
     # ------------------------------------------------------------------
-    # Private helpers
+    # Private
     # ------------------------------------------------------------------
 
-    def _connect_lock(self, session_id: str) -> asyncio.Lock:
-        if session_id not in self._connect_locks:
-            self._connect_locks[session_id] = asyncio.Lock()
-        return self._connect_locks[session_id]
-
-    def _query_lock(self, session_id: str) -> asyncio.Lock:
-        if session_id not in self._query_locks:
-            self._query_locks[session_id] = asyncio.Lock()
-        return self._query_locks[session_id]
-
     async def _evict_idle_sessions(self) -> None:
-        """Background loop: evict sessions that have been idle longer than TTL."""
         while True:
             await asyncio.sleep(_EVICTION_INTERVAL_SECONDS)
             now = time.monotonic()
             idle = [
-                sid
-                for sid, last in list(self._last_used.items())
+                sid for sid, last in list(self._last_used.items())
                 if (now - last) >= _IDLE_TTL_SECONDS
             ]
             for session_id in idle:
-                logger.info(
-                    "Evicting idle session %s (idle >%ds)", session_id, _IDLE_TTL_SECONDS
-                )
-                await self.remove_client(session_id)
+                logger.info("Evicting idle session %s", session_id)
+                self.remove_session(session_id)
 
 
-# Module-level singleton — imported by server.py
+# Module-level singleton
 session_manager = SessionManager()

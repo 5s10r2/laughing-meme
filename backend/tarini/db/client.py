@@ -60,16 +60,29 @@ async def get_session(session_id: str) -> dict | None:
     return result.data[0] if result.data else None
 
 
-async def update_sdk_session_id(session_id: str, sdk_session_id: str) -> dict:
-    """Persist the Claude SDK session ID for future resumption."""
+async def load_messages(session_id: str) -> list:
+    """Load conversation history from the session's messages JSONB column."""
     c = _get_client()
     result = await (
         c.table("sessions")
-        .update({"sdk_session_id": sdk_session_id})
+        .select("messages")
         .eq("id", session_id)
         .execute()
     )
-    return result.data[0]
+    if not result.data:
+        return []
+    return result.data[0].get("messages") or []
+
+
+async def save_messages(session_id: str, messages: list) -> None:
+    """Persist conversation history to the session's messages JSONB column."""
+    c = _get_client()
+    await (
+        c.table("sessions")
+        .update({"messages": messages})
+        .eq("id", session_id)
+        .execute()
+    )
 
 
 async def update_session_state(session_id: str, new_state: dict) -> dict:

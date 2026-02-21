@@ -68,8 +68,12 @@ async def stream_chat(
             # Get the final message to check for tool use
             final_message = await stream.get_final_message()
 
-        # Record the assistant's full response in history
-        history.append({"role": "assistant", "content": final_message.content})
+        # Record the assistant's full response in history (serialised to plain dicts
+        # so the history is JSON-storable in Supabase)
+        history.append({
+            "role": "assistant",
+            "content": _serialize_content(final_message.content),
+        })
 
         # Check if the model wants to use tools
         tool_use_blocks = [
@@ -104,3 +108,23 @@ async def stream_chat(
     # Safety: if we hit the max rounds, end gracefully
     logger.warning("[stream_chat] hit MAX_TOOL_ROUNDS for session %s", session_id)
     yield {"type": "done"}
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _serialize_content(content) -> list[dict]:
+    """Convert Anthropic SDK content blocks to plain JSON-serialisable dicts."""
+    out: list[dict] = []
+    for block in content:
+        if block.type == "text":
+            out.append({"type": "text", "text": block.text})
+        elif block.type == "tool_use":
+            out.append({
+                "type": "tool_use",
+                "id": block.id,
+                "name": block.name,
+                "input": block.input,
+            })
+    return out

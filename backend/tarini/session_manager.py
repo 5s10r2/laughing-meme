@@ -1,11 +1,14 @@
 """
 Per-session conversation history manager.
 
-Manages in-memory message history for each session. No subprocess, no SDK client.
+Manages in-memory message history for each session, backed by Supabase persistence.
+On cache miss (e.g. after Render free-tier spin-down) the history is reloaded from
+the database so conversations survive server restarts.
 
 Guarantees:
-  • One message history list per session (created lazily).
+  • One message history list per session (created lazily or loaded from DB).
   • One asyncio.Lock per session for query serialisation.
+  • History is persisted to Supabase after every turn.
   • Idle sessions are evicted after _IDLE_TTL_SECONDS (default 30 min).
 """
 import asyncio
@@ -15,6 +18,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from tarini.agent import stream_chat
+from tarini.db import client as db
 
 logger = logging.getLogger(__name__)
 
@@ -57,14 +61,29 @@ class SessionManager:
         """
         Send a message and stream SSE events. Manages history automatically.
         Must be called inside a query_lock context.
+
+        On cache miss (server restarted / session evicted) the history is
+        loaded from Supabase so the conversation picks up where it left off.
+        After the turn completes the updated history is persisted back.
         """
-        history = self._histories.setdefault(session_id, [])
+        # Load from DB on cache miss
+        if session_id not in self._histories:
+            logger.info("Cache miss for session %s — loading history from DB", session_id)
+            self._histories[session_id] = await db.load_messages(session_id)
+
+        history = self._histories[session_id]
         self._last_used[session_id] = time.monotonic()
 
         async for event in stream_chat(session_id, user_message, history):
             yield event
 
+        # Persist updated history to Supabase after the turn
         self._last_used[session_id] = time.monotonic()
+        try:
+            await db.save_messages(session_id, history)
+            logger.info("Persisted %d messages for session %s", len(history), session_id)
+        except Exception:
+            logger.exception("Failed to persist messages for session %s", session_id)
 
     def remove_session(self, session_id: str) -> None:
         """Remove all state for a session."""

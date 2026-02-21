@@ -139,7 +139,7 @@ async def chat(session_id: str, body: ChatRequest):
                 )
                 keepalive_count = 0
                 while not connect_task.done():
-                    done, _ = await asyncio.wait({connect_task}, timeout=5.0)
+                    done, _ = await asyncio.wait({connect_task}, timeout=2.0)
                     if not done:
                         keepalive_count += 1
                         logger.info("Keepalive #%d for session %s (still connecting)", keepalive_count, session_id)
@@ -194,6 +194,23 @@ async def chat(session_id: str, body: ChatRequest):
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/sse-test")
+async def sse_test():
+    """Test SSE keepalive behavior on this host."""
+    async def gen():
+        import asyncio
+        for i in range(15):
+            yield f"data: {json.dumps({'tick': i, 't': i*2})}\n\n"
+            await asyncio.sleep(2)
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/diag")

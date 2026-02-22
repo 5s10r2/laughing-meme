@@ -75,15 +75,22 @@ class SessionManager:
         self._last_used[session_id] = time.monotonic()
 
         async for event in stream_chat(session_id, user_message, history):
+            # Persist BEFORE yielding "done" — the SSE generator cancels our
+            # task immediately after receiving "done", so post-yield code
+            # would never execute.
+            if event.get("type") == "done":
+                self._last_used[session_id] = time.monotonic()
+                try:
+                    await db.save_messages(session_id, history)
+                    logger.info(
+                        "Persisted %d messages for session %s",
+                        len(history), session_id,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to persist messages for session %s", session_id,
+                    )
             yield event
-
-        # Persist updated history to Supabase after the turn
-        self._last_used[session_id] = time.monotonic()
-        try:
-            await db.save_messages(session_id, history)
-            logger.info("Persisted %d messages for session %s", len(history), session_id)
-        except Exception:
-            logger.exception("Failed to persist messages for session %s", session_id)
 
     def remove_session(self, session_id: str) -> None:
         """Remove all state for a session."""

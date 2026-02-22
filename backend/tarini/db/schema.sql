@@ -1,5 +1,5 @@
--- Tarini Agent — Supabase Schema V1
--- Apply this via: Supabase Dashboard → SQL Editor → Run
+-- Tarini Agent — Supabase Schema
+-- Apply via: Supabase Dashboard > SQL Editor > Run
 
 CREATE TABLE IF NOT EXISTS sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -7,21 +7,21 @@ CREATE TABLE IF NOT EXISTS sessions (
   -- Multi-user ready from day 1
   user_id TEXT,
 
-  -- Claude SDK session ID — used to resume conversations via ClaudeAgentOptions(resume=...)
+  -- Legacy field from Agent SDK era — unused but kept for compatibility
   sdk_session_id TEXT,
 
   -- Onboarding stage: intro | structure | packages | mapping | verification
   stage TEXT NOT NULL DEFAULT 'intro',
 
   -- All property data as a flexible JSONB blob.
-  -- Schema is defined in the system prompt; normalized in V2 once data model stabilises.
-  -- Expected top-level keys:
-  --   property_name, property_type, user_name,
-  --   floors (array), units (array), packages (array)
+  -- Schema is defined in the system prompt.
   state JSONB NOT NULL DEFAULT '{}',
 
   -- Monotonically increasing version — incremented on every update_state call
   state_version INTEGER NOT NULL DEFAULT 1,
+
+  -- Conversation history for persistence across server restarts
+  messages JSONB NOT NULL DEFAULT '[]',
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

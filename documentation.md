@@ -1,202 +1,133 @@
 # Tarini Agent — Complete Developer Recreation Guide
 
-> **Purpose:** This guide contains every file, every line of code, and every decision needed to recreate the Tarini Agent system from scratch. A junior AI developer with Python and TypeScript knowledge can follow this document and have a working system.
+> **Last updated:** 2026-02-22
+> **Architecture version:** 2.0 (Direct Anthropic API — no Claude Agent SDK)
+
+This document is a step-by-step guide to recreate the Tarini agent from scratch. Every file, every line of code, every configuration detail is here. If this repo disappeared tomorrow, you could rebuild the entire system using only this guide.
+
+For architecture decisions, deployment notes, and project state, see `memory.md`.
 
 ---
 
 ## Table of Contents
 
-1. [Introduction](#1-introduction)
-2. [Architecture Overview](#2-architecture-overview)
-3. [Prerequisites & Setup](#3-prerequisites--setup)
-4. [Build Order](#4-build-order)
-5. [Database Layer](#5-database-layer)
-6. [MCP Tools Layer](#6-mcp-tools-layer)
-7. [System Prompt](#7-system-prompt)
-8. [Agent Configuration](#8-agent-configuration)
-9. [Session Manager](#9-session-manager)
-10. [FastAPI Server](#10-fastapi-server)
-11. [Frontend Setup](#11-frontend-setup)
-12. [Frontend API Proxies](#12-frontend-api-proxies)
-13. [Frontend Chat UI](#13-frontend-chat-ui)
-14. [Running the System](#14-running-the-system)
-15. [Testing Each Layer](#15-testing-each-layer)
-16. [Troubleshooting](#16-troubleshooting)
-17. [Appendix A: CLI Development Tool](#appendix-a-cli-development-tool)
-18. [Appendix B: Deployment](#appendix-b-deployment)
-19. [Appendix C: File Reference](#appendix-c-file-reference)
+1. [System Overview](#1-system-overview)
+2. [Prerequisites](#2-prerequisites)
+3. [Project Structure](#3-project-structure)
+4. [Database Setup (Supabase)](#4-database-setup-supabase)
+5. [Backend — Python / FastAPI](#5-backend--python--fastapi)
+   - 5.1 [Configuration Files](#51-configuration-files)
+   - 5.2 [Database Client](#52-database-client)
+   - 5.3 [System Prompt](#53-system-prompt)
+   - 5.4 [Tool Definitions & Dispatcher](#54-tool-definitions--dispatcher)
+   - 5.5 [Tool Implementations (State)](#55-tool-implementations-state)
+   - 5.6 [Agent (Streaming Tool-Use Loop)](#56-agent-streaming-tool-use-loop)
+   - 5.7 [Session Manager](#57-session-manager)
+   - 5.8 [FastAPI Server](#58-fastapi-server)
+6. [Frontend — Next.js](#6-frontend--nextjs)
+   - 6.1 [Configuration Files](#61-configuration-files)
+   - 6.2 [API Routes (Proxy)](#62-api-routes-proxy)
+   - 6.3 [Chat UI Component](#63-chat-ui-component)
+   - 6.4 [Layout & Styles](#64-layout--styles)
+7. [Deployment](#7-deployment)
+   - 7.1 [Backend on Render](#71-backend-on-render)
+   - 7.2 [Frontend on Vercel](#72-frontend-on-vercel)
+8. [Data Flow — End to End](#8-data-flow--end-to-end)
+9. [Key Gotchas & Lessons Learned](#9-key-gotchas--lessons-learned)
 
 ---
 
-## 1. Introduction
+## 1. System Overview
 
-### What Is Tarini?
+Tarini is a conversational AI agent that onboards Indian rental property operators on RentOK. No forms — operators describe their property in natural chat (English, Hindi, Hinglish), and Tarini collects, validates, and persists structured listing data.
 
-Tarini is an AI property onboarding chatbot for RentOK. Indian rental property operators describe their property through natural conversation — in English, Hindi, or Hinglish — and Tarini collects structured data about the property's structure, rental packages, and unit-to-package mappings.
+**Architecture:**
 
-### What Makes This Different from a Simple Chatbot?
+```
+┌─────────────┐       ┌────────────────┐       ┌──────────────┐       ┌──────────┐
+│   Browser    │──SSE──│  Next.js (Edge)│──SSE──│  FastAPI      │──────│ Supabase │
+│   (React)    │       │  Vercel        │       │  Render       │      │ Postgres │
+└─────────────┘       └────────────────┘       │               │      └──────────┘
+                                                │  Anthropic SDK│
+                                                │  ↕ Claude API │
+                                                └──────────────┘
+```
 
-- **Persistent state** — Claude doesn't hallucinate what was saved. Every save goes through a tool call to Supabase, and every session starts with a state check.
-- **Session resumption** — Users can close the browser and come back. The conversation picks up exactly where they left off.
-- **Domain expertise** — The 353-line system prompt encodes deep knowledge of Indian rental property types (PGs, hostels, BHK flats, co-living).
-
-### Core Principle
-
-> The system prompt IS the product. The code is infrastructure to deliver it.
-
-### Prerequisites
-
-| Requirement | Version | Purpose |
-|-------------|---------|---------|
-| Python | 3.11+ | Backend runtime |
-| Node.js | 20+ | Frontend runtime |
-| npm | 10+ | Package management |
-| Supabase account | Free tier | PostgreSQL database |
-| Anthropic API key | — | Claude model access |
+| Layer | Tech | Hosting |
+|---|---|---|
+| Frontend | Next.js 16 (App Router), React 19, Tailwind CSS 4 | Vercel |
+| Backend | Python 3.12, FastAPI, uvicorn | Render free tier (Singapore) |
+| AI | Direct `anthropic` Python SDK, model: `claude-sonnet-4-20250514` | Anthropic API |
+| Database | Supabase Postgres | Supabase |
 
 ---
 
-## 2. Architecture Overview
+## 2. Prerequisites
 
-```
-Browser (Next.js Chat UI on Vercel)
-     │  HTTP / SSE
-     ▼
-FastAPI server (Python on Railway/Render)
-     │
-     ├─ ClaudeSDKClient (persistent session, resumable)
-     │   ├─ System Prompt: Tarini's expertise + conversation rules
-     │   └─ 3 In-Process MCP Tools: get_state, update_state, advance_stage
-     │
-     └─ Supabase (session + state persistence via JSONB)
-```
-
-**Why two hosts?** The Claude Agent SDK's `ClaudeSDKClient` maintains a persistent subprocess — it can't run as a stateless serverless function. The backend needs to be always-on (Railway/Render). The frontend is stateless and deploys perfectly to Vercel.
-
-**Why a proxy pattern?** The Next.js API routes (`/api/session`, `/api/chat`) forward requests to the Python backend. This gives same-origin requests (no CORS in production) and a natural place for authentication later.
+- Python 3.12
+- Node.js 20+
+- npm or yarn
+- Supabase account (free tier works)
+- Anthropic API key
+- Render account (for backend deployment)
+- Vercel account (for frontend deployment)
 
 ---
 
-## 3. Prerequisites & Setup
-
-### 3.1 Create the Project Directory
-
-```bash
-mkdir tarini-agent
-cd tarini-agent
-```
-
-### 3.2 Set Up Supabase
-
-1. Go to [supabase.com](https://supabase.com) and create a new project
-2. Note your **Project URL** and **Service Role Key** (Settings → API)
-3. You'll apply the SQL schema in Section 5
-
-### 3.3 Get an Anthropic API Key
-
-1. Go to [console.anthropic.com](https://console.anthropic.com)
-2. Create an API key
-3. Add credits to your account (Sonnet costs ~$0.03 per conversation)
-
-### 3.4 Set Up the Backend
-
-```bash
-mkdir -p backend/tarini/{prompts,tools,db}
-touch backend/tarini/__init__.py
-cd backend
-
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-Create `backend/requirements.txt`:
+## 3. Project Structure
 
 ```
-claude-agent-sdk>=0.1.39
-supabase>=2.10.0
-fastapi>=0.115.0
-uvicorn[standard]>=0.32.0
-python-dotenv>=1.0.0
-pydantic>=2.10.0
-```
+tarini-agent/
+  memory.md                           # Architecture decisions, project state
+  documentation.md                    # This file — full recreation guide
 
-Install dependencies:
+  backend/
+    server.py                         # FastAPI app, SSE streaming with keepalive bridge
+    runtime.txt                       # python-3.12.0
+    render.yaml                       # Render service config
+    requirements.txt                  # Python dependencies
+    tarini/
+      __init__.py                     # (empty)
+      agent.py                        # Streaming tool-use loop, _serialize_content helper
+      session_manager.py              # Per-session history, Supabase persistence, eviction
+      prompts/
+        __init__.py                   # load_system_prompt(), INITIAL_PROMPT
+        system_prompt.md              # 354-line behavioral prompt (character, stages, tools)
+      tools/
+        __init__.py                   # TOOL_DEFINITIONS (3 tools), execute_tool dispatcher
+        state.py                      # get_state, update_state, advance_stage
+      db/
+        __init__.py                   # (empty)
+        client.py                     # Supabase async client: sessions CRUD, messages
+        schema.sql                    # Reference DDL (sessions table + RPC)
 
-```bash
-pip install -r requirements.txt
-```
-
-Create `backend/.env`:
-
-```
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIs...your-key
-```
-
-Create `backend/.gitignore`:
-
-```
-.env
-__pycache__/
-*.pyc
-*.pyo
-.tarini_session
-venv/
-.venv/
-*.egg-info/
-dist/
-```
-
-### 3.5 Set Up the Frontend
-
-```bash
-cd ..  # back to tarini-agent/
-npx create-next-app@latest frontend --typescript --tailwind --eslint --app --no-src-dir
-cd frontend
-```
-
-Create `frontend/.env.local`:
-
-```
-BACKEND_URL=http://localhost:8000
+  frontend/
+    package.json
+    next.config.ts
+    app/
+      page.tsx                        # Root page — renders ChatUI
+      layout.tsx                      # HTML layout, fonts, metadata
+      globals.css                     # Tailwind import + CSS vars
+      components/
+        ChatUI.tsx                    # Main chat interface (SSE consumer)
+      api/
+        session/
+          route.ts                    # POST /api/session — proxy to backend
+        chat/
+          route.ts                    # POST /api/chat — SSE proxy to backend
 ```
 
 ---
 
-## 4. Build Order
+## 4. Database Setup (Supabase)
 
-Follow this exact order. Each step depends on the ones before it.
+Create a Supabase project. Then run this SQL in the SQL Editor:
 
-| # | File | Depends On |
-|---|------|-----------|
-| 1 | `db/schema.sql` | Supabase project |
-| 2 | `db/client.py` | Schema applied |
-| 3 | `tools/state.py` | `db/client.py` |
-| 4 | `tools/__init__.py` | `tools/state.py` |
-| 5 | `prompts/system_prompt.md` | Nothing (standalone) |
-| 6 | `prompts/__init__.py` | `system_prompt.md` |
-| 7 | `agent.py` | Tools + prompts |
-| 8 | `session_manager.py` | `agent.py` + `db/client.py` |
-| 9 | `server.py` | Everything above |
-| 10 | Test with curl | Server running |
-| 11 | Frontend scaffold | Node.js |
-| 12 | `api/session/route.ts` | Backend running |
-| 13 | `api/chat/route.ts` | Backend running |
-| 14 | `ChatUI.tsx` | API routes |
-| 15 | End-to-end test | Everything |
-
----
-
-## 5. Database Layer
-
-### 5.1 Schema (`backend/tarini/db/schema.sql`)
-
-Apply this in the Supabase Dashboard → SQL Editor → Run:
+### `backend/tarini/db/schema.sql`
 
 ```sql
--- Tarini Agent — Supabase Schema V1
--- Apply this via: Supabase Dashboard → SQL Editor → Run
+-- Tarini Agent — Supabase Schema
+-- Apply via: Supabase Dashboard > SQL Editor > Run
 
 CREATE TABLE IF NOT EXISTS sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -204,27 +135,26 @@ CREATE TABLE IF NOT EXISTS sessions (
   -- Multi-user ready from day 1
   user_id TEXT,
 
-  -- Claude SDK session ID — used to resume conversations via ClaudeAgentOptions(resume=...)
+  -- Legacy field from Agent SDK era — unused but kept for compatibility
   sdk_session_id TEXT,
 
   -- Onboarding stage: intro | structure | packages | mapping | verification
   stage TEXT NOT NULL DEFAULT 'intro',
 
   -- All property data as a flexible JSONB blob.
-  -- Schema is defined in the system prompt; normalized in V2 once data model stabilises.
-  -- Expected top-level keys:
-  --   property_name, property_type, user_name,
-  --   floors (array), units (array), packages (array)
   state JSONB NOT NULL DEFAULT '{}',
 
   -- Monotonically increasing version — incremented on every update_state call
   state_version INTEGER NOT NULL DEFAULT 1,
 
+  -- Conversation history for persistence across server restarts
+  messages JSONB NOT NULL DEFAULT '[]',
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Indexes for common lookups
+-- Indexes
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_sdk_id ON sessions(sdk_session_id);
 
@@ -242,100 +172,141 @@ CREATE TRIGGER update_sessions_updated_at
   BEFORE UPDATE ON sessions
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Atomic state update: replaces state JSONB and increments state_version in ONE statement.
+-- Eliminates the read-modify-write race condition.
+-- Called via: client.rpc("update_session_state_atomic", {...}).execute()
+CREATE OR REPLACE FUNCTION update_session_state_atomic(
+  p_session_id UUID,
+  p_new_state   JSONB
+)
+RETURNS SETOF sessions
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  UPDATE sessions
+     SET state         = p_new_state,
+         state_version = state_version + 1,
+         updated_at    = NOW()
+   WHERE id = p_session_id
+   RETURNING *;
+END;
+$$;
 ```
 
-**Key design decisions:**
-- **JSONB `state` column** — Lets us iterate on data structure through prompt changes alone, no migrations needed. The schema is defined in the system prompt, not in SQL.
-- **`state_version`** — Monotonic counter incremented on every `update_state`. Useful for debugging ("7 saves happened") and future optimistic concurrency.
-- **`sdk_session_id`** — Captured from the Claude SDK's `ResultMessage` after the first successful exchange. Used for `resume=` on server restart.
-- **`updated_at` trigger** — Auto-updates on every row change so we always know when a session was last active.
+**Important:** The `messages` column was added after the initial schema. If you're working from an older database, run:
 
-### 5.2 Database Client (`backend/tarini/db/client.py`)
+```sql
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS messages JSONB NOT NULL DEFAULT '[]';
+```
 
-This is the data access layer. It wraps the synchronous `supabase-py` client with `asyncio.to_thread()` so it plays nicely with FastAPI's async handlers.
+---
+
+## 5. Backend — Python / FastAPI
+
+### 5.1 Configuration Files
+
+#### `backend/requirements.txt`
+
+```
+anthropic>=0.42.0
+supabase==2.28.0
+fastapi==0.115.14
+uvicorn[standard]==0.29.0
+python-dotenv==1.0.1
+pydantic==2.12.5
+```
+
+#### `backend/runtime.txt`
+
+```
+python-3.12.0
+```
+
+#### `backend/render.yaml`
+
+```yaml
+services:
+  - type: web
+    name: tarini-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+    autoDeploy: true
+```
+
+#### Environment variables (set in Render dashboard)
+
+| Var | Description |
+|---|---|
+| `ANTHROPIC_API_KEY` | Anthropic API key |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key (not the anon key) |
+| `PYTHON_VERSION` | `3.12.0` (must also be set as env var — Render ignores runtime.txt alone) |
+| `DEPLOY_TRIGGER` | Any value; change it to force a redeploy (auto-deploy from git doesn't trigger reliably) |
+
+---
+
+### 5.2 Database Client
+
+#### `backend/tarini/db/__init__.py`
+
+```python
+# (empty)
+```
+
+#### `backend/tarini/db/client.py`
 
 ```python
 """
 Supabase client singleton + session helpers.
 
-Uses the synchronous supabase-py client wrapped with asyncio.to_thread() so it
-plays nicely with FastAPI's async handlers without introducing extra dependencies.
+Uses the native async supabase-py client so it works correctly inside
+FastAPI's async event loop without thread-pool wrappers.
+
+The client is initialised once during app startup (via init_client / close_client)
+and stored as a module-level variable — a simple, safe pattern for FastAPI apps.
 """
-import asyncio
-import json
 import os
-from copy import deepcopy
-from functools import lru_cache
 
-from supabase import Client, create_client
+from supabase import AsyncClient, acreate_client
 
 
 # ---------------------------------------------------------------------------
-# Singleton sync client
+# Module-level async client (set during lifespan startup)
 # ---------------------------------------------------------------------------
 
-@lru_cache(maxsize=1)
-def _get_client() -> Client:
+_client: AsyncClient | None = None
+
+
+async def init_client() -> None:
+    """Call once during FastAPI lifespan startup."""
+    global _client
     url = os.environ["SUPABASE_URL"]
     key = os.environ["SUPABASE_SERVICE_KEY"]
-    return create_client(url, key)
+    _client = await acreate_client(url, key)
 
 
-# ---------------------------------------------------------------------------
-# Sync helpers (run inside asyncio.to_thread)
-# ---------------------------------------------------------------------------
-
-def _sync_create_session(user_id: str | None = None) -> dict:
-    client = _get_client()
-    row: dict = {}
-    if user_id:
-        row["user_id"] = user_id
-    result = client.table("sessions").insert(row).execute()
-    return result.data[0]
+async def close_client() -> None:
+    """Call once during FastAPI lifespan shutdown."""
+    global _client
+    _client = None  # AsyncClient has no explicit close — GC handles cleanup
 
 
-def _sync_get_session(session_id: str) -> dict | None:
-    client = _get_client()
-    result = (
-        client.table("sessions")
-        .select("*")
-        .eq("id", session_id)
-        .execute()
-    )
-    return result.data[0] if result.data else None
-
-
-def _sync_update_sdk_session_id(session_id: str, sdk_session_id: str) -> dict:
-    client = _get_client()
-    result = (
-        client.table("sessions")
-        .update({"sdk_session_id": sdk_session_id})
-        .eq("id", session_id)
-        .execute()
-    )
-    return result.data[0]
-
-
-def _sync_update_session_state(session_id: str, new_state: dict, new_version: int) -> dict:
-    client = _get_client()
-    result = (
-        client.table("sessions")
-        .update({"state": json.dumps(new_state), "state_version": new_version})
-        .eq("id", session_id)
-        .execute()
-    )
-    return result.data[0]
-
-
-def _sync_advance_stage(session_id: str, stage: str) -> dict:
-    client = _get_client()
-    result = (
-        client.table("sessions")
-        .update({"stage": stage})
-        .eq("id", session_id)
-        .execute()
-    )
-    return result.data[0]
+def _get_client() -> AsyncClient:
+    if _client is None:
+        raise RuntimeError("Supabase client not initialised — call init_client() first")
+    return _client
 
 
 # ---------------------------------------------------------------------------
@@ -344,67 +315,209 @@ def _sync_advance_stage(session_id: str, stage: str) -> dict:
 
 async def create_session(user_id: str | None = None) -> dict:
     """Create a new session row. Returns the full session dict."""
-    return await asyncio.to_thread(_sync_create_session, user_id)
+    c = _get_client()
+    row: dict = {}
+    if user_id:
+        row["user_id"] = user_id
+    result = await c.table("sessions").insert(row).execute()
+    return result.data[0]
 
 
 async def get_session(session_id: str) -> dict | None:
     """Fetch a session by ID. Returns None if not found."""
-    return await asyncio.to_thread(_sync_get_session, session_id)
+    c = _get_client()
+    result = await c.table("sessions").select("*").eq("id", session_id).execute()
+    return result.data[0] if result.data else None
 
 
-async def update_sdk_session_id(session_id: str, sdk_session_id: str) -> dict:
-    """Persist the Claude SDK session ID for future resumption."""
-    return await asyncio.to_thread(_sync_update_sdk_session_id, session_id, sdk_session_id)
+async def load_messages(session_id: str) -> list:
+    """Load conversation history from the session's messages JSONB column."""
+    c = _get_client()
+    result = await (
+        c.table("sessions")
+        .select("messages")
+        .eq("id", session_id)
+        .execute()
+    )
+    if not result.data:
+        return []
+    return result.data[0].get("messages") or []
+
+
+async def save_messages(session_id: str, messages: list) -> None:
+    """Persist conversation history to the session's messages JSONB column."""
+    c = _get_client()
+    await (
+        c.table("sessions")
+        .update({"messages": messages})
+        .eq("id", session_id)
+        .execute()
+    )
 
 
 async def update_session_state(session_id: str, new_state: dict) -> dict:
+    """Replace the session's state JSONB blob and increment state_version atomically.
+
+    Uses the update_session_state_atomic Postgres RPC — no extra round-trip, no race.
     """
-    Replace the session's state JSONB blob and increment state_version.
-    The caller is responsible for the merge; this just persists.
-    """
-    # Get current version to increment
-    session = await get_session(session_id)
-    if not session:
+    c = _get_client()
+    result = await c.rpc(
+        "update_session_state_atomic",
+        {"p_session_id": session_id, "p_new_state": new_state},
+    ).execute()
+    if not result.data:
         raise ValueError(f"Session {session_id} not found")
-    new_version = (session.get("state_version") or 1) + 1
-    return await asyncio.to_thread(
-        _sync_update_session_state, session_id, new_state, new_version
-    )
+    return result.data[0]
 
 
 async def advance_stage(session_id: str, stage: str) -> dict:
     """Update the stage field."""
-    return await asyncio.to_thread(_sync_advance_stage, session_id, stage)
-```
-
-**Pattern:** Private `_sync_*` functions do the actual Supabase calls synchronously. Public `async` functions wrap them with `asyncio.to_thread()`. The `@lru_cache(maxsize=1)` ensures only one Supabase client instance exists.
-
-You also need `backend/tarini/db/__init__.py` (can be empty):
-
-```python
-# backend/tarini/db/__init__.py is empty
+    c = _get_client()
+    result = await (
+        c.table("sessions")
+        .update({"stage": stage})
+        .eq("id", session_id)
+        .execute()
+    )
+    return result.data[0]
 ```
 
 ---
 
-## 6. MCP Tools Layer
+### 5.3 System Prompt
 
-### 6.1 State Tools (`backend/tarini/tools/state.py`)
+#### `backend/tarini/prompts/__init__.py`
 
-These are the 3 tools Claude uses to read and write session state. The key pattern is **closure binding** — `build_state_tools(session_id)` returns tool instances that have `session_id` captured in their closure, so Claude never needs to pass `session_id` as an argument.
+```python
+from pathlib import Path
+
+
+def load_system_prompt() -> str:
+    """Load Tarini's system prompt from the markdown file."""
+    prompt_file = Path(__file__).parent / "system_prompt.md"
+    return prompt_file.read_text(encoding="utf-8")
+
+
+# Single source of truth for the silent opening prompt that triggers the greeting.
+# Imported by both server.py (web) and main.py (CLI) — never duplicated.
+INITIAL_PROMPT = (
+    "Session started. Call get_state immediately to check current progress, "
+    "then greet the user appropriately based on their stage and what has been saved."
+)
+```
+
+#### `backend/tarini/prompts/system_prompt.md`
+
+This is a 354-line markdown file that defines Tarini's character, language rules, tools, conversation rules, error recovery, onboarding stages, and more. It is too long to inline here but lives at the path above. Key sections:
+
+- **Character:** Warm, patient, expert, honest, adaptive, not robotic
+- **Language:** Mirror user's language (English/Hindi/Hinglish) automatically
+- **Tools:** `get_state`, `update_state`, `advance_stage` (described with usage rules)
+- **Conversation rules:** One question per turn, confirm before save, ambiguous = no mutation
+- **Error recovery:** 3-tier escalation, never dead-end
+- **Stages:** intro > structure > packages > mapping > verification
+- **Never does:** Uses tech terms, claims false saves, bullet-point lists
+
+---
+
+### 5.4 Tool Definitions & Dispatcher
+
+#### `backend/tarini/tools/__init__.py`
 
 ```python
 """
-Tarini's 3 MCP tools — each bound to a specific session_id via closure.
+Tarini tool definitions for Anthropic API tool use.
 
-Tool pattern: build_state_tools(session_id) returns a list of SdkMcpTool instances
-that are wired to the correct session without needing session_id as a call argument.
+TOOL_DEFINITIONS: list of dicts in Anthropic tool-use format.
+execute_tool(session_id, tool_name, tool_input): dispatches to the right handler.
+"""
+from .state import get_state, update_state, advance_stage
+
+TOOL_DEFINITIONS = [
+    {
+        "name": "get_state",
+        "description": (
+            "Get the current property onboarding state for this session. "
+            "Call this at the start of every conversation — before saying anything — "
+            "to know the stage and all property data collected so far. "
+            "Never assume what is saved; always check."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "update_state",
+        "description": (
+            "Save confirmed property information. Call this after the user explicitly "
+            "confirms a piece of information. The `updates` dict is deep-merged into the "
+            "existing state — only pass the fields that actually changed. "
+            "Never claim to have saved something without calling this tool first."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "updates": {
+                    "type": "object",
+                    "additionalProperties": True,
+                    "description": (
+                        "Key-value pairs to deep-merge into current state. "
+                        "Use nested dicts for structured data."
+                    ),
+                }
+            },
+            "required": ["updates"],
+        },
+    },
+    {
+        "name": "advance_stage",
+        "description": (
+            "Mark the current onboarding stage as complete and record the next stage. "
+            "Only call this when the user has confirmed all information for the current stage. "
+            "Valid stages in order: intro > structure > packages > mapping > verification."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "stage": {
+                    "type": "string",
+                    "enum": ["intro", "structure", "packages", "mapping", "verification"],
+                    "description": "The stage to advance to.",
+                }
+            },
+            "required": ["stage"],
+        },
+    },
+]
+
+
+async def execute_tool(session_id: str, tool_name: str, tool_input: dict) -> str:
+    """Dispatch a tool call and return the result as a JSON string."""
+    if tool_name == "get_state":
+        return await get_state(session_id)
+    elif tool_name == "update_state":
+        return await update_state(session_id, tool_input.get("updates", {}))
+    elif tool_name == "advance_stage":
+        return await advance_stage(session_id, tool_input.get("stage", ""))
+    else:
+        return f'{{"error": "Unknown tool: {tool_name}"}}'
+```
+
+---
+
+### 5.5 Tool Implementations (State)
+
+#### `backend/tarini/tools/state.py`
+
+```python
+"""
+Tarini's 3 state tools — pure async functions returning JSON strings.
+
+These are called by the tool dispatcher in __init__.py.
 """
 import json
 from copy import deepcopy
-from typing import Any
-
-from claude_agent_sdk import tool
 
 from tarini.db import client as db
 
@@ -433,448 +546,396 @@ def _deep_merge(base: dict, updates: dict) -> dict:
     return result
 
 
-# ---------------------------------------------------------------------------
-# Tool factory
-# ---------------------------------------------------------------------------
-
 VALID_STAGES = ("intro", "structure", "packages", "mapping", "verification")
 
 
-def build_state_tools(session_id: str) -> list:
-    """
-    Create tool instances bound to the given session_id.
-    Called once per ClaudeSDKClient instantiation.
-    """
+# ---------------------------------------------------------------------------
+# Tool implementations
+# ---------------------------------------------------------------------------
 
-    @tool(
-        "get_state",
-        (
-            "Get the current property onboarding state for this session. "
-            "Call this at the start of every conversation — before saying anything — "
-            "to know the stage and all property data collected so far. "
-            "Never assume what is saved; always check."
-        ),
-        {},
-    )
-    async def get_state(args: dict[str, Any]) -> dict[str, Any]:
-        session = await db.get_session(session_id)
-        if not session:
-            return {
-                "content": [{"type": "text", "text": json.dumps({"error": "Session not found"})}],
-                "is_error": True,
-            }
-        return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": json.dumps(
-                        {
-                            "stage": session.get("stage", "intro"),
-                            "state": session.get("state") or {},
-                            "state_version": session.get("state_version", 1),
-                        },
-                        ensure_ascii=False,
-                    ),
-                }
-            ]
-        }
-
-    @tool(
-        "update_state",
-        (
-            "Save confirmed property information. Call this after the user explicitly "
-            "confirms a piece of information. The `updates` dict is deep-merged into the "
-            "existing state — only pass the fields that actually changed. "
-            "Never claim to have saved something without calling this tool first."
-        ),
+async def get_state(session_id: str) -> str:
+    """Return session state as JSON string."""
+    session = await db.get_session(session_id)
+    if not session:
+        return json.dumps({"error": "Session not found"})
+    return json.dumps(
         {
-            "type": "object",
-            "properties": {
-                "updates": {
-                    "type": "object",
-                    "additionalProperties": True,
-                    "description": (
-                        "Key-value pairs to deep-merge into current state. "
-                        "Use nested dicts for structured data. "
-                        "Example: {\"floors\": [{\"index\": 0, \"label\": \"Ground Floor\"}], "
-                        "\"packages\": [{\"id\": \"pkg_001\", \"name\": \"AC Double\", \"active\": true}]}"
-                    ),
-                }
-            },
-            "required": ["updates"],
+            "stage": session.get("stage", "intro"),
+            "state": session.get("state") or {},
+            "state_version": session.get("state_version", 1),
         },
+        ensure_ascii=False,
     )
-    async def update_state(args: dict[str, Any]) -> dict[str, Any]:
-        updates = args.get("updates", {})
-        if not updates:
-            return {
-                "content": [{"type": "text", "text": json.dumps({"error": "No updates provided"})}],
-                "is_error": True,
-            }
 
-        session = await db.get_session(session_id)
-        if not session:
-            return {
-                "content": [{"type": "text", "text": json.dumps({"error": "Session not found"})}],
-                "is_error": True,
-            }
 
-        current_state = session.get("state") or {}
-        new_state = _deep_merge(current_state, updates)
-        updated = await db.update_session_state(session_id, new_state)
+async def update_state(session_id: str, updates: dict) -> str:
+    """Deep-merge updates into session state. Return result as JSON string."""
+    if not updates:
+        return json.dumps({"error": "No updates provided"})
 
-        return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": json.dumps(
-                        {
-                            "saved": True,
-                            "state_version": updated.get("state_version"),
-                            "state": updated.get("state") or new_state,
-                        },
-                        ensure_ascii=False,
-                    ),
-                }
-            ]
-        }
+    session = await db.get_session(session_id)
+    if not session:
+        return json.dumps({"error": "Session not found"})
 
-    @tool(
-        "advance_stage",
-        (
-            "Mark the current onboarding stage as complete and record the next stage. "
-            "Only call this when the user has confirmed all information for the current stage. "
-            "Valid stages in order: intro → structure → packages → mapping → verification."
-        ),
-        {"stage": str},
+    current_state = session.get("state") or {}
+    new_state = _deep_merge(current_state, updates)
+    updated = await db.update_session_state(session_id, new_state)
+
+    return json.dumps(
+        {
+            "saved": True,
+            "state_version": updated.get("state_version"),
+            "state": updated.get("state") or new_state,
+        },
+        ensure_ascii=False,
     )
-    async def advance_stage(args: dict[str, Any]) -> dict[str, Any]:
-        stage = args.get("stage", "").strip()
-        if stage not in VALID_STAGES:
-            return {
-                "content": [
-                    {
-                        "type": "text",
-                        "text": json.dumps(
-                            {
-                                "error": (
-                                    f"Invalid stage: '{stage}'. "
-                                    f"Must be one of: {', '.join(VALID_STAGES)}"
-                                )
-                            }
-                        ),
-                    }
-                ],
-                "is_error": True,
+
+
+async def advance_stage(session_id: str, stage: str) -> str:
+    """Advance the session to a new stage. Return result as JSON string."""
+    stage = (stage or "").strip()
+    if stage not in VALID_STAGES:
+        return json.dumps(
+            {
+                "error": (
+                    f"Invalid stage: '{stage}'. "
+                    f"Must be one of: {', '.join(VALID_STAGES)}"
+                )
             }
+        )
 
-        updated = await db.advance_stage(session_id, stage)
-        return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": json.dumps({"stage": updated.get("stage"), "advanced": True}),
-                }
-            ]
-        }
-
-    return [get_state, update_state, advance_stage]
+    updated = await db.advance_stage(session_id, stage)
+    return json.dumps({"stage": updated.get("stage"), "advanced": True})
 ```
 
-**Important patterns:**
-- The `@tool` decorator takes 3 args: `(name, description, input_schema)`. The description is what Claude reads to decide when to call the tool.
-- All tool functions receive `args: dict` and return MCP-compliant dicts with `content` array.
-- `_deep_merge()` recursively merges nested dicts but overwrites lists (so you can replace a full floors array).
-- `VALID_STAGES` tuple prevents Claude from setting an invalid stage.
-
-### 6.2 MCP Server Factory (`backend/tarini/tools/__init__.py`)
-
-This tiny file creates an in-process MCP server from the tool list:
-
-```python
-from claude_agent_sdk import create_sdk_mcp_server
-from .state import build_state_tools
-
-
-def build_mcp_server(session_id: str):
-    """Create an in-process MCP server with state tools bound to session_id."""
-    tools = build_state_tools(session_id)
-    return create_sdk_mcp_server(
-        name="tarini",
-        version="1.0.0",
-        tools=tools,
-    )
-```
-
-The `name="tarini"` means tools are namespaced as `mcp__tarini__get_state`, `mcp__tarini__update_state`, `mcp__tarini__advance_stage`.
+**Key design note:** `_deep_merge` overwrites lists, not appends. When the agent modifies `floors`, `units`, or `packages`, it must send the complete array.
 
 ---
 
-## 7. System Prompt
+### 5.6 Agent (Streaming Tool-Use Loop)
 
-### Why the Prompt Matters Most
-
-The system prompt is the single most important file in the project. It defines:
-- Who Tarini is (character, expertise, tone)
-- How she communicates (language rules, conversation rules)
-- What she knows (Indian rental property types, floor structures, package patterns)
-- When she saves data (tool usage rules, confirmation requirements)
-- How she handles errors (3-strike protocol)
-- The onboarding journey (4 stages with detailed guidance)
-
-Every other file exists to let this prompt run reliably with persistent state.
-
-### The File (`backend/tarini/prompts/system_prompt.md`)
-
-This is a 353-line markdown file. Here are the key sections and WHY they exist:
-
-**Character section (lines 1-19):** Defines warmth, patience, expertise, honesty, adaptiveness. Without this, Claude defaults to a generic assistant tone. We want Tarini to sound like the best human onboarding specialist — someone who never makes the operator feel slow.
-
-**Language rules (lines 21-30):** Indian users code-switch between Hindi, English, and Hinglish constantly. Tarini must auto-mirror without asking "which language do you prefer?" This section also guards against a specific bug: Claude sometimes treats Hindi confusion phrases ("samajh nahi aaya") as a user's name.
-
-**Tool documentation (lines 32-114):** Each tool has exact usage rules embedded in the prompt itself. The state schema is defined here (not in code) so Claude knows exactly what structure to use when calling `update_state`. This section includes the full JSONB schema with examples.
-
-**Conversation rules (lines 116-141):** 11 non-negotiable rules. The most critical: "One question per turn" (prevents overwhelming operators), "Confirm before saving" (prevents bad data), "Never ask for something already confirmed" (prevents annoying repetition).
-
-**Error recovery (lines 143-154):** A 3-strike protocol. First failure: retry silently. Second: acknowledge but continue. Third: give explicit choices. Most important rule: "Never pretend something was saved when it wasn't."
-
-**Proactive quality checks (lines 156-165):** Like a sharp human specialist, Tarini catches things users don't think to mention: missing rents, unmapped rooms, dangling packages. These examples teach Claude the pattern of proactive observation.
-
-**4 Stages (lines 168-294):** Detailed guidance for each onboarding stage. The structure stage encodes deep domain knowledge about PG rooms (private/double/triple/dorm), BHK flats, hostels, and naming patterns. The packages stage defines what a "package" is and its lifecycle. The mapping stage handles bulk assignment commands. The verification stage has completion blockers.
-
-**Never list (lines 296-309):** Hard boundaries. Most critical: never use tech jargon ("Supabase", "JSON", "API"), never claim a save without calling the tool, never dump bullet-point lists.
-
-**Session start (lines 311-333):** Different behavior for fresh vs. returning users. Fresh: warm greeting + first question. Returning: "Welcome back, we were working on [X]..." without re-introducing herself.
-
-### The Prompt Loader (`backend/tarini/prompts/__init__.py`)
-
-```python
-from pathlib import Path
-
-
-def load_system_prompt() -> str:
-    """Load Tarini's system prompt from the markdown file."""
-    prompt_file = Path(__file__).parent / "system_prompt.md"
-    return prompt_file.read_text(encoding="utf-8")
-```
-
-Uses `Path(__file__).parent` so it works regardless of where the server is started from.
-
----
-
-## 8. Agent Configuration
-
-### `backend/tarini/agent.py`
-
-This is the factory that creates a fully configured `ClaudeAgentOptions` object for each session:
+#### `backend/tarini/agent.py`
 
 ```python
 """
-ClaudeSDKClient options factory.
+Anthropic API agent — streams Claude responses with tool-use loop.
 
-build_options(session_id, sdk_session_id) returns a ClaudeAgentOptions object
-configured with:
-  - claude-sonnet-4-20250514 model (direct Anthropic API)
-  - Tarini's system prompt
-  - In-process MCP tools bound to the session
-  - bypassPermissions (tools run autonomously — no user permission dialogs)
-  - resume= for session continuity across server restarts
+stream_chat(session_id, user_message, history) is the single entry point.
+It yields SSE-ready dicts: {"type": "text", "text": "..."} and {"type": "done"}.
 """
-from claude_agent_sdk import ClaudeAgentOptions
+import logging
+import os
+from typing import AsyncIterator
+
+import anthropic
 
 from tarini.prompts import load_system_prompt
-from tarini.tools import build_mcp_server
+from tarini.tools import TOOL_DEFINITIONS, execute_tool
+
+logger = logging.getLogger(__name__)
+
+MODEL = "claude-sonnet-4-20250514"
+MAX_TOOL_ROUNDS = 10  # safety limit to prevent infinite tool loops
 
 
-def build_options(
+async def stream_chat(
     session_id: str,
-    sdk_session_id: str | None = None,
-) -> ClaudeAgentOptions:
+    user_message: str,
+    history: list[dict],
+) -> AsyncIterator[dict]:
     """
-    Create a fully configured ClaudeAgentOptions for a Tarini session.
-
-    Uses direct Anthropic API. ANTHROPIC_API_KEY must be set in the environment.
+    Send a message to Claude and stream the response, handling tool use.
 
     Args:
-        session_id: Our Supabase session UUID (used to bind tools to correct session).
-        sdk_session_id: Claude SDK session ID from a prior ResultMessage, for resumption.
+        session_id: Session UUID for tool dispatch.
+        user_message: The user's message text.
+        history: Mutable list of conversation messages (updated in-place).
+
+    Yields:
+        SSE event dicts: {"type": "text", "text": "..."} or {"type": "done"}.
     """
-    return ClaudeAgentOptions(
-        model="claude-sonnet-4-20250514",
-        system_prompt=load_system_prompt(),
-        allowed_tools=[
-            "mcp__tarini__get_state",
-            "mcp__tarini__update_state",
-            "mcp__tarini__advance_stage",
-        ],
-        mcp_servers={"tarini": build_mcp_server(session_id)},
-        permission_mode="bypassPermissions",
-        resume=sdk_session_id,
-    )
+    client = anthropic.AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    system_prompt = load_system_prompt()
+
+    # Add the user message to history
+    history.append({"role": "user", "content": user_message})
+
+    for _round in range(MAX_TOOL_ROUNDS):
+        logger.info(
+            "[stream_chat] round %d for session %s (%d messages)",
+            _round, session_id, len(history),
+        )
+
+        # Stream the API response
+        collected_text = ""
+        tool_use_blocks = []
+
+        async with client.messages.stream(
+            model=MODEL,
+            max_tokens=4096,
+            system=system_prompt,
+            messages=history,
+            tools=TOOL_DEFINITIONS,
+        ) as stream:
+            async for event in stream:
+                if event.type == "content_block_delta":
+                    if event.delta.type == "text_delta":
+                        text = event.delta.text
+                        collected_text += text
+                        yield {"type": "text", "text": text}
+
+            # Get the final message to check for tool use
+            final_message = await stream.get_final_message()
+
+        # Record the assistant's full response in history (serialised to plain dicts
+        # so the history is JSON-storable in Supabase)
+        history.append({
+            "role": "assistant",
+            "content": _serialize_content(final_message.content),
+        })
+
+        # Check if the model wants to use tools
+        tool_use_blocks = [
+            block for block in final_message.content
+            if block.type == "tool_use"
+        ]
+
+        if final_message.stop_reason != "tool_use" or not tool_use_blocks:
+            # No tool use — we're done
+            yield {"type": "done"}
+            return
+
+        # Execute all tool calls and build tool results
+        tool_results = []
+        for tool_block in tool_use_blocks:
+            logger.info(
+                "[stream_chat] executing tool %s for session %s",
+                tool_block.name, session_id,
+            )
+            result_str = await execute_tool(
+                session_id, tool_block.name, tool_block.input,
+            )
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": tool_block.id,
+                "content": result_str,
+            })
+
+        # Add tool results to history and loop back for next response
+        history.append({"role": "user", "content": tool_results})
+
+    # Safety: if we hit the max rounds, end gracefully
+    logger.warning("[stream_chat] hit MAX_TOOL_ROUNDS for session %s", session_id)
+    yield {"type": "done"}
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _serialize_content(content) -> list[dict]:
+    """Convert Anthropic SDK content blocks to plain JSON-serialisable dicts."""
+    out: list[dict] = []
+    for block in content:
+        if block.type == "text":
+            out.append({"type": "text", "text": block.text})
+        elif block.type == "tool_use":
+            out.append({
+                "type": "tool_use",
+                "id": block.id,
+                "name": block.name,
+                "input": block.input,
+            })
+    return out
 ```
 
-**Field-by-field explanation:**
-
-| Field | Value | Why |
-|-------|-------|-----|
-| `model` | `"claude-sonnet-4-20250514"` | Best cost/quality ratio. ~40% cheaper than Opus with near-identical tool-use performance. |
-| `system_prompt` | `load_system_prompt()` | Loaded fresh on each client creation (supports hot-reload during development). |
-| `allowed_tools` | 3 tool names | Explicitly whitelists which MCP tools Claude can call. Uses `mcp__tarini__` prefix (server name + tool name). |
-| `mcp_servers` | `{"tarini": build_mcp_server(session_id)}` | In-process MCP server with tools bound to this specific session. |
-| `permission_mode` | `"bypassPermissions"` | Tools run autonomously — no interactive permission dialogs. Required for server-side use. |
-| `resume` | `sdk_session_id` | If provided, restores the full conversation from a prior session. `None` for new sessions. |
+**Key design notes:**
+- `history` is a **mutable list** passed by reference. Both `stream_chat` and the session manager share the same list object.
+- `_serialize_content()` converts Anthropic SDK pydantic models (`TextBlock`, `ToolUseBlock`) to plain dicts so they can be stored in Supabase JSONB.
+- The tool-use loop iterates up to `MAX_TOOL_ROUNDS` (10) to prevent infinite loops. Each iteration: call Claude > stream text > check if tool use > execute tools > add results to history > loop.
 
 ---
 
-## 9. Session Manager
+### 5.7 Session Manager
 
-### `backend/tarini/session_manager.py`
-
-Manages the lifecycle of `ClaudeSDKClient` instances — one per active session. The dual-lock architecture prevents race conditions.
+#### `backend/tarini/session_manager.py`
 
 ```python
 """
-Per-session ClaudeSDKClient lifecycle management for the FastAPI server.
+Per-session conversation history manager.
 
-The manager keeps one ClaudeSDKClient alive per session_id.
-On the first request for a session, it creates and connects the client.
-On subsequent requests, it reuses the existing connected client.
-If the server restarts, clients are reconstructed with resume=sdk_session_id.
+Manages in-memory message history for each session, backed by Supabase persistence.
+On cache miss (e.g. after Render free-tier spin-down) the history is reloaded from
+the database so conversations survive server restarts.
 
-Thread safety: asyncio.Lock per session prevents concurrent connect() calls
-for the same session. A separate query-level lock serialises query()+receive_response()
-pairs so they can't overlap within a session.
+Guarantees:
+  * One message history list per session (created lazily or loaded from DB).
+  * One asyncio.Lock per session for query serialisation.
+  * History is persisted to Supabase after every turn.
+  * Idle sessions are evicted after _IDLE_TTL_SECONDS (default 30 min).
 """
 import asyncio
 import logging
+import time
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
 
-from claude_agent_sdk import ClaudeSDKClient
-
-from tarini.agent import build_options
+from tarini.agent import stream_chat
 from tarini.db import client as db
 
 logger = logging.getLogger(__name__)
 
+_IDLE_TTL_SECONDS = 30 * 60
+_EVICTION_INTERVAL_SECONDS = 5 * 60
+
 
 class SessionManager:
     def __init__(self) -> None:
-        # session_id → connected ClaudeSDKClient
-        self._clients: dict[str, ClaudeSDKClient] = {}
-        # Locks to prevent concurrent connect() for the same session
-        self._connect_locks: dict[str, asyncio.Lock] = {}
-        # Locks to serialise query+receive pairs (one at a time per session)
+        # session_id -> list of conversation messages
+        self._histories: dict[str, list[dict]] = {}
+        # Locks to serialise queries (one at a time per session)
         self._query_locks: dict[str, asyncio.Lock] = {}
+        # Last-used timestamps for idle eviction
+        self._last_used: dict[str, float] = {}
+        # Background eviction task
+        self._eviction_task: asyncio.Task | None = None
 
-    def _connect_lock(self, session_id: str) -> asyncio.Lock:
-        if session_id not in self._connect_locks:
-            self._connect_locks[session_id] = asyncio.Lock()
-        return self._connect_locks[session_id]
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
-    def query_lock(self, session_id: str) -> asyncio.Lock:
-        if session_id not in self._query_locks:
-            self._query_locks[session_id] = asyncio.Lock()
-        return self._query_locks[session_id]
+    def start_eviction_task(self) -> None:
+        self._eviction_task = asyncio.create_task(self._evict_idle_sessions())
+        logger.info(
+            "Session eviction task started (TTL=%ds, interval=%ds)",
+            _IDLE_TTL_SECONDS, _EVICTION_INTERVAL_SECONDS,
+        )
 
-    async def get_or_create_client(self, session_id: str) -> ClaudeSDKClient:
+    @asynccontextmanager
+    async def query_lock(self, session_id: str) -> AsyncIterator[None]:
+        """Acquire the per-session lock for query serialisation."""
+        lock = self._query_locks.setdefault(session_id, asyncio.Lock())
+        async with lock:
+            yield
+
+    async def chat(
+        self, session_id: str, user_message: str,
+    ) -> AsyncIterator[dict]:
         """
-        Return the active ClaudeSDKClient for this session, creating it if needed.
-        Safe to call concurrently — the lock ensures only one connect() per session.
+        Send a message and stream SSE events. Manages history automatically.
+        Must be called inside a query_lock context.
+
+        On cache miss (server restarted / session evicted) the history is
+        loaded from Supabase so the conversation picks up where it left off.
+        After the turn completes the updated history is persisted back.
         """
-        async with self._connect_lock(session_id):
-            if session_id in self._clients:
-                return self._clients[session_id]
+        # Load from DB on cache miss
+        if session_id not in self._histories:
+            logger.info("Cache miss for session %s — loading history from DB", session_id)
+            self._histories[session_id] = await db.load_messages(session_id)
 
-            session = await db.get_session(session_id)
-            if not session:
-                raise ValueError(f"Session {session_id} not found in database")
+        history = self._histories[session_id]
+        self._last_used[session_id] = time.monotonic()
 
-            sdk_session_id = session.get("sdk_session_id") or None
-            logger.info(
-                "Creating ClaudeSDKClient for session %s (resume=%s)",
-                session_id,
-                sdk_session_id,
-            )
+        async for event in stream_chat(session_id, user_message, history):
+            # Persist BEFORE yielding "done" — the SSE generator cancels our
+            # task immediately after receiving "done", so post-yield code
+            # would never execute.
+            if event.get("type") == "done":
+                self._last_used[session_id] = time.monotonic()
+                try:
+                    await db.save_messages(session_id, history)
+                    logger.info(
+                        "Persisted %d messages for session %s",
+                        len(history), session_id,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to persist messages for session %s", session_id,
+                    )
+            yield event
 
-            client = ClaudeSDKClient(
-                options=build_options(
-                    session_id=session_id,
-                    sdk_session_id=sdk_session_id,
-                )
-            )
-            await client.connect()
-            self._clients[session_id] = client
-            return client
-
-    async def remove_client(self, session_id: str) -> None:
-        """Disconnect and remove a client (e.g. on session error)."""
-        client = self._clients.pop(session_id, None)
-        if client:
-            try:
-                await client.disconnect()
-            except Exception:
-                pass
+    def remove_session(self, session_id: str) -> None:
+        """Remove all state for a session."""
+        self._histories.pop(session_id, None)
+        self._query_locks.pop(session_id, None)
+        self._last_used.pop(session_id, None)
+        logger.info("Removed session %s", session_id)
 
     async def cleanup(self) -> None:
-        """Disconnect all clients — called on server shutdown."""
-        for session_id, client in list(self._clients.items()):
+        """Cancel eviction task and clear all sessions — called on shutdown."""
+        if self._eviction_task is not None:
+            self._eviction_task.cancel()
             try:
-                await client.disconnect()
-                logger.info("Disconnected client for session %s", session_id)
-            except Exception as exc:
-                logger.warning("Error disconnecting session %s: %s", session_id, exc)
-        self._clients.clear()
+                await self._eviction_task
+            except asyncio.CancelledError:
+                pass
+            self._eviction_task = None
+
+        self._histories.clear()
+        self._query_locks.clear()
+        self._last_used.clear()
+
+    # ------------------------------------------------------------------
+    # Private
+    # ------------------------------------------------------------------
+
+    async def _evict_idle_sessions(self) -> None:
+        while True:
+            await asyncio.sleep(_EVICTION_INTERVAL_SECONDS)
+            now = time.monotonic()
+            idle = [
+                sid for sid, last in list(self._last_used.items())
+                if (now - last) >= _IDLE_TTL_SECONDS
+            ]
+            for session_id in idle:
+                logger.info("Evicting idle session %s", session_id)
+                self.remove_session(session_id)
 
 
-# Module-level singleton — imported by server.py
+# Module-level singleton
 session_manager = SessionManager()
 ```
 
-**Key concepts:**
-
-- **Singleton pattern** — `session_manager = SessionManager()` at module level. Imported by `server.py`.
-- **Connect lock** — Prevents two concurrent requests from creating two clients for the same session. Without this, a race condition could create duplicate `ClaudeSDKClient` instances.
-- **Query lock** — Serializes `query()` + `receive_response()` pairs. The Claude SDK requires one complete exchange before starting another on the same client.
-- **Error recovery** — `remove_client()` disconnects and removes a broken client so the next request creates a fresh one.
-- **Graceful shutdown** — `cleanup()` is called by FastAPI's lifespan handler on server shutdown.
+**Critical design note:** The `chat()` method persists history **before** yielding the `"done"` event. This is because the SSE generator in `server.py` cancels the `_run_chat` task immediately after receiving `"done"`. Any code after the yield would never execute due to task cancellation. This was a hard-won lesson (see memory.md).
 
 ---
 
-## 10. FastAPI Server
+### 5.8 FastAPI Server
 
-### `backend/server.py`
-
-The main server file — 4 endpoints, SSE streaming, CORS, lifespan management:
+#### `backend/server.py`
 
 ```python
 """
 Tarini FastAPI server — SSE streaming chat API.
 
+Uses direct Anthropic API calls (no CLI subprocess).
+
 Endpoints:
-  POST /sessions              → create a new session
-  GET  /sessions/{id}         → get session state
-  POST /sessions/{id}/chat    → send a message, stream Tarini's response (SSE)
+  POST /sessions              -> create a new session
+  GET  /sessions/{id}         -> get session state
+  POST /sessions/{id}/chat    -> send a message, stream Tarini's response (SSE)
 
 SSE event format:
   data: {"type": "text",  "text": "..."}
   data: {"type": "done"}
   data: {"type": "error", "message": "..."}
 """
+import asyncio
 import json
 import logging
-import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 load_dotenv()
 
-from claude_agent_sdk import AssistantMessage, ResultMessage, TextBlock
-
 from tarini.db import client as db
+from tarini.prompts import INITIAL_PROMPT
 from tarini.session_manager import session_manager
 
 logging.basicConfig(level=logging.INFO)
@@ -882,26 +943,29 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Lifespan — clean up on shutdown
+# Lifespan
 # ---------------------------------------------------------------------------
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Tarini server starting up")
+    await db.init_client()
+    session_manager.start_eviction_task()
     yield
-    logger.info("Tarini server shutting down — cleaning up sessions")
+    logger.info("Tarini server shutting down")
     await session_manager.cleanup()
+    await db.close_client()
 
 
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="Tarini API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Tarini API", version="2.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Tighten to specific domains in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -909,11 +973,78 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------------------------
-# Request/response models
+# Request models
 # ---------------------------------------------------------------------------
 
 class ChatRequest(BaseModel):
-    message: str = ""
+    message: str = Field("", max_length=8000)
+
+
+# ---------------------------------------------------------------------------
+# SSE keepalive helper
+# ---------------------------------------------------------------------------
+
+async def _stream_with_keepalives(
+    session_id: str,
+    user_message: str,
+    keepalive_interval: float = 2.0,
+):
+    """
+    Async generator that streams chat events with keepalives.
+
+    Uses asyncio.Queue bridge so the chat logic runs in a background task
+    while keepalives are sent during quiet periods (tool execution, API calls).
+    """
+    yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
+
+    queue: asyncio.Queue[dict | None] = asyncio.Queue()
+
+    async def _run_chat() -> None:
+        try:
+            async with session_manager.query_lock(session_id):
+                async for event in session_manager.chat(session_id, user_message):
+                    await queue.put(event)
+        except Exception:
+            logger.exception("[_run_chat] ERROR for session %s", session_id)
+            session_manager.remove_session(session_id)
+            await queue.put({"type": "error", "message": "An error occurred. Please try again."})
+        finally:
+            await queue.put(None)  # sentinel
+
+    task = asyncio.create_task(_run_chat())
+
+    # Drain queue with keepalives using asyncio.wait (not wait_for)
+    get_task: asyncio.Task = asyncio.ensure_future(queue.get())
+    try:
+        while True:
+            done, _ = await asyncio.wait({get_task}, timeout=keepalive_interval)
+
+            if not done:
+                yield f"data: {json.dumps({'type': 'thinking'})}\n\n"
+                continue
+
+            item = get_task.result()
+            if item is None:
+                break
+
+            yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
+
+            if item.get("type") in ("done", "error"):
+                break
+
+            get_task = asyncio.ensure_future(queue.get())
+    finally:
+        if not get_task.done():
+            get_task.cancel()
+            try:
+                await get_task
+            except (asyncio.CancelledError, Exception):
+                pass
+        task.cancel()
+        try:
+            await task
+        except (asyncio.CancelledError, Exception):
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -922,14 +1053,12 @@ class ChatRequest(BaseModel):
 
 @app.post("/sessions", status_code=201)
 async def create_session():
-    """Create a new onboarding session. Returns the session_id for subsequent calls."""
     session = await db.create_session()
     return {"session_id": session["id"]}
 
 
 @app.get("/sessions/{session_id}")
 async def get_session(session_id: str):
-    """Get current session state — useful for the frontend to restore UI."""
     session = await db.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -945,71 +1074,19 @@ async def get_session(session_id: str):
 
 @app.post("/sessions/{session_id}/chat")
 async def chat(session_id: str, body: ChatRequest):
-    """
-    Send a message to Tarini and stream the response via SSE.
-
-    If message is empty, Tarini is asked to check state and give an opening greeting.
-    This is how the frontend triggers the initial greeting on new sessions.
-    """
     session = await db.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Empty message → trigger opening greeting
-    user_message = (body.message or "").strip()
-    if not user_message:
-        user_message = (
-            "Session started. Call get_state immediately to check progress, "
-            "then greet the user appropriately based on their stage and what has been saved."
-        )
-
-    async def generate():
-        # Acquire the per-session query lock — prevents concurrent queries on same client
-        async with session_manager.query_lock(session_id):
-            try:
-                # Re-fetch session inside the lock so sdk_session_id check is always current
-                current_session = await db.get_session(session_id)
-                if not current_session:
-                    yield f"data: {json.dumps({'type': 'error', 'message': 'Session not found'})}\n\n"
-                    return
-
-                client = await session_manager.get_or_create_client(session_id)
-                await client.query(user_message)
-
-                captured_sdk_id: str | None = None
-
-                async for msg in client.receive_response():
-                    if isinstance(msg, AssistantMessage):
-                        for block in msg.content:
-                            if isinstance(block, TextBlock) and block.text:
-                                yield f"data: {json.dumps({'type': 'text', 'text': block.text}, ensure_ascii=False)}\n\n"
-                    elif isinstance(msg, ResultMessage):
-                        captured_sdk_id = msg.session_id
-
-                # Persist sdk_session_id on first successful exchange
-                if captured_sdk_id and not session.get("sdk_session_id"):
-                    await db.update_sdk_session_id(session_id, captured_sdk_id)
-                    logger.info(
-                        "Saved sdk_session_id %s for session %s",
-                        captured_sdk_id,
-                        session_id,
-                    )
-
-                yield f"data: {json.dumps({'type': 'done'})}\n\n"
-
-            except Exception as exc:
-                logger.exception("Error in chat stream for session %s", session_id)
-                # Remove the broken client so next request creates a fresh one
-                await session_manager.remove_client(session_id)
-                yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
+    user_message = (body.message or "").strip() or INITIAL_PROMPT
 
     return StreamingResponse(
-        generate(),
+        _stream_with_keepalives(session_id, user_message),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",  # Disable nginx buffering for SSE
+            "X-Accel-Buffering": "no",
         },
     )
 
@@ -1019,24 +1096,29 @@ async def health():
     return {"status": "ok"}
 ```
 
-**Key patterns:**
+**SSE Architecture — Queue Bridge Pattern:**
 
-- **Empty-message greeting trick** — When the frontend sends `{"message": ""}`, the server replaces it with a prompt that tells Claude to call `get_state` and greet the user. This triggers the opening greeting without the user having to say anything.
-- **SSE format** — Each event is `data: {JSON}\n\n`. Three event types: `text` (streaming content), `done` (stream complete), `error` (something broke).
-- **SDK session ID capture** — On the first successful exchange, the `ResultMessage` contains the SDK's internal session ID. We persist this to Supabase so future requests can use `resume=`.
-- **Error recovery** — On exception, the broken client is removed via `session_manager.remove_client()`. The next request will create a fresh one.
-- **`X-Accel-Buffering: no`** — Tells nginx (if present) not to buffer SSE responses.
-- **`load_dotenv()` before imports** — Must run before the `tarini.db` import since `db/client.py` reads `SUPABASE_URL` from environment.
+```
+                    asyncio.Queue
+┌─────────────┐       ┌───┐       ┌──────────────────────────┐
+│  _run_chat   │──put──│ Q │──get──│ _stream_with_keepalives  │──yield──> HTTP SSE
+│  (bg task)   │       └───┘       │  (async generator)       │
+└─────────────┘                    │  2s timeout → keepalive  │
+                                   └──────────────────────────┘
+```
+
+1. `_stream_with_keepalives()` yields SSE events to the HTTP response
+2. `_run_chat()` (background task) iterates `session_manager.chat()` and puts events into a Queue
+3. The SSE generator drains the queue with `asyncio.wait()` timeout for 2-second keepalive pings
+4. On `"done"` or `"error"` event, SSE generator breaks and cancels the `_run_chat` task in its `finally` block
 
 ---
 
-## 11. Frontend Setup
+## 6. Frontend — Next.js
 
-### 11.1 Project Scaffold
+### 6.1 Configuration Files
 
-If you used `create-next-app` in Section 3.5, you already have the scaffolding. Here are the key configuration files:
-
-### `frontend/package.json`
+#### `frontend/package.json`
 
 ```json
 {
@@ -1067,21 +1149,9 @@ If you used `create-next-app` in Section 3.5, you already have the scaffolding. 
 }
 ```
 
-### `frontend/postcss.config.mjs`
+#### `frontend/next.config.ts`
 
-```js
-const config = {
-  plugins: {
-    "@tailwindcss/postcss": {},
-  },
-};
-
-export default config;
-```
-
-### `frontend/next.config.ts`
-
-```ts
+```typescript
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -1091,124 +1161,24 @@ const nextConfig: NextConfig = {
 export default nextConfig;
 ```
 
-### `frontend/tsconfig.json`
+#### Environment variables (set in Vercel dashboard)
 
-```json
-{
-  "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./*"] }
-  },
-  "include": [
-    "next-env.d.ts", "**/*.ts", "**/*.tsx",
-    ".next/types/**/*.ts", ".next/dev/types/**/*.ts", "**/*.mts"
-  ],
-  "exclude": ["node_modules"]
-}
-```
-
-### `frontend/app/globals.css`
-
-```css
-@import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
-```
-
-### `frontend/app/layout.tsx`
-
-```tsx
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Tarini — RentOK Property Onboarding",
-  description: "AI-powered property onboarding specialist",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
-    </html>
-  );
-}
-```
-
-### `frontend/app/page.tsx`
-
-```tsx
-import ChatUI from "./components/ChatUI";
-
-export default function Home() {
-  return <ChatUI />;
-}
-```
+| Var | Description |
+|---|---|
+| `BACKEND_URL` | Full URL of the Render backend (e.g., `https://tarini-backend-d79e.onrender.com`) |
 
 ---
 
-## 12. Frontend API Proxies
+### 6.2 API Routes (Proxy)
 
-### 12.1 Session Creation (`frontend/app/api/session/route.ts`)
+The frontend proxies requests to the backend. This avoids CORS issues and keeps the backend URL private.
 
-Creates a new session by forwarding to the backend:
+#### `frontend/app/api/session/route.ts`
 
-```ts
+```typescript
+// Edge Runtime: no 10-second function timeout — needed when Render cold-starts (30-90s).
+export const runtime = "edge";
+
 import { NextResponse } from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
@@ -1231,11 +1201,13 @@ export async function POST() {
 }
 ```
 
-### 12.2 Chat SSE Proxy (`frontend/app/api/chat/route.ts`)
+#### `frontend/app/api/chat/route.ts`
 
-Proxies the SSE stream from the backend — the key trick is passing `res.body` (a `ReadableStream`) directly as the response body:
+```typescript
+// Edge Runtime: no function timeout — required for SSE streams that can last 30-60 seconds.
+// fetch() and ReadableStream are natively supported in the Edge Runtime.
+export const runtime = "edge";
 
-```ts
 import { NextRequest } from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
@@ -1272,724 +1244,247 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-**Why proxy?** Same-origin requests (no CORS), natural auth injection point, clean separation between frontend and backend URLs.
+**Why Edge Runtime?** Next.js serverless functions have a 10-second timeout by default. SSE streams can last 30-60 seconds (Claude thinking + tool execution). Edge Runtime has no function timeout.
 
 ---
 
-## 13. Frontend Chat UI
+### 6.3 Chat UI Component
 
-### `frontend/app/components/ChatUI.tsx`
+#### `frontend/app/page.tsx`
 
-The entire chat interface — 323 lines covering session management, SSE streaming, message state, and rendering:
+```typescript
+import ChatUI from "./components/ChatUI";
 
-```tsx
-"use client";
-
-import { useEffect, useRef, useState } from "react";
-
-// ── Types ──────────────────────────────────────────────────────────────────
-
-interface Message {
-  id: string;
-  role: "user" | "tarini";
-  text: string;
-  streaming?: boolean;
+export default function Home() {
+  return <ChatUI />;
 }
+```
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+#### `frontend/app/components/ChatUI.tsx`
 
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
+This is a 377-line React component. Key behaviors:
 
-async function createSession(): Promise<string> {
-  const res = await fetch("/api/session", { method: "POST" });
-  if (!res.ok) throw new Error("Failed to create session");
-  const { session_id } = await res.json();
-  return session_id;
-}
+- **Session init:** On mount, checks `localStorage` for `tarini_session_id`. Creates new session if missing.
+- **Opening greeting:** Sends empty message (`sendMessage("")`) when session connects. Backend replaces with `INITIAL_PROMPT`.
+- **SSE streaming:** `streamChat()` async generator reads the response body, parses `data:` lines, yields text chunks.
+- **Abort handling:** `AbortController` per send, cancelled on unmount or new session.
+- **Auto-scroll:** Scrolls to bottom on new messages.
+- **Textarea auto-resize:** Grows up to 160px based on content.
+- **New session:** Aborts in-flight stream, clears localStorage, creates fresh session.
+- **UI:** Dark theme (zinc-950), amber accents, message bubbles with avatars, typing indicator (bouncing dots), streaming cursor.
 
-async function* streamChat(
-  session_id: string,
-  message: string
-): AsyncGenerator<string> {
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session_id, message }),
-  });
+The full source is in the file at `frontend/app/components/ChatUI.tsx`.
 
-  if (!res.body) return;
+---
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
+### 6.4 Layout & Styles
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
+#### `frontend/app/layout.tsx`
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
+```typescript
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
 
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const raw = line.slice(6).trim();
-      if (!raw || raw === "[DONE]") continue;
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 
-      try {
-        const event = JSON.parse(raw);
-        if (event.type === "text" && event.text) {
-          yield event.text;
-        }
-      } catch {
-        // malformed SSE line — skip
-      }
-    }
-  }
-}
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
-// ── Component ──────────────────────────────────────────────────────────────
+export const metadata: Metadata = {
+  title: "Tarini — RentOK Property Onboarding",
+  description: "AI-powered property onboarding specialist",
+};
 
-export default function ChatUI() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  // ── Session init ──────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    async function init() {
-      let sid = localStorage.getItem("tarini_session_id");
-
-      if (!sid) {
-        try {
-          sid = await createSession();
-          localStorage.setItem("tarini_session_id", sid);
-        } catch {
-          setMessages([
-            {
-              id: uid(),
-              role: "tarini",
-              text: "Sorry, I couldn't connect right now. Please check the backend is running and refresh.",
-            },
-          ]);
-          return;
-        }
-      }
-
-      setSessionId(sid);
-    }
-    init();
-  }, []);
-
-  // ── Trigger opening greeting once session is ready ────────────────────────
-
-  useEffect(() => {
-    if (!sessionId) return;
-    sendMessage(""); // empty string triggers the opening greeting
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
-
-  // ── Auto-scroll ───────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // ── Send message ──────────────────────────────────────────────────────────
-
-  async function sendMessage(text: string) {
-    if (!sessionId || isStreaming) return;
-
-    setIsStreaming(true);
-
-    // Add user message (skip for the silent opening prompt)
-    if (text.trim()) {
-      setMessages((prev) => [
-        ...prev,
-        { id: uid(), role: "user", text: text.trim() },
-      ]);
-    }
-
-    // Add a streaming Tarini message
-    const streamId = uid();
-    setMessages((prev) => [
-      ...prev,
-      { id: streamId, role: "tarini", text: "", streaming: true },
-    ]);
-
-    try {
-      for await (const chunk of streamChat(sessionId, text)) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === streamId ? { ...m, text: m.text + chunk } : m
-          )
-        );
-      }
-    } catch (err) {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === streamId
-            ? {
-                ...m,
-                text: "Sorry, something went wrong. Please try again.",
-                streaming: false,
-              }
-            : m
-        )
-      );
-    } finally {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === streamId ? { ...m, streaming: false } : m
-        )
-      );
-      setIsStreaming(false);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text || isStreaming) return;
-    setInput("");
-    sendMessage(text);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e as unknown as React.FormEvent);
-    }
-  }
-
-  function handleNewSession() {
-    if (isStreaming) return;
-    localStorage.removeItem("tarini_session_id");
-    setMessages([]);
-    setSessionId(null);
-    setInput("");
-    // Re-init
-    createSession().then((sid) => {
-      localStorage.setItem("tarini_session_id", sid);
-      setSessionId(sid);
-    });
-  }
-
-  // ── Render ────────────────────────────────────────────────────────────────
-
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-zinc-950 font-bold text-sm">
-            T
-          </div>
-          <div>
-            <h1 className="font-semibold text-zinc-100 leading-tight">Tarini</h1>
-            <p className="text-xs text-zinc-500">RentOK Property Onboarding</p>
-          </div>
-        </div>
-        <button
-          onClick={handleNewSession}
-          disabled={isStreaming}
-          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-40"
-        >
-          New session
-        </button>
-      </header>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-        {messages.length === 0 && (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-zinc-600 text-sm">Connecting to Tarini…</p>
-          </div>
-        )}
-
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
-        ))}
-
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input */}
-      <form
-        onSubmit={handleSubmit}
-        className="border-t border-zinc-800 px-4 py-4"
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="flex items-end gap-3 max-w-3xl mx-auto">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isStreaming || !sessionId}
-            placeholder={isStreaming ? "Tarini is responding…" : "Type your message…"}
-            rows={1}
-            className="flex-1 resize-none bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors disabled:opacity-40 max-h-40 overflow-y-auto"
-            style={{ fieldSizing: "content" } as React.CSSProperties}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isStreaming || !sessionId}
-            className="w-10 h-10 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:bg-zinc-700 disabled:opacity-50 flex items-center justify-center transition-colors flex-shrink-0"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-4 h-4 text-zinc-950"
-            >
-              <path d="M3.105 2.289a.75.75 0 00-.826.95l1.414 4.925A1.5 1.5 0 005.135 9.25h6.115a.75.75 0 010 1.5H5.135a1.5 1.5 0 00-1.442 1.086l-1.414 4.926a.75.75 0 00.826.95 28.896 28.896 0 0015.293-7.154.75.75 0 000-1.115A28.897 28.897 0 003.105 2.289z" />
-            </svg>
-          </button>
-        </div>
-        <p className="text-center text-xs text-zinc-700 mt-2">
-          Shift+Enter for new line · Enter to send
-        </p>
-      </form>
-    </div>
-  );
-}
-
-// ── Message Bubble ─────────────────────────────────────────────────────────
-
-function MessageBubble({ message }: { message: Message }) {
-  const isTarini = message.role === "tarini";
-
-  return (
-    <div
-      className={`flex gap-3 max-w-3xl mx-auto ${isTarini ? "" : "flex-row-reverse"}`}
-    >
-      {/* Avatar */}
-      {isTarini ? (
-        <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-zinc-950 font-bold text-xs flex-shrink-0 mt-0.5">
-          T
-        </div>
-      ) : (
-        <div className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center text-zinc-300 text-xs flex-shrink-0 mt-0.5">
-          You
-        </div>
-      )}
-
-      {/* Bubble */}
-      <div
-        className={`rounded-2xl px-4 py-3 text-sm leading-relaxed max-w-[85%] ${
-          isTarini
-            ? "bg-zinc-900 text-zinc-100 rounded-tl-sm"
-            : "bg-amber-500 text-zinc-950 rounded-tr-sm"
-        }`}
-      >
-        {message.text ? (
-          <span className="whitespace-pre-wrap">{message.text}</span>
-        ) : (
-          <span className="inline-flex gap-1 items-center py-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 animate-bounce [animation-delay:0ms]" />
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 animate-bounce [animation-delay:150ms]" />
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 animate-bounce [animation-delay:300ms]" />
-          </span>
-        )}
-        {message.streaming && message.text && (
-          <span className="inline-block w-0.5 h-3.5 bg-amber-400 ml-0.5 animate-pulse" />
-        )}
-      </div>
-    </div>
+        {children}
+      </body>
+    </html>
   );
 }
 ```
 
-**Section-by-section walkthrough:**
+#### `frontend/app/globals.css`
 
-1. **Types** — `Message` interface: `id` (unique string), `role` (user/tarini), `text` (content), `streaming?` (boolean for showing cursor).
+```css
+@import "tailwindcss";
 
-2. **`createSession()`** — Calls `/api/session` (our Next.js proxy). Returns the Supabase UUID.
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
 
-3. **`streamChat()`** — An async generator that:
-   - POSTs to `/api/chat` with session_id + message
-   - Reads the SSE stream chunk by chunk via `ReadableStream`
-   - Parses `data: {JSON}` lines from the buffer
-   - Yields text content for each `type: "text"` event
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
 
-4. **Session init effect** — On mount, checks `localStorage.tarini_session_id`. Creates new session if missing. Stores session ID in state.
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
 
-5. **Opening greeting effect** — When `sessionId` is set, calls `sendMessage("")` which triggers the backend's greeting logic.
-
-6. **`sendMessage()`** — Core function:
-   - Sets `isStreaming = true`
-   - Adds user bubble (unless empty/silent greeting)
-   - Adds empty Tarini bubble with `streaming: true`
-   - Iterates over `streamChat()` generator, appending each chunk to the Tarini bubble
-   - On error: replaces Tarini bubble text with error message
-   - Finally: marks `streaming: false`, re-enables input
-
-7. **Keyboard handling** — Enter submits. Shift+Enter inserts newline.
-
-8. **New session** — Clears `localStorage`, resets state, creates fresh session.
-
-9. **MessageBubble** — Tarini messages (left, dark background, amber avatar "T") vs user messages (right, amber background). Empty text shows bouncing dots animation. `streaming: true` with text shows a pulsing cursor.
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+```
 
 ---
 
-## 14. Running the System
+## 7. Deployment
 
-### Two-Terminal Setup
+### 7.1 Backend on Render
 
-```bash
-# Terminal 1: Backend
-cd tarini-agent/backend
-source venv/bin/activate
-uvicorn server:app --reload --port 8000
-```
+1. Create a new **Web Service** on Render
+2. Connect to your GitHub repo
+3. Set:
+   - **Root directory:** `backend`
+   - **Runtime:** Python
+   - **Build command:** `pip install -r requirements.txt`
+   - **Start command:** `uvicorn server:app --host 0.0.0.0 --port $PORT`
+   - **Health check path:** `/health`
+4. Add environment variables:
+   - `ANTHROPIC_API_KEY`
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_KEY`
+   - `PYTHON_VERSION` = `3.12.0`
+   - `DEPLOY_TRIGGER` = `1` (change this value to force redeployments)
+5. Choose Singapore region (closest to Indian users)
 
-```bash
-# Terminal 2: Frontend
-cd tarini-agent/frontend
-npm run dev
-```
+**Render free tier notes:**
+- 512MB RAM — works fine with direct Anthropic API (~80MB usage)
+- Spins down after ~15 min idle. Cold start takes 20-30s.
+- Auto-deploy from git push does NOT reliably trigger. Change `DEPLOY_TRIGGER` env var to force redeploy.
+- Python version: Must be pinned via BOTH `runtime.txt` AND `PYTHON_VERSION` env var. Without both, Render may default to Python 3.14+ which causes `anyio` issues.
 
-### What to Expect
+### 7.2 Frontend on Vercel
 
-1. Open `http://localhost:3000` in your browser
-2. You'll see "Connecting to Tarini…" briefly
-3. After 10-50 seconds (cold start), Tarini's greeting appears
-4. Type a message and hit Enter — Tarini responds with streaming text
+1. Connect GitHub repo to Vercel
+2. Set **Root Directory** to `frontend`
+3. Add environment variable:
+   - `BACKEND_URL` = `https://your-backend.onrender.com`
+4. Deploy — Vercel auto-detects Next.js
 
-**First request is slow** — The Claude Agent SDK starts a CLI subprocess, boots the MCP server, makes an API call with the 353-line system prompt, executes `get_state`, and generates a response. Subsequent messages are much faster (~3-8 seconds).
-
----
-
-## 15. Testing Each Layer
-
-### 15.1 Database Test
-
-In Supabase Dashboard → SQL Editor:
-
-```sql
--- Create a test session
-INSERT INTO sessions DEFAULT VALUES RETURNING id;
-
--- Check it exists
-SELECT * FROM sessions;
-
--- Clean up
-DELETE FROM sessions WHERE state = '{}';
-```
-
-### 15.2 Backend API Tests (curl)
-
-```bash
-# Create a session
-curl -X POST http://localhost:8000/sessions
-# → {"session_id": "uuid-here"}
-
-# Get session state
-curl http://localhost:8000/sessions/<uuid>
-# → {"id": "...", "stage": "intro", "state": {}, ...}
-
-# Chat (SSE stream) — watch streaming events
-curl -N http://localhost:8000/sessions/<uuid>/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": ""}'
-# → data: {"type": "text", "text": "Hi! I'm Tarini..."}
-# → data: {"type": "done"}
-
-# Health check
-curl http://localhost:8000/health
-# → {"status": "ok"}
-```
-
-### 15.3 Frontend SSE Test
-
-Open Chrome DevTools → Network tab → filter by "Fetch/XHR":
-- Look for the `/api/chat` request
-- Check the "EventStream" tab to see individual SSE events
-- Verify `type: "text"` events contain Tarini's streaming response
+**Why the API proxy?** The frontend Next.js API routes (`/api/session`, `/api/chat`) proxy to the backend. This:
+- Avoids CORS issues
+- Keeps the backend URL private (not exposed to the browser)
+- Allows Edge Runtime for no function timeout (needed for long SSE streams)
 
 ---
 
-## 16. Troubleshooting
+## 8. Data Flow — End to End
 
-### CORS Errors
-
-If you see CORS errors in the browser console, make sure:
-- The backend's `allow_origins` includes your frontend URL (or `["*"]` for development)
-- You're using the Next.js API proxy routes (not calling the backend directly from the browser)
-
-### Missing API Key
+### New Session Flow
 
 ```
-Error: ANTHROPIC_API_KEY not set
+1. Browser loads page
+2. ChatUI useEffect → POST /api/session → Vercel Edge → POST backend/sessions → Supabase INSERT
+3. Returns session_id → stored in localStorage
+4. ChatUI useEffect(sessionId) → sendMessage("")
+5. POST /api/chat {session_id, message: ""} → Vercel Edge → POST backend/sessions/{id}/chat
+6. Backend: empty message → replaced with INITIAL_PROMPT
+7. Backend: session_manager.chat()
+   a. Cache miss → db.load_messages() → empty []
+   b. Add user message to history
+   c. stream_chat() round 0:
+      - Claude calls get_state tool → reads session from Supabase
+      - Gets {stage: "intro", state: {}} → fresh session
+      - Claude responds with greeting text
+   d. Text chunks → yield {type: "text"} events → SSE
+   e. Done → save_messages() to Supabase → yield {type: "done"}
+8. Browser: streamChat() yields text chunks → MessageBubble updates
 ```
-→ Check `backend/.env` exists and has the correct key. Make sure `load_dotenv()` runs before any imports that need the key.
 
-### SSE Stream Closes Immediately
-
-This usually means the backend crashed during response generation. Check the backend terminal for Python tracebacks. Common causes:
-- Missing environment variables
-- Supabase connection issues (wrong URL or key)
-- Claude SDK authentication failure
-
-### Import Errors (`ModuleNotFoundError`)
+### Returning Session Flow (after server restart)
 
 ```
-ModuleNotFoundError: No module named 'claude_agent_sdk'
+1. Browser loads page → finds session_id in localStorage
+2. sendMessage("") triggers opening
+3. session_manager.chat() → cache miss → db.load_messages() → loaded from Supabase
+4. history restored → Claude has full conversation context
+5. Claude calls get_state → sees saved property data → resumes naturally
 ```
-→ Make sure you're in the virtual environment (`source venv/bin/activate`) and have installed requirements (`pip install -r requirements.txt`).
 
-### Frontend Shows "Connecting to Tarini…" Forever
+### Tool Use Flow
 
-1. Check the backend is running (`curl http://localhost:8000/health`)
-2. Check `.env.local` has `BACKEND_URL=http://localhost:8000`
-3. Open browser DevTools → Console for error messages
-4. Try clearing localStorage: `localStorage.removeItem("tarini_session_id")`
-
-### Slow First Response (30-60 Seconds)
-
-Normal for the first message. The Claude Agent SDK boots a CLI subprocess, initializes the MCP server, sends the 353-line prompt to Claude, Claude calls `get_state`, then generates the greeting. Subsequent messages are 3-8 seconds.
-
-### Session Not Resuming
-
-Check that `sdk_session_id` is being persisted. In Supabase Dashboard:
-```sql
-SELECT id, sdk_session_id FROM sessions ORDER BY created_at DESC LIMIT 5;
 ```
-If `sdk_session_id` is NULL after the first exchange, there may be an error in the `captured_sdk_id` logic in `server.py`.
+1. User says "I have a PG in Koramangala"
+2. Claude: "Great, a PG in Koramangala! Can I save that?" → yields text
+3. User says "Yes"
+4. Claude calls update_state tool:
+   a. stream_chat pauses text streaming
+   b. Executes update_state(session_id, {property_type: "pg", property_location: "Koramangala"})
+   c. _deep_merge into existing state
+   d. Supabase RPC update_session_state_atomic
+   e. Returns {saved: true, state_version: 2}
+5. Claude sees tool result, generates confirmation text
+6. stream_chat continues to next round → yields confirmation text → done
+```
 
 ---
 
-## Appendix A: CLI Development Tool
+## 9. Key Gotchas & Lessons Learned
 
-### `backend/main.py`
+### 1. Task Cancellation Bug (Critical)
 
-A terminal-based chat interface for rapid system prompt iteration — no frontend needed:
+The SSE generator (`_stream_with_keepalives`) cancels the `_run_chat` task immediately after receiving a `"done"` event. Any code placed **after** `yield event` in the `session_manager.chat()` async generator will never execute.
 
+**Wrong:**
 ```python
-"""
-Tarini CLI — development entry point for rapid testing and system prompt iteration.
-
-Usage:
-  cd backend
-  python main.py
-
-On first run: creates a new Supabase session and saves the session ID to .tarini_session.
-On subsequent runs: loads the session ID and resumes the conversation.
-
-To start fresh: delete the .tarini_session file.
-"""
-import asyncio
-import json
-import os
-import sys
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-load_dotenv()
-
-from claude_agent_sdk import AssistantMessage, ClaudeSDKClient, ResultMessage, TextBlock
-
-from tarini.agent import build_options
-from tarini.db import client as db
-
-SESSION_FILE = Path(".tarini_session")
-INITIAL_PROMPT = (
-    "Session started. Call get_state immediately to check current progress, "
-    "then greet the user appropriately based on their stage and what has been saved."
-)
-
-
-async def load_or_create_session() -> dict:
-    """Load session from file, or create a new one and save the ID."""
-    if SESSION_FILE.exists():
-        session_id = SESSION_FILE.read_text().strip()
-        session = await db.get_session(session_id)
-        if session:
-            print(f"[Resuming session: {session_id[:8]}...]")
-            return session
-        else:
-            print("[Session not found in database — starting fresh]")
-
-    session = await db.create_session()
-    SESSION_FILE.write_text(session["id"])
-    print(f"[New session: {session['id'][:8]}...]")
-    return session
-
-
-def print_tarini(text: str) -> None:
-    """Print Tarini's response with a label."""
-    print(f"\nTarini: {text}", end="", flush=True)
-
-
-async def run_turn(
-    client: ClaudeSDKClient,
-    message: str,
-    session: dict,
-) -> str | None:
-    """
-    Send a message, stream the response, and return the SDK session_id
-    from the ResultMessage (if received for the first time).
-    """
-    await client.query(message)
-    captured_sdk_id: str | None = None
-    printed = False
-
-    async for msg in client.receive_response():
-        if isinstance(msg, AssistantMessage):
-            for block in msg.content:
-                if isinstance(block, TextBlock) and block.text:
-                    if not printed:
-                        print()  # newline before first chunk
-                        printed = True
-                    print_tarini(block.text)
-        elif isinstance(msg, ResultMessage):
-            captured_sdk_id = msg.session_id
-
-    if printed:
-        print()  # trailing newline
-
-    return captured_sdk_id
-
-
-async def main() -> None:
-    session = await load_or_create_session()
-    session_id = session["id"]
-    sdk_session_id = session.get("sdk_session_id") or None
-
-    options = build_options(session_id=session_id, sdk_session_id=sdk_session_id)
-
-    print("\n" + "=" * 60)
-    print("  Tarini — RentOK Property Onboarding")
-    print("  Type 'exit' or 'quit' to end. 'new' to start over.")
-    print("=" * 60)
-
-    async with ClaudeSDKClient(options=options) as client:
-        # Opening — Tarini checks state and greets
-        sdk_id = await run_turn(client, INITIAL_PROMPT, session)
-        if sdk_id and not sdk_session_id:
-            await db.update_sdk_session_id(session_id, sdk_id)
-            sdk_session_id = sdk_id
-
-        # Chat loop
-        while True:
-            try:
-                user_input = input("\nYou: ").strip()
-            except (EOFError, KeyboardInterrupt):
-                print("\n\nGoodbye!")
-                break
-
-            if not user_input:
-                continue
-
-            if user_input.lower() in ("exit", "quit", "bye"):
-                print("\nTarini: Your progress is saved. See you next time!")
-                break
-
-            if user_input.lower() == "new":
-                confirm = input("Start over? This will clear all saved data. (yes/no): ").strip()
-                if confirm.lower() == "yes":
-                    SESSION_FILE.unlink(missing_ok=True)
-                    print("Starting fresh. Please restart the CLI.")
-                    break
-                else:
-                    print("Okay, continuing where we left off.")
-                    continue
-
-            await run_turn(client, user_input, session)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+async for event in stream_chat(session_id, user_message, history):
+    yield event
+# This never runs — task is cancelled after yielding "done"
+await db.save_messages(session_id, history)
 ```
 
-**Usage:**
-
-```bash
-cd backend
-source venv/bin/activate
-python main.py
+**Right:**
+```python
+async for event in stream_chat(session_id, user_message, history):
+    if event.get("type") == "done":
+        await db.save_messages(session_id, history)  # Save BEFORE yield
+    yield event
 ```
 
-Session state is saved to `.tarini_session` (gitignored). Delete this file to start fresh.
+### 2. Anthropic SDK Content Serialization
 
----
+Anthropic's streaming SDK returns pydantic models (`TextBlock`, `ToolUseBlock`), not plain dicts. These can't be stored directly in Supabase JSONB. Use `_serialize_content()` to convert them.
 
-## Appendix B: Deployment
+### 3. Deep Merge Replaces Arrays
 
-### Backend → Railway
+`_deep_merge` overwrites lists entirely (doesn't append). When the agent modifies `floors`, `units`, or `packages`, it must send the **complete** array, not just the changed element. This is by design — it allows deletions.
 
-```bash
-cd backend
-```
+### 4. Render Free Tier Python Version
 
-Create `Procfile`:
-```
-web: uvicorn server:app --host 0.0.0.0 --port $PORT
-```
+Without **both** `runtime.txt` and `PYTHON_VERSION` env var, Render may default to Python 3.14.3, which causes `anyio` compatibility issues. Pin to `3.12.0` in both places.
 
-Deploy:
-```bash
-railway login
-railway init
-railway up
-```
+### 5. Render Auto-Deploy
 
-Set environment variables in Railway dashboard:
-- `ANTHROPIC_API_KEY`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_KEY`
+Git push auto-deploy doesn't reliably trigger on Render. Use the `DEPLOY_TRIGGER` env var trick: change its value via the Render dashboard or API to force a redeploy.
 
-### Frontend → Vercel
+### 6. Edge Runtime for SSE
 
-```bash
-cd frontend
-vercel deploy
-```
+Next.js serverless functions timeout at 10 seconds. SSE streams can last 30-60s. Use `export const runtime = "edge"` in API routes to remove the timeout.
 
-Set environment variable in Vercel dashboard:
-- `BACKEND_URL` → your Railway URL (e.g., `https://tarini-backend.up.railway.app`)
+### 7. localStorage Session Persistence
 
-**Important:** Tighten CORS in production. Change `allow_origins=["*"]` to `allow_origins=["https://your-vercel-url.vercel.app"]`.
-
----
-
-## Appendix C: File Reference
-
-| File | Lines | Purpose |
-|------|-------|---------|
-| `backend/server.py` | 172 | FastAPI app — 4 endpoints, SSE streaming |
-| `backend/main.py` | 136 | CLI entry point for development |
-| `backend/requirements.txt` | 6 | Python dependencies |
-| `backend/Procfile` | 1 | Railway deployment command |
-| `backend/.env` | 3 | Environment variables (gitignored) |
-| `backend/.gitignore` | 9 | Git ignore rules |
-| `backend/tarini/__init__.py` | 0 | Package marker |
-| `backend/tarini/agent.py` | 43 | ClaudeAgentOptions factory |
-| `backend/tarini/session_manager.py` | 95 | Per-session client lifecycle + dual locks |
-| `backend/tarini/prompts/__init__.py` | 8 | System prompt loader |
-| `backend/tarini/prompts/system_prompt.md` | 353 | Tarini's character + expertise + rules |
-| `backend/tarini/tools/__init__.py` | 13 | MCP server factory |
-| `backend/tarini/tools/state.py` | 186 | 3 MCP tools + deep merge |
-| `backend/tarini/db/__init__.py` | 0 | Package marker |
-| `backend/tarini/db/schema.sql` | 48 | Supabase table + indexes + trigger |
-| `backend/tarini/db/client.py` | 121 | Supabase client + async wrappers |
-| `frontend/package.json` | 27 | Next.js project config |
-| `frontend/next.config.ts` | 8 | Next.js configuration |
-| `frontend/tsconfig.json` | 35 | TypeScript configuration |
-| `frontend/postcss.config.mjs` | 8 | Tailwind 4 PostCSS config |
-| `frontend/.env.local` | 1 | Backend URL |
-| `frontend/app/layout.tsx` | 35 | Root layout — fonts, metadata |
-| `frontend/app/page.tsx` | 5 | Root page — renders ChatUI |
-| `frontend/app/globals.css` | 27 | Tailwind 4 + theme variables |
-| `frontend/app/components/ChatUI.tsx` | 323 | Full chat interface + SSE streaming |
-| `frontend/app/api/session/route.ts` | 21 | Session creation proxy |
-| `frontend/app/api/chat/route.ts` | 35 | SSE stream proxy |
-| **Total** | **~1,210** | |
+The frontend stores `tarini_session_id` in `localStorage`. If a user clears their browser data, they lose their session reference (though the data still exists in Supabase). The "New session" button explicitly clears this.

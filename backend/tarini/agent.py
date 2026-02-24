@@ -17,6 +17,23 @@ logger = logging.getLogger(__name__)
 
 MODEL = "claude-sonnet-4-20250514"
 MAX_TOOL_ROUNDS = 10  # safety limit to prevent infinite tool loops
+_MAX_API_HISTORY = 20  # ~5 tool-use turns of context for the API call
+
+
+# ---------------------------------------------------------------------------
+# Sliding window — keeps API costs bounded
+# ---------------------------------------------------------------------------
+
+def _trim_history_for_api(history: list[dict]) -> list[dict]:
+    """Return a trimmed copy of history for the API call.
+
+    The full history stays intact in SessionManager for Supabase persistence.
+    get_state provides all captured property data, so old conversation turns
+    are redundant — the state IS the memory.
+    """
+    if len(history) <= _MAX_API_HISTORY:
+        return history
+    return history[-_MAX_API_HISTORY:]
 
 
 async def stream_chat(
@@ -42,9 +59,12 @@ async def stream_chat(
     history.append({"role": "user", "content": user_message})
 
     for _round in range(MAX_TOOL_ROUNDS):
+        # Trim history for the API call (full history stays intact for persistence)
+        api_history = _trim_history_for_api(history)
+
         logger.info(
-            "[stream_chat] round %d for session %s (%d messages)",
-            _round, session_id, len(history),
+            "[stream_chat] round %d for session %s (%d messages, %d sent to API)",
+            _round, session_id, len(history), len(api_history),
         )
 
         # Stream the API response
@@ -55,8 +75,9 @@ async def stream_chat(
             model=MODEL,
             max_tokens=4096,
             system=system_prompt,
-            messages=history,
+            messages=api_history,
             tools=TOOL_DEFINITIONS,
+            cache_control={"type": "ephemeral"},
         ) as stream:
             async for event in stream:
                 if event.type == "content_block_delta":
@@ -67,6 +88,9 @@ async def stream_chat(
 
             # Get the final message to check for tool use
             final_message = await stream.get_final_message()
+
+        # Log token usage for cost tracking
+        _log_usage(session_id, _round, final_message)
 
         # Record the assistant's full response in history (serialised to plain dicts
         # so the history is JSON-storable in Supabase)
@@ -113,6 +137,25 @@ async def stream_chat(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _log_usage(session_id: str, round_num: int, message) -> None:
+    """Log token usage from the API response for cost tracking."""
+    try:
+        usage = message.usage
+        cache_read = getattr(usage, "cache_read_input_tokens", 0)
+        cache_write = getattr(usage, "cache_creation_input_tokens", 0)
+        logger.info(
+            "[stream_chat] tokens session=%s round=%d | "
+            "input=%d cache_read=%d cache_write=%d output=%d",
+            session_id, round_num,
+            usage.input_tokens,
+            cache_read,
+            cache_write,
+            usage.output_tokens,
+        )
+    except Exception:
+        logger.debug("[stream_chat] could not read usage for session %s", session_id)
+
 
 def _serialize_content(content) -> list[dict]:
     """Convert Anthropic SDK content blocks to plain JSON-serialisable dicts."""

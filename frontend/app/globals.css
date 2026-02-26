@@ -1,8 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+
+  /* Tarini Component Design System */
+  --tarini-amber: #f59e0b;
+  --tarini-amber-soft: rgba(245, 158, 11, 0.15);
+  --tarini-emerald: #10b981;
+  --tarini-emerald-soft: rgba(16, 185, 129, 0.15);
+  --tarini-orange: #f97316;
+  --tarini-orange-soft: rgba(249, 115, 22, 0.1);
+  --tarini-blue: #60a5fa;
+  --tarini-surface: rgba(39, 39, 42, 0.4);
+  --tarini-border: rgb(39, 39, 42);
+  --tarini-radius: 0.75rem;
 }
 
 @theme inline {
@@ -12,15 +24,62 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+}
+
+/* Smooth scrolling for chat messages */
+.overflow-y-auto {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(63, 63, 70, 0.5) transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(63, 63, 70, 0.5);
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(63, 63, 70, 0.8);
+}
+
+/* Animation for component entrance */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Pulse animation for streaming cursor */
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Touch-friendly tap targets */
+@media (hover: none) {
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }

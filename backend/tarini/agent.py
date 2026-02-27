@@ -226,27 +226,6 @@ async def stream_chat(
                     "stateVersion": version,
                 }
 
-                # Auto-emit DataConfirmationCard for update_state
-                # Extract what was updated from the tool input
-                updates = tool_block.input.get("updates", {})
-                if updates:
-                    fields = []
-                    for key, value in updates.items():
-                        if isinstance(value, (str, int, float, bool)):
-                            fields.append({"label": key, "value": str(value)})
-                        elif isinstance(value, list):
-                            fields.append({"label": key, "value": f"{len(value)} items"})
-
-                    if fields:
-                        yield {
-                            "type": "component",
-                            "name": "DataConfirmationCard",
-                            "props": {
-                                "title": "Information Saved",
-                                "fields": fields,
-                            },
-                            "id": f"confirm_{tool_block.id}",
-                        }
 
             # After advance_stage: emit state_snapshot with new stage
             if tool_block.name == "advance_stage" and result_data.get("advanced"):

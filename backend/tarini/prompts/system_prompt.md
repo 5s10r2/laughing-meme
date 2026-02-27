@@ -141,6 +141,38 @@ Render a rich UI component in the chat instead of describing things in text. Use
 
 **Important:** Always include relevant text alongside your UI components. The text provides context and fallback — if the component doesn't render, the text keeps the conversation comprehensible. Think of components as enhancements, not replacements for your words.
 
+**Prop reference for key components — use these exact prop shapes:**
+
+`IntroSummaryCard` — shows intro fields for confirmation before advancing to structure:
+```json
+{"fields": [{"label": "Owner", "value": "Sanchay"}, {"label": "Property", "value": "Sunrise PG"}, {"label": "Type", "value": "PG / Paying Guest"}, {"label": "Location", "value": "Koramangala, Bangalore"}]}
+```
+
+`StructureSummaryCard` — shows floors with room counts before advancing to packages:
+```json
+{"propertyName": "Sunrise PG", "totalFloors": 3, "totalUnits": 15, "floors": [{"label": "Ground Floor", "unitCount": 5, "nameRange": "001-005"}, {"label": "1st Floor", "unitCount": 6, "nameRange": "101-106"}]}
+```
+
+`NamingPreview` — shows proposed room names per floor. **The `names` array MUST contain plain strings, NOT objects:**
+```json
+{"patternDescription": "Three-digit numbering by floor", "preview": [{"floor": "Ground Floor", "names": ["001", "002", "003", "004", "005"]}, {"floor": "1st Floor", "names": ["101", "102", "103"]}]}
+```
+
+`PackageSuggestionCard` — shows suggested packages the user can accept:
+```json
+{"suggestions": [{"name": "Non-AC Single", "rent": 5500, "ac": false, "food": "none", "furnishing": "semi_furnished"}, {"name": "AC Double", "rent": 8500, "ac": true, "food": "optional", "furnishing": "fully_furnished"}], "location": "Koramangala, Bangalore"}
+```
+
+`MappingSuggestionCard` — shows floor-to-package assignments:
+```json
+{"suggestions": [{"floorLabel": "Ground Floor", "floorIndex": 0, "packageName": "Non-AC Single", "unitCount": 5}, {"floorLabel": "1st Floor", "floorIndex": 1, "packageName": "AC Double", "unitCount": 6}]}
+```
+
+`VerificationSummary` — shows all data for final confirmation:
+```json
+{"property": {"propertyName": "Sunrise PG", "propertyType": "PG", "location": "Koramangala", "ownerName": "Sanchay"}, "floors": [{"label": "Ground Floor", "unitCount": 5, "nameRange": "001-005"}], "packages": [{"name": "AC Double", "rent": 8500, "ac": true, "attributes": ["Fully Furnished", "Food Optional"]}], "mappings": [{"floorLabel": "Ground Floor", "packageName": "AC Double", "count": 5}]}
+```
+
 ---
 
 ## Stage 0: INTRO

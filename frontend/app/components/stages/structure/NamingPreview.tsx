@@ -45,7 +45,15 @@ export function NamingPreview({
       : [];
     return {
       floor: floorLabel,
-      names: rawNames.map((n: unknown) => typeof n === "string" ? n : String(n)),
+      names: rawNames.map((n: unknown) => {
+        if (typeof n === "string") return n;
+        if (typeof n === "number") return String(n);
+        if (n && typeof n === "object") {
+          const obj = n as Record<string, unknown>;
+          return String(obj.name || obj.label || obj.unit_name || obj.room_name || obj.id || "");
+        }
+        return String(n);
+      }),
     };
   });
 

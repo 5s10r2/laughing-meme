@@ -2,6 +2,12 @@
 
 import { Check } from "lucide-react";
 
+function formatFieldLabel(key: string): string {
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 interface ConfirmationField {
   label: string;
   value: string;
@@ -16,10 +22,14 @@ interface DataConfirmationCardProps {
 
 export function DataConfirmationCard({ title, fields: rawFields, onSendMessage }: DataConfirmationCardProps) {
   // Defensive: handle dict format {key: value} from backend or missing fields
+  // Normalize labels from snake_case to Title Case
   const fields: ConfirmationField[] = Array.isArray(rawFields)
-    ? rawFields
+    ? rawFields.map((f) => ({ label: formatFieldLabel(f.label), value: f.value }))
     : rawFields && typeof rawFields === "object"
-      ? Object.entries(rawFields).map(([label, value]) => ({ label, value: String(value) }))
+      ? Object.entries(rawFields).map(([label, value]) => ({
+          label: formatFieldLabel(label),
+          value: Array.isArray(value) ? `${value.length} items` : String(value),
+        }))
       : [];
   return (
     <div className="border-l-2 border-emerald-500/40 bg-emerald-950/10 rounded-r-lg px-3.5 py-2.5 my-1.5">

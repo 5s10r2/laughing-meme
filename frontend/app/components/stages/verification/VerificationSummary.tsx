@@ -121,7 +121,12 @@ export function VerificationSummary({
         const f = raw as Record<string, unknown>;
         return {
           label: (f.label || f.floor_label || f.floorLabel || f.floor || f.name || "Floor") as string,
-          unitCount: (f.unitCount || f.unit_count || f.rooms || f.count || 0) as number,
+          unitCount: Number(
+            f.unitCount ?? f.unit_count ?? f.units ?? f.rooms ?? f.room_count ??
+            (Array.isArray(f.unit_names) ? f.unit_names.length : undefined) ??
+            (Array.isArray(f.room_names) ? f.room_names.length : undefined) ??
+            f.count ?? 0
+          ),
           nameRange: (f.nameRange || f.name_range || f.range) as string | undefined,
         };
       })

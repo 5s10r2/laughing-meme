@@ -48,7 +48,6 @@ export function BulkMappingPreview({
     };
   });
 
-  const description = rawDescription || (rest.description as string) || (rest.title as string) || "Bulk mapping operation";
   const totalUnits = rawTotalUnits
     || (rest.total_units as number)
     || (rest.total_rooms as number)
@@ -61,6 +60,7 @@ export function BulkMappingPreview({
     || (rest.floor_count as number)
     || operations.length
     || 0;
+  const description = rawDescription || (rest.description as string) || (rest.title as string) || `Assign ${totalUnits} room${totalUnits !== 1 ? "s" : ""} across ${totalFloors} floor${totalFloors !== 1 ? "s" : ""}`;
 
   return (
     <div className="border border-amber-500/20 bg-amber-500/5 rounded-xl px-4 py-3.5 my-2">
@@ -96,20 +96,28 @@ export function BulkMappingPreview({
 
       <div className="flex gap-2 pt-2 border-t border-amber-500/10">
         <button
-          onClick={() => onSendMessage?.("Yes, confirm this mapping")}
+          onClick={() => {
+            const summary = operations
+              .map(
+                (op) =>
+                  `${op.floorLabel}: ${op.unitCount} room${op.unitCount !== 1 ? "s" : ""} → ${op.packageName}`
+              )
+              .join(", ");
+            onSendMessage?.(`Confirm mapping: ${summary}`);
+          }}
           className={cn(
             "flex-1 px-3 py-1.5 rounded-lg text-xs font-medium",
             "bg-amber-500/20 text-amber-300 border border-amber-500/30",
             "hover:bg-amber-500/30 active:scale-95 transition-all"
           )}
         >
-          Confirm
+          Confirm mapping for {totalUnits} room{totalUnits !== 1 ? "s" : ""} →
         </button>
         <button
           onClick={() => onSendMessage?.("No, I want to change this")}
           className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-zinc-700 hover:bg-zinc-800 active:scale-95 transition-all"
         >
-          Cancel
+          Go back and adjust
         </button>
       </div>
     </div>

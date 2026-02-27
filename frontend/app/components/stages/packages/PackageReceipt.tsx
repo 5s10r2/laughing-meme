@@ -18,7 +18,13 @@ export function PackageReceipt({ name: rawName, rent: rawRent, ac, food, furnish
   const badges: string[] = [];
   if (ac) badges.push("AC");
   if (food) badges.push(food);
-  if (furnishing) badges.push(String(furnishing).replace(/_/g, " "));
+  if (furnishing) {
+    // Normalize: "semi_furnished" → "Semi Furnished"
+    const formatted = String(furnishing)
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+    badges.push(formatted);
+  }
 
   return (
     <div className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-emerald-950/15 border-l-2 border-emerald-500/30 my-1">
@@ -30,7 +36,7 @@ export function PackageReceipt({ name: rawName, rent: rawRent, ac, food, furnish
           <Fan className="w-2.5 h-2.5 text-zinc-500 flex-shrink-0" />
         )}
         <span className="text-xs text-emerald-300/80 truncate">
-          {name}: Rs.{rent.toLocaleString("en-IN")}/mo
+          {name}: ₹{rent.toLocaleString("en-IN")}/mo
         </span>
         {badges.length > 0 && (
           <span className="text-[10px] text-emerald-400/50 flex-shrink-0">

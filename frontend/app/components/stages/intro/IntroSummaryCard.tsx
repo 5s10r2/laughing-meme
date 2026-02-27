@@ -39,27 +39,31 @@ export function IntroSummaryCard({
       <p className="text-[11px] text-zinc-500 font-medium uppercase tracking-wider mb-2.5">
         Property Overview
       </p>
-      <div className="space-y-2">
+      <div className="space-y-0">
         {fields.map((field) => (
-          <div key={field.label} className="flex items-center gap-2">
-            <field.icon className="w-3.5 h-3.5 text-zinc-600 flex-shrink-0" />
-            <span className="text-xs text-zinc-500 w-16 flex-shrink-0">{field.label}</span>
-            <span className="text-xs text-zinc-200 font-medium">{field.value}</span>
+          <div key={field.label} className="flex items-center justify-between py-1.5 border-b border-zinc-800/50 last:border-0">
+            <div className="flex items-center gap-2">
+              <field.icon className="w-3.5 h-3.5 text-zinc-600 flex-shrink-0" />
+              <span className="text-xs text-zinc-500">{field.label}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-zinc-200">{field.value}</span>
+              <button
+                onClick={() => onSendMessage?.(`I want to change the ${field.label.toLowerCase()}, currently '${field.value}'`)}
+                className="text-[11px] text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer"
+              >
+                change
+              </button>
+            </div>
           </div>
         ))}
       </div>
-      <div className="flex gap-2 mt-3 pt-2.5 border-t border-zinc-800">
+      <div className="mt-3 pt-2.5 border-t border-zinc-800">
         <button
-          onClick={() => onSendMessage?.("Looks good, let's continue")}
-          className="flex-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/25 hover:bg-amber-500/25 active:scale-[0.98] transition-all"
+          onClick={() => onSendMessage?.("Looks good, let's continue to structure")}
+          className="w-full px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/25 hover:bg-amber-500/25 active:scale-[0.98] transition-all"
         >
-          Looks good!
-        </button>
-        <button
-          onClick={() => onSendMessage?.("I need to change something")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-zinc-700 hover:bg-zinc-800 active:scale-[0.98] transition-all"
-        >
-          Edit
+          Confirm &amp; continue →
         </button>
       </div>
     </div>

@@ -14,10 +14,21 @@ const TOOL_LABELS: Record<string, string> = {
   update_state: "Saving your information",
   advance_stage: "Moving to next step",
   emit_ui: "Preparing view",
+  validate_property_data: "Validating property data",
+  create_packages: "Creating packages",
+  map_rooms: "Mapping rooms",
+  verify_setup: "Verifying setup",
 };
 
+/** Convert snake_case tool name to Title Case for display */
+function formatToolName(tool: string): string {
+  return tool
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export function ToolActivityIndicator({ tool, status, description }: ToolActivityIndicatorProps) {
-  const label = description || TOOL_LABELS[tool] || `Running ${tool}`;
+  const label = description || TOOL_LABELS[tool] || formatToolName(tool);
 
   return (
     <div

@@ -77,20 +77,27 @@ export function PackageSuggestionCard({
 
       <div className="flex gap-2 pt-2 border-t border-zinc-800">
         <button
-          onClick={() => onSendMessage?.("These suggestions look good, let's use them")}
+          onClick={() => {
+            const summary = finalSuggestions
+              .map((s) => `${s.name}${s.estimatedRent ? ` (${s.estimatedRent})` : ""}`)
+              .join(", ");
+            onSendMessage?.(
+              `Use these ${finalSuggestions.length} packages: ${summary}`
+            );
+          }}
           className={cn(
             "flex-1 px-3 py-1.5 rounded-lg text-xs font-medium",
             "bg-amber-500/15 text-amber-300 border border-amber-500/25",
             "hover:bg-amber-500/25 active:scale-95 transition-all"
           )}
         >
-          Use these
+          Use all {finalSuggestions.length} package{finalSuggestions.length !== 1 ? "s" : ""} →
         </button>
         <button
-          onClick={() => onSendMessage?.("I have different packages in mind")}
+          onClick={() => onSendMessage?.("I want different packages")}
           className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-zinc-700 hover:bg-zinc-800 active:scale-95 transition-all"
         >
-          Customize
+          I want different packages
         </button>
       </div>
     </div>

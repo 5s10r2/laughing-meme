@@ -78,11 +78,12 @@ export function FloorMappingRow({
 
   const mappedCount = units.filter((u) => u.packageId).length;
   const totalCount = units.length;
+  const hasUnmapped = mappedCount < totalCount;
 
   function assignPackage(unitId: string, unitName: string, pkg: PackageOption) {
     setSelectedUnit(null);
     onSendMessage?.(
-      `Assign ${unitName} on ${floorLabel} to ${pkg.name} package`
+      `Assign ${unitName} on ${floorLabel} to ${pkg.name}`
     );
   }
 
@@ -100,40 +101,55 @@ export function FloorMappingRow({
         </span>
       </div>
 
-      <div className="flex flex-wrap gap-1">
-        {units.map((unit) => (
-          <div key={unit.id} className="relative">
-            <button
-              onClick={() =>
-                setSelectedUnit(selectedUnit === unit.id ? null : unit.id)
-              }
-              className={cn(
-                "px-2 py-1 rounded text-[10px] font-medium border transition-all",
-                unit.packageId
-                  ? getPackageColor(unit.packageId, packages)
-                  : "bg-zinc-800/60 text-zinc-500 border-zinc-700 hover:border-zinc-600",
-                selectedUnit === unit.id && "ring-1 ring-amber-400/50"
-              )}
-            >
-              {unit.name}
-            </button>
+      {/* Helper text for unmapped units */}
+      {hasUnmapped && packages.length > 0 && (
+        <p className="text-[11px] text-zinc-500 italic mb-2">
+          Tap a room to assign its package
+        </p>
+      )}
 
-            {/* Package selector dropdown */}
-            {selectedUnit === unit.id && (
-              <div className="absolute top-full left-0 mt-1 z-10 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl p-1 min-w-[120px]">
-                {packages.map((pkg) => (
-                  <button
-                    key={pkg.id}
-                    onClick={() => assignPackage(unit.id, unit.name, pkg)}
-                    className="w-full text-left px-2 py-1.5 rounded text-[10px] text-zinc-300 hover:bg-zinc-700 transition-colors"
-                  >
-                    {pkg.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+      <div className="flex flex-wrap gap-1">
+        {units.map((unit) => {
+          const isUnmapped = !unit.packageId;
+          const isSelected = selectedUnit === unit.id;
+          return (
+            <div key={unit.id} className="relative">
+              <button
+                onClick={() =>
+                  setSelectedUnit(isSelected ? null : unit.id)
+                }
+                className={cn(
+                  "px-2 py-1 rounded text-[10px] font-medium border transition-all",
+                  unit.packageId
+                    ? getPackageColor(unit.packageId, packages)
+                    : "bg-zinc-800/60 text-zinc-500 border-zinc-700 hover:border-zinc-500",
+                  isUnmapped && !isSelected && "border-dashed",
+                  isSelected && "ring-2 ring-amber-400 bg-amber-500/10"
+                )}
+              >
+                {unit.name}
+              </button>
+
+              {/* Package selector dropdown */}
+              {isSelected && (
+                <div className="absolute top-full left-0 mt-1 z-10 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl p-1 min-w-[140px]">
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider px-2 py-1 font-medium">
+                    Assign to:
+                  </p>
+                  {packages.map((pkg) => (
+                    <button
+                      key={pkg.id}
+                      onClick={() => assignPackage(unit.id, unit.name, pkg)}
+                      className="w-full text-left px-2 py-1.5 rounded text-[10px] text-zinc-300 hover:bg-zinc-700 transition-colors"
+                    >
+                      {pkg.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

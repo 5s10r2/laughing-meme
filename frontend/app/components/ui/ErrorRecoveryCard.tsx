@@ -16,8 +16,8 @@ interface ErrorRecoveryCardProps {
 
 export function ErrorRecoveryCard({ message, actions, onSendMessage }: ErrorRecoveryCardProps) {
   const defaultActions: RecoveryAction[] = actions || [
-    { label: "Retry", action: "Please try again" },
-    { label: "Show saved data", action: "What do you have saved so far?" },
+    { label: "Try again", action: "Please try again" },
+    { label: "Show what's saved", action: "What do you have saved so far?" },
   ];
 
   return (

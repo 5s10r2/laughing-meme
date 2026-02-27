@@ -11,9 +11,10 @@ interface DataConfirmationCardProps {
   title: string;
   fields: ConfirmationField[];
   stateVersion?: number;
+  onSendMessage?: (text: string) => void;
 }
 
-export function DataConfirmationCard({ title, fields: rawFields }: DataConfirmationCardProps) {
+export function DataConfirmationCard({ title, fields: rawFields, onSendMessage }: DataConfirmationCardProps) {
   // Defensive: handle dict format {key: value} from backend or missing fields
   const fields: ConfirmationField[] = Array.isArray(rawFields)
     ? rawFields
@@ -28,11 +29,21 @@ export function DataConfirmationCard({ title, fields: rawFields }: DataConfirmat
         </div>
         <span className="text-xs font-semibold text-emerald-300/90">{title}</span>
       </div>
-      <div className="space-y-0.5 pl-6">
+      <div className="space-y-0 pl-6">
         {fields.map((field) => (
-          <div key={field.label} className="flex items-baseline gap-1.5 text-xs">
-            <span className="text-zinc-500">{field.label}:</span>
-            <span className="text-zinc-300">{field.value}</span>
+          <div key={field.label} className="flex items-center justify-between py-0.5 border-b border-zinc-800/20 last:border-0">
+            <div className="flex items-baseline gap-1.5 text-xs">
+              <span className="text-zinc-500">{field.label}:</span>
+              <span className="text-zinc-300">{field.value}</span>
+            </div>
+            {onSendMessage && (
+              <button
+                onClick={() => onSendMessage(`I want to change ${field.label.toLowerCase()}, currently '${field.value}'`)}
+                className="text-[11px] text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer ml-2"
+              >
+                change
+              </button>
+            )}
           </div>
         ))}
       </div>

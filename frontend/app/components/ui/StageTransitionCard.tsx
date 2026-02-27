@@ -64,7 +64,7 @@ export function StageTransitionCard({
           </div>
         </div>
         <button
-          onClick={() => onSendMessage?.("Let's continue")}
+          onClick={() => onSendMessage?.(`Let's continue to ${nextStage}`)}
           className={cn(
             "px-3 py-1.5 rounded-lg text-xs font-medium",
             "bg-amber-500/15 text-amber-300 border border-amber-500/25",
@@ -72,7 +72,7 @@ export function StageTransitionCard({
             "active:scale-95 transition-all duration-150"
           )}
         >
-          Continue
+          Continue to {STAGE_LABELS[nextStage] || nextStage} →
         </button>
       </div>
     </div>

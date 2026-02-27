@@ -70,7 +70,7 @@ export function ChatInput({
         <button
           type="submit"
           disabled={!input.trim() || isStreaming || disabled}
-          className="w-10 h-10 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:bg-zinc-700 disabled:opacity-50 flex items-center justify-center transition-colors flex-shrink-0"
+          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-400 disabled:bg-zinc-700 disabled:opacity-50 flex items-center justify-center transition-colors flex-shrink-0"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -82,7 +82,7 @@ export function ChatInput({
           </svg>
         </button>
       </div>
-      <p className="text-center text-xs text-zinc-700 mt-2">
+      <p className="text-center text-xs text-zinc-700 mt-2 hidden sm:block">
         Shift+Enter for new line · Enter to send
       </p>
     </form>

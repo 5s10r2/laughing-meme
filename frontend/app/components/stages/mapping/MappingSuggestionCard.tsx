@@ -69,16 +69,22 @@ export function MappingSuggestionCard({
 
       <div className="flex gap-2 pt-2 border-t border-zinc-800">
         <button
-          onClick={() =>
-            onSendMessage?.("This mapping looks good, apply it")
-          }
+          onClick={() => {
+            const summary = suggestions
+              .map(
+                (s) =>
+                  `${s.floorLabel} → ${s.packageName} (${s.unitCount} room${s.unitCount !== 1 ? "s" : ""})`
+              )
+              .join(", ");
+            onSendMessage?.(`Apply this mapping: ${summary}`);
+          }}
           className={cn(
             "flex-1 px-3 py-1.5 rounded-lg text-xs font-medium",
             "bg-amber-500/15 text-amber-300 border border-amber-500/25",
             "hover:bg-amber-500/25 active:scale-95 transition-all"
           )}
         >
-          Apply mapping
+          Apply this mapping →
         </button>
         <button
           onClick={() =>
@@ -86,7 +92,7 @@ export function MappingSuggestionCard({
           }
           className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-zinc-700 hover:bg-zinc-800 active:scale-95 transition-all"
         >
-          Customize
+          I want to map differently
         </button>
       </div>
     </div>

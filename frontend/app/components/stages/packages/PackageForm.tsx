@@ -34,7 +34,7 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
 
     const foodLabel = food === "included" ? "food included" : food === "optional" ? "food optional" : "no food";
     const furnishLabel = furnishing.replace(/_/g, " ");
-    const message = `Package: ${packageName.trim()}, AC: ${ac ? "yes" : "no"}, Food: ${foodLabel}, Furnishing: ${furnishLabel}, Rent: ${rent}`;
+    const message = `Package: ${packageName.trim()}, ${ac ? "AC" : "non-AC"}, ${foodLabel}, ${furnishLabel}, rent ₹${rent}`;
     onSendMessage?.(message);
   }
 
@@ -73,23 +73,28 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
         {/* AC Toggle */}
         <div className="flex items-center justify-between">
           <label className="text-xs text-zinc-400">Air Conditioning</label>
-          <button
-            onClick={() => !submitted && setAc(!ac)}
-            disabled={submitted}
-            className={cn(
-              "w-10 h-5 rounded-full transition-all duration-200 relative",
-              ac ? "bg-amber-500" : "bg-zinc-700",
-              "disabled:opacity-40"
-            )}
-          >
-            <div
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-zinc-500 font-medium">{ac ? "AC" : "Non-AC"}</span>
+            <button
+              onClick={() => !submitted && setAc(!ac)}
+              disabled={submitted}
+              role="switch"
+              aria-checked={ac}
               className={cn(
-                "w-4 h-4 rounded-full bg-white absolute top-0.5 transition-all duration-200",
-                ac ? "left-5.5" : "left-0.5"
+                "w-10 h-5 rounded-full transition-all duration-200 relative",
+                ac ? "bg-amber-500" : "bg-zinc-700",
+                "disabled:opacity-40"
               )}
-              style={{ left: ac ? "22px" : "2px" }}
-            />
-          </button>
+            >
+              <div
+                className={cn(
+                  "w-4 h-4 rounded-full bg-white absolute top-0.5 transition-all duration-200",
+                  ac ? "left-5.5" : "left-0.5"
+                )}
+                style={{ left: ac ? "22px" : "2px" }}
+              />
+            </button>
+          </div>
         </div>
 
         {/* Food */}
@@ -144,7 +149,7 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
         <div>
           <label className="text-[11px] text-zinc-500 mb-1 block">Starting Rent</label>
           <div className="flex items-center gap-1">
-            <span className="text-xs text-zinc-500 font-medium">Rs.</span>
+            <span className="text-xs text-zinc-500 font-medium">₹</span>
             <input
               type="number"
               value={rent}
@@ -169,7 +174,7 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
           "disabled:opacity-40 disabled:cursor-not-allowed"
         )}
       >
-        {submitted ? "Submitted" : "Save Package"}
+        {submitted ? "Saved" : `Save ${packageName.trim() || "package"} →`}
       </button>
     </div>
   );

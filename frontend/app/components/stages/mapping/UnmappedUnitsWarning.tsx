@@ -74,7 +74,7 @@ export function UnmappedUnitsWarning({
 
       <button
         onClick={() =>
-          onSendMessage?.("Help me assign packages to the remaining rooms")
+          onSendMessage?.(`Help me assign packages to the remaining ${totalUnmapped} rooms`)
         }
         className={cn(
           "w-full px-3 py-1.5 rounded-lg text-xs font-medium",
@@ -82,7 +82,7 @@ export function UnmappedUnitsWarning({
           "hover:bg-orange-500/25 active:scale-95 transition-all"
         )}
       >
-        Assign remaining rooms
+        Help assign {totalUnmapped} remaining room{totalUnmapped !== 1 ? "s" : ""}
       </button>
     </div>
   );

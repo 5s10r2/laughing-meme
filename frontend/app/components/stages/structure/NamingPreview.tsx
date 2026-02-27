@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "../../../lib/cn";
 
 interface FloorNaming {
@@ -20,6 +21,9 @@ export function NamingPreview({
   onSendMessage,
   ...rest
 }: NamingPreviewProps & Record<string, unknown>) {
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customPattern, setCustomPattern] = useState("");
+
   // Defensive: handle missing/malformed props from Claude
   const patternDescription = rawPatternDescription || (rest.pattern_description as string) || (rest.pattern as string) || "";
 
@@ -46,6 +50,8 @@ export function NamingPreview({
   });
 
   if (!preview.length) return null;
+
+  const firstFloor = preview[0]?.floor || "this floor";
 
   return (
     <div className="border border-zinc-800 bg-zinc-900/40 rounded-xl px-3.5 py-3 my-2">
@@ -77,27 +83,69 @@ export function NamingPreview({
         ))}
       </div>
 
+      {/* Custom pattern input (visible after clicking secondary button) */}
+      {showCustomInput && (
+        <div className="mb-3 pt-2 border-t border-zinc-800">
+          <label className="text-[10px] text-zinc-500 mb-1 block">
+            Enter your naming pattern (e.g., Room-A, Room-B):
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={customPattern}
+              onChange={(e) => setCustomPattern(e.target.value)}
+              placeholder="e.g. Room-101, Room-102"
+              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-amber-500/50 focus:outline-none"
+              autoFocus
+            />
+            <button
+              onClick={() => {
+                if (customPattern.trim()) {
+                  onSendMessage?.(`Use naming pattern: ${customPattern.trim()}`);
+                  setShowCustomInput(false);
+                }
+              }}
+              disabled={!customPattern.trim()}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium",
+                "bg-amber-500/15 text-amber-300 border border-amber-500/25",
+                "hover:bg-amber-500/25 active:scale-95 transition-all",
+                "disabled:opacity-40 disabled:cursor-not-allowed"
+              )}
+            >
+              Use this pattern →
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2 pt-2 border-t border-zinc-800">
         <button
-          onClick={() => onSendMessage?.("Looks good")}
+          onClick={() =>
+            onSendMessage?.(
+              `Use the naming pattern: ${patternDescription || "default"} for ${firstFloor}`
+            )
+          }
           className={cn(
             "flex-1 px-3 py-1.5 rounded-lg text-xs font-medium",
             "bg-amber-500/15 text-amber-300 border border-amber-500/25",
             "hover:bg-amber-500/25 active:scale-95 transition-all"
           )}
         >
-          Looks good
+          Use these names →
         </button>
-        <button
-          onClick={() => onSendMessage?.("I use a different naming system")}
-          className={cn(
-            "px-3 py-1.5 rounded-lg text-xs font-medium",
-            "text-zinc-400 border border-zinc-700",
-            "hover:bg-zinc-800 active:scale-95 transition-all"
-          )}
-        >
-          Different pattern
-        </button>
+        {!showCustomInput && (
+          <button
+            onClick={() => setShowCustomInput(true)}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-medium",
+              "text-zinc-400 border border-zinc-700",
+              "hover:bg-zinc-800 active:scale-95 transition-all"
+            )}
+          >
+            I&apos;ll type my own names
+          </button>
+        )}
       </div>
     </div>
   );

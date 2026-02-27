@@ -55,7 +55,7 @@ export function PendingItemsList({
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-zinc-300 truncate">
-                {item.description}
+                {item.fixAction || item.description}
               </p>
               <p className="text-[10px] text-zinc-600 capitalize">
                 {item.stage} stage

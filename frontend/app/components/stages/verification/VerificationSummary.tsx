@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Package, ArrowRightLeft, AlertCircle, Pencil } from "lucide-react";
+import { Building2, Package, ArrowRightLeft, AlertCircle } from "lucide-react";
 import { cn } from "../../../lib/cn";
 
 interface PropertySection {
@@ -46,29 +46,43 @@ interface VerificationSummaryProps {
 function SectionHeader({
   icon: Icon,
   title,
-  onEdit,
 }: {
   icon: React.ElementType;
   title: string;
-  onEdit?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between mb-2">
-      <div className="flex items-center gap-1.5">
-        <Icon className="w-3 h-3 text-amber-400/70" />
-        <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
-          {title}
-        </span>
+    <div className="flex items-center gap-1.5 mb-2">
+      <Icon className="w-3 h-3 text-amber-400/70" />
+      <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+        {title}
+      </span>
+    </div>
+  );
+}
+
+function FieldRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange?: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between py-1 border-b border-zinc-800/30 last:border-0">
+      <span className="text-[10px] text-zinc-600">{label}</span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-zinc-300">{value}</span>
+        {onChange && (
+          <button
+            onClick={onChange}
+            className="text-[11px] text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer"
+          >
+            change
+          </button>
+        )}
       </div>
-      {onEdit && (
-        <button
-          onClick={onEdit}
-          className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-0.5"
-        >
-          <Pencil className="w-2.5 h-2.5" />
-          Edit
-        </button>
-      )}
     </div>
   );
 }
@@ -168,37 +182,35 @@ export function VerificationSummary({
       {/* Property Section */}
       {property && (
         <div>
-          <SectionHeader
-            icon={Building2}
-            title="Property"
-            onEdit={() => onSendMessage?.("I want to edit property details")}
-          />
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 px-2">
+          <SectionHeader icon={Building2} title="Property" />
+          <div className="px-2 space-y-0">
             {property.propertyName && (
-              <div>
-                <span className="text-[10px] text-zinc-600">Name</span>
-                <p className="text-xs text-zinc-300">{property.propertyName}</p>
-              </div>
+              <FieldRow
+                label="Name"
+                value={property.propertyName}
+                onChange={() => onSendMessage?.(`I want to change the property name, currently '${property.propertyName}'`)}
+              />
             )}
             {property.propertyType && (
-              <div>
-                <span className="text-[10px] text-zinc-600">Type</span>
-                <p className="text-xs text-zinc-300 capitalize">
-                  {property.propertyType}
-                </p>
-              </div>
+              <FieldRow
+                label="Type"
+                value={property.propertyType}
+                onChange={() => onSendMessage?.(`I want to change the property type, currently '${property.propertyType}'`)}
+              />
             )}
             {property.location && (
-              <div>
-                <span className="text-[10px] text-zinc-600">Location</span>
-                <p className="text-xs text-zinc-300">{property.location}</p>
-              </div>
+              <FieldRow
+                label="Location"
+                value={property.location}
+                onChange={() => onSendMessage?.(`I want to change the location, currently '${property.location}'`)}
+              />
             )}
             {property.ownerName && (
-              <div>
-                <span className="text-[10px] text-zinc-600">Owner</span>
-                <p className="text-xs text-zinc-300">{property.ownerName}</p>
-              </div>
+              <FieldRow
+                label="Owner"
+                value={property.ownerName}
+                onChange={() => onSendMessage?.(`I want to change the owner name, currently '${property.ownerName}'`)}
+              />
             )}
           </div>
         </div>
@@ -207,27 +219,15 @@ export function VerificationSummary({
       {/* Structure Section */}
       {floors && floors.length > 0 && (
         <div>
-          <SectionHeader
-            icon={Building2}
-            title="Structure"
-            onEdit={() => onSendMessage?.("I want to edit the structure")}
-          />
-          <div className="space-y-1 px-2">
+          <SectionHeader icon={Building2} title="Structure" />
+          <div className="space-y-0 px-2">
             {floors.map((floor, i) => (
-              <div
+              <FieldRow
                 key={i}
-                className="flex items-center justify-between text-xs py-0.5"
-              >
-                <span className="text-zinc-400">{floor.label}</span>
-                <div className="flex items-center gap-2 text-[11px]">
-                  <span className="text-zinc-300 font-mono">
-                    {floor.unitCount} room{floor.unitCount !== 1 ? "s" : ""}
-                  </span>
-                  {floor.nameRange && (
-                    <span className="text-zinc-600">({floor.nameRange})</span>
-                  )}
-                </div>
-              </div>
+                label={floor.label}
+                value={`${floor.unitCount} room${floor.unitCount !== 1 ? "s" : ""}${floor.nameRange ? ` (${floor.nameRange})` : ""}`}
+                onChange={() => onSendMessage?.(`I want to change ${floor.label}, it currently has ${floor.unitCount} rooms${floor.nameRange ? ` (${floor.nameRange})` : ""}`)}
+              />
             ))}
           </div>
         </div>
@@ -236,32 +236,21 @@ export function VerificationSummary({
       {/* Packages Section */}
       {packages && packages.length > 0 && (
         <div>
-          <SectionHeader
-            icon={Package}
-            title="Packages"
-            onEdit={() => onSendMessage?.("I want to edit packages")}
-          />
-          <div className="space-y-1 px-2">
-            {packages.map((pkg, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between text-xs py-0.5"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="text-zinc-300 font-medium">{pkg.name}</span>
-                  {pkg.attributes && pkg.attributes.length > 0 && (
-                    <span className="text-[10px] text-zinc-600">
-                      {pkg.attributes.join(", ")}
-                    </span>
-                  )}
-                </div>
-                {pkg.rent && (
-                  <span className="text-zinc-400 font-mono text-[11px]">
-                    Rs.{pkg.rent.toLocaleString("en-IN")}
-                  </span>
-                )}
-              </div>
-            ))}
+          <SectionHeader icon={Package} title="Packages" />
+          <div className="space-y-0 px-2">
+            {packages.map((pkg, i) => {
+              const rentStr = pkg.rent ? `₹${pkg.rent.toLocaleString("en-IN")}` : "";
+              const attrs = pkg.attributes?.join(", ") || "";
+              const valueStr = [rentStr, attrs].filter(Boolean).join(" · ");
+              return (
+                <FieldRow
+                  key={i}
+                  label={pkg.name}
+                  value={valueStr || "—"}
+                  onChange={() => onSendMessage?.(`I want to change the ${pkg.name} package${rentStr ? `, currently ${rentStr}` : ""}`)}
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -269,27 +258,15 @@ export function VerificationSummary({
       {/* Mapping Section */}
       {mappings && mappings.length > 0 && (
         <div>
-          <SectionHeader
-            icon={ArrowRightLeft}
-            title="Mapping"
-            onEdit={() => onSendMessage?.("I want to edit the mapping")}
-          />
-          <div className="space-y-1 px-2">
+          <SectionHeader icon={ArrowRightLeft} title="Mapping" />
+          <div className="space-y-0 px-2">
             {mappings.map((m, i) => (
-              <div
+              <FieldRow
                 key={i}
-                className="flex items-center justify-between text-xs py-0.5"
-              >
-                <span className="text-zinc-400">{m.floorLabel}</span>
-                <div className="flex items-center gap-2 text-[11px]">
-                  <span className="text-zinc-300 font-mono">
-                    {m.count} room{m.count !== 1 ? "s" : ""}
-                  </span>
-                  <span className="text-amber-300/70 font-medium">
-                    {m.packageName}
-                  </span>
-                </div>
-              </div>
+                label={m.floorLabel}
+                value={`${m.count} room${m.count !== 1 ? "s" : ""} → ${m.packageName}`}
+                onChange={() => onSendMessage?.(`I want to change the mapping for ${m.floorLabel}, currently ${m.count} rooms assigned to ${m.packageName}`)}
+              />
             ))}
           </div>
         </div>
@@ -319,24 +296,23 @@ export function VerificationSummary({
       )}
 
       {/* Actions */}
-      <div className="flex gap-2 pt-2 border-t border-zinc-800">
+      <div className="pt-2 border-t border-zinc-800">
+        {pending && pending.length > 0 && (
+          <p className="text-[10px] text-amber-400/70 mb-2">
+            Resolve {pending.length} pending item{pending.length !== 1 ? "s" : ""} first
+          </p>
+        )}
         <button
           onClick={() => onSendMessage?.("Everything looks correct, confirm")}
           className={cn(
-            "flex-1 px-3 py-2 rounded-lg text-xs font-medium",
+            "w-full px-3 py-2 rounded-lg text-xs font-medium",
             "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25",
             "hover:bg-emerald-500/25 active:scale-95 transition-all",
             pending && pending.length > 0 && "opacity-50 cursor-not-allowed"
           )}
           disabled={!!(pending && pending.length > 0)}
         >
-          Confirm Everything
-        </button>
-        <button
-          onClick={() => onSendMessage?.("I need to fix some things")}
-          className="px-3 py-2 rounded-lg text-xs font-medium text-zinc-400 border border-zinc-700 hover:bg-zinc-800 active:scale-95 transition-all"
-        >
-          Fix Issues
+          Confirm everything &amp; go live →
         </button>
       </div>
     </div>

@@ -27,19 +27,25 @@ export function CompletionCelebration({
   const s = (rawStats && typeof rawStats === "object" ? rawStats : {}) as Record<string, unknown>;
   const stats: PropertyStats = rawStats && typeof rawStats === "object"
     ? {
-        propertyName: (s.propertyName || s.property_name || "Your Property") as string,
-        totalFloors: (s.totalFloors || s.total_floors || 0) as number,
-        totalRooms: (s.totalRooms || s.total_rooms || 0) as number,
-        totalPackages: (s.totalPackages || s.total_packages || 0) as number,
+        propertyName: (s.propertyName || s.property_name || s.name || "Your Property") as string,
+        totalFloors: Number(s.totalFloors ?? s.total_floors ?? s.floors ?? s.floor_count ?? 0),
+        totalRooms: Number(s.totalRooms ?? s.total_rooms ?? s.rooms ?? s.room_count ?? s.units ?? 0),
+        totalPackages: Number(s.totalPackages ?? s.total_packages ?? s.packages ?? s.package_count ?? 0),
         propertyType: (s.propertyType || s.property_type) as string | undefined,
         location: s.location as string | undefined,
       }
     : {
         // Fallback: try extracting from top-level props
         propertyName: (rest.propertyName || rest.property_name || rest.name || "Your Property") as string,
-        totalFloors: (rest.totalFloors || rest.total_floors || rest.floors || 0) as number,
-        totalRooms: (rest.totalRooms || rest.total_rooms || rest.rooms || 0) as number,
-        totalPackages: (rest.totalPackages || rest.total_packages || rest.packages || 0) as number,
+        totalFloors: Number(
+          (rest.totalFloors ?? rest.total_floors ?? rest.floors ?? rest.floor_count ?? 0) as number
+        ),
+        totalRooms: Number(
+          (rest.totalRooms ?? rest.total_rooms ?? rest.rooms ?? rest.room_count ?? rest.units ?? 0) as number
+        ),
+        totalPackages: Number(
+          (rest.totalPackages ?? rest.total_packages ?? rest.packages ?? rest.package_count ?? 0) as number
+        ),
         propertyType: (rest.propertyType || rest.property_type) as string | undefined,
         location: rest.location as string | undefined,
       };

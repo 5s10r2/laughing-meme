@@ -29,21 +29,25 @@ export function BulkMappingPreview({
   // Claude may pass operations under various key names
   const rawList = Array.isArray(rawOperations)
     ? rawOperations
-    : Array.isArray((rest as Record<string, unknown>).mappings)
-      ? ((rest as Record<string, unknown>).mappings as BulkOperation[])
-      : Array.isArray((rest as Record<string, unknown>).assignments)
-        ? ((rest as Record<string, unknown>).assignments as BulkOperation[])
-        : Array.isArray((rest as Record<string, unknown>).floors)
-          ? ((rest as Record<string, unknown>).floors as BulkOperation[])
-          : Array.isArray((rest as Record<string, unknown>).items)
-            ? ((rest as Record<string, unknown>).items as BulkOperation[])
-            : [];
+    : Array.isArray((rest as Record<string, unknown>).suggestions)
+      ? ((rest as Record<string, unknown>).suggestions as BulkOperation[])
+      : Array.isArray((rest as Record<string, unknown>).mappings)
+        ? ((rest as Record<string, unknown>).mappings as BulkOperation[])
+        : Array.isArray((rest as Record<string, unknown>).assignments)
+          ? ((rest as Record<string, unknown>).assignments as BulkOperation[])
+          : Array.isArray((rest as Record<string, unknown>).floors)
+            ? ((rest as Record<string, unknown>).floors as BulkOperation[])
+            : Array.isArray((rest as Record<string, unknown>).items)
+              ? ((rest as Record<string, unknown>).items as BulkOperation[])
+              : [];
 
   const operations: BulkOperation[] = (rawList as unknown[]).map((raw: unknown) => {
     const op = raw as Record<string, unknown>;
     return {
       floorLabel: (op.floorLabel || op.floor_label || op.floor || op.label || "Unknown Floor") as string,
-      unitCount: (op.unitCount || op.unit_count || op.count || op.rooms || op.room_count || op.units || 0) as number,
+      unitCount: Number(
+        op.unitCount ?? op.unit_count ?? op.count ?? op.rooms ?? op.room_count ?? op.units ?? 0
+      ),
       packageName: (op.packageName || op.package_name || op.package || "Unknown Package") as string,
     };
   });

@@ -173,6 +173,34 @@ Render a rich UI component in the chat instead of describing things in text. Use
 {"property": {"propertyName": "Sunrise PG", "propertyType": "PG", "location": "Koramangala", "ownerName": "Sanchay"}, "floors": [{"label": "Ground Floor", "unitCount": 5, "nameRange": "001-005"}], "packages": [{"name": "AC Double", "rent": 8500, "ac": true, "attributes": ["Fully Furnished", "Food Optional"]}], "mappings": [{"floorLabel": "Ground Floor", "packageName": "AC Double", "count": 5}]}
 ```
 
+`BulkMappingPreview` — shows mapping confirmation before applying:
+```json
+{
+  "operations": [
+    {"floorLabel": "Ground Floor", "unitCount": 5, "packageName": "Non-AC Single"},
+    {"floorLabel": "1st Floor", "unitCount": 6, "packageName": "AC Double"}
+  ],
+  "totalUnits": 15,
+  "totalFloors": 3
+}
+```
+Important: Pass operations as `operations` array (NOT `suggestions`). Each operation must have `floorLabel`, `unitCount`, and `packageName`.
+
+`CompletionCelebration` — shows final success screen:
+```json
+{
+  "stats": {
+    "propertyName": "Sunrise PG",
+    "totalFloors": 3,
+    "totalRooms": 15,
+    "totalPackages": 2,
+    "propertyType": "PG",
+    "location": "Koramangala, Bangalore"
+  }
+}
+```
+Important: Wrap all stats inside a `stats` object. Use `totalFloors` (NOT `floors`), `totalRooms` (NOT `rooms`), `totalPackages` (NOT `packages`).
+
 ---
 
 ## Stage 0: INTRO

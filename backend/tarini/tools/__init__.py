@@ -4,6 +4,8 @@ Tarini tool definitions for Anthropic API tool use.
 TOOL_DEFINITIONS: list of dicts in Anthropic tool-use format.
 execute_tool(session_id, tool_name, tool_input): dispatches to the right handler.
 """
+import json
+
 from .state import get_state, update_state, advance_stage
 from .ui import validate_emit_ui, emit_ui_result
 
@@ -119,7 +121,7 @@ async def execute_tool(session_id: str, tool_name: str, tool_input: dict) -> str
         props = tool_input.get("props", {})
         error = validate_emit_ui(component, props)
         if error:
-            return f'{{"error": "{error}"}}'
+            return json.dumps({"error": error})
         return emit_ui_result(component)
     else:
-        return f'{{"error": "Unknown tool: {tool_name}"}}'
+        return json.dumps({"error": f"Unknown tool: {tool_name}"})

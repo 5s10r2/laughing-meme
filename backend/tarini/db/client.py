@@ -164,10 +164,10 @@ async def advance_stage(session_id: str, stage: str) -> dict:
         return s
 
     c = _get_client()
-    result = await (
-        c.table("sessions")
-        .update({"stage": stage})
-        .eq("id", session_id)
-        .execute()
-    )
+    result = await c.rpc(
+        "advance_stage_atomic",
+        {"p_session_id": session_id, "p_new_stage": stage},
+    ).execute()
+    if not result.data:
+        raise ValueError(f"Session {session_id} not found")
     return result.data[0]

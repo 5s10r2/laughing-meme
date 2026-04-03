@@ -67,3 +67,22 @@ BEGIN
    RETURNING *;
 END;
 $$;
+
+-- Atomic stage advancement: updates stage in a single statement.
+-- Ensures stage transition is atomic (no partial state between reads).
+CREATE OR REPLACE FUNCTION advance_stage_atomic(
+  p_session_id UUID,
+  p_new_stage  TEXT
+)
+RETURNS SETOF sessions
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  UPDATE sessions
+     SET stage      = p_new_stage,
+         updated_at = NOW()
+   WHERE id = p_session_id
+   RETURNING *;
+END;
+$$;

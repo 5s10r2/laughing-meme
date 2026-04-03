@@ -34,19 +34,19 @@ export function ToolActivityIndicator({ tool, status, description }: ToolActivit
     <div
       className={cn(
         "flex items-center gap-2 py-1.5 px-3 rounded-lg text-xs font-medium transition-all duration-300",
-        status === "running" && "text-zinc-400 bg-zinc-900/50",
-        status === "complete" && "text-emerald-400/80 bg-emerald-950/20",
-        status === "error" && "text-red-400/80 bg-red-950/20"
+        status === "running" && "text-content-secondary bg-bg-surface",
+        status === "complete" && "text-success/80 bg-success-surface",
+        status === "error" && "text-error/80 bg-error-surface"
       )}
     >
       {status === "running" && (
-        <Loader2 className="w-3 h-3 animate-spin text-amber-400/70" />
+        <Loader2 className="w-3 h-3 animate-spin text-accent-light/70" />
       )}
       {status === "complete" && (
-        <Check className="w-3 h-3 text-emerald-400" />
+        <Check className="w-3 h-3 text-success" />
       )}
       {status === "error" && (
-        <AlertCircle className="w-3 h-3 text-red-400" />
+        <AlertCircle className="w-3 h-3 text-error" />
       )}
       <span>{label}{status === "running" ? "..." : ""}</span>
     </div>

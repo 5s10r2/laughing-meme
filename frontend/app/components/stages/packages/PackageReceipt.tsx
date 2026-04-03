@@ -36,10 +36,10 @@ export function PackageReceipt({ name: rawName, rent: rawRent, ac, food, furnish
           <Fan className="w-2.5 h-2.5 text-zinc-500 flex-shrink-0" />
         )}
         <span className="text-xs text-emerald-300/80 truncate">
-          {name}: ₹{rent.toLocaleString("en-IN")}/mo
+          {name}: <span className="font-semibold">₹{rent.toLocaleString("en-IN")}/mo</span>
         </span>
         {badges.length > 0 && (
-          <span className="text-[10px] text-emerald-400/50 flex-shrink-0">
+          <span className="text-xs text-emerald-400/50 flex-shrink-0">
             {badges.join(", ")}
           </span>
         )}

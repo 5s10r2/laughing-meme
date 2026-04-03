@@ -37,7 +37,8 @@ export function PropertyTypeSelector({ options, onSendMessage }: PropertyTypeSel
 
   return (
     <div className="my-2">
-      <p className="text-[11px] text-zinc-500 mb-2 font-medium">Select your property type</p>
+      <p className="text-xs text-zinc-500 mb-1 font-medium">What type of property is this?</p>
+      <p className="text-xs text-zinc-500 mb-2">This helps Tarini suggest the right packages for you</p>
       <div className="grid grid-cols-3 gap-2">
         {typeOptions.map((type) => {
           const Icon = type.icon;
@@ -59,7 +60,7 @@ export function PropertyTypeSelector({ options, onSendMessage }: PropertyTypeSel
               )}
             >
               <Icon className={cn("w-5 h-5", isSelected ? "text-amber-400" : "text-zinc-500")} />
-              <span className="text-[10px] font-medium text-center leading-tight">
+              <span className="text-xs font-medium text-center leading-tight">
                 {type.label}
               </span>
             </button>
@@ -70,7 +71,7 @@ export function PropertyTypeSelector({ options, onSendMessage }: PropertyTypeSel
         <div className="flex justify-end mt-1.5">
           <button
             onClick={() => setSelected(null)}
-            className="text-[11px] text-zinc-500 hover:text-amber-400 transition-colors cursor-pointer"
+            className="text-xs text-zinc-500 hover:text-amber-400 transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
           >
             change ↺
           </button>

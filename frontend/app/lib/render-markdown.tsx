@@ -33,14 +33,14 @@ export function renderInlineMarkdown(text: string): React.ReactNode[] {
     if (match[1]) {
       // Bold: **text**
       nodes.push(
-        <strong key={key++} className="font-semibold text-zinc-50">
+        <strong key={key++} className="font-semibold text-content">
           {match[2]}
         </strong>
       );
     } else if (match[3]) {
       // Italic: *text*
       nodes.push(
-        <em key={key++} className="italic text-zinc-200">
+        <em key={key++} className="italic text-content">
           {match[4]}
         </em>
       );
@@ -49,7 +49,7 @@ export function renderInlineMarkdown(text: string): React.ReactNode[] {
       nodes.push(
         <code
           key={key++}
-          className="px-1 py-0.5 rounded bg-zinc-800 text-amber-300/80 text-[13px] font-mono"
+          className="px-1 py-0.5 rounded bg-bg-subtle text-accent-lighter text-[13px] font-mono"
         >
           {match[6]}
         </code>
@@ -62,7 +62,7 @@ export function renderInlineMarkdown(text: string): React.ReactNode[] {
           href={match[9]}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+          className="text-accent-light underline underline-offset-2 hover:text-accent-lighter"
         >
           {match[8]}
         </a>

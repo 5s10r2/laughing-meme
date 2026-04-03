@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tarini-backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd '/Users/eazypg/CC Property Onboarding Scratch/tarini-agent/backend' && uvicorn server:app --host 0.0.0.0 --port 8000 --reload"],
+      "port": 8000
+    },
+    {
+      "name": "tarini-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd '/Users/eazypg/CC Property Onboarding Scratch/tarini-agent/frontend' && npm run dev"],
+      "port": 3000
+    }
+  ]
+}

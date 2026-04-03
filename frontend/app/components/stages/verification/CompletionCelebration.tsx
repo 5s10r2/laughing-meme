@@ -76,12 +76,12 @@ export function CompletionCelebration({
           <div className="flex items-center gap-1.5 justify-center mb-1">
             <PartyPopper className="w-4 h-4 text-amber-400" />
             <h3 className="text-sm font-semibold text-zinc-100">
-              Setup Complete!
+              You&apos;re All Set!
             </h3>
             <PartyPopper className="w-4 h-4 text-amber-400 scale-x-[-1]" />
           </div>
           <p className="text-xs text-zinc-400">
-            {stats.propertyName} is ready to go live
+            Congratulations! {stats.propertyName} is ready for tenants
           </p>
         </motion.div>
       </div>
@@ -93,26 +93,22 @@ export function CompletionCelebration({
         transition={{ delay: 0.4 }}
         className="grid grid-cols-3 gap-2 mb-4"
       >
-        <div className="text-center py-2 px-2 rounded-lg bg-zinc-800/40">
-          <p className="text-lg font-bold text-zinc-200">{stats.totalFloors}</p>
-          <p className="text-[10px] text-zinc-500">
-            Floor{stats.totalFloors !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <div className="text-center py-2 px-2 rounded-lg bg-zinc-800/40">
-          <p className="text-lg font-bold text-zinc-200">{stats.totalRooms}</p>
-          <p className="text-[10px] text-zinc-500">
-            Room{stats.totalRooms !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <div className="text-center py-2 px-2 rounded-lg bg-zinc-800/40">
-          <p className="text-lg font-bold text-zinc-200">
-            {stats.totalPackages}
-          </p>
-          <p className="text-[10px] text-zinc-500">
-            Package{stats.totalPackages !== 1 ? "s" : ""}
-          </p>
-        </div>
+        {[
+          { value: stats.totalFloors, label: `Floor${stats.totalFloors !== 1 ? "s" : ""}` },
+          { value: stats.totalRooms, label: `Room${stats.totalRooms !== 1 ? "s" : ""}` },
+          { value: stats.totalPackages, label: `Package${stats.totalPackages !== 1 ? "s" : ""}` },
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 + i * 0.1, duration: 0.3, ease: "easeOut" }}
+            className="text-center py-2 px-2 rounded-lg bg-zinc-800/40"
+          >
+            <p className="text-lg font-bold text-zinc-200">{stat.value}</p>
+            <p className="text-xs text-zinc-500">{stat.label}</p>
+          </motion.div>
+        ))}
       </motion.div>
 
       {/* CTAs */}
@@ -125,13 +121,13 @@ export function CompletionCelebration({
         <button
           onClick={() => onSendMessage?.("Take me to the dashboard")}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium",
+            "flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[13px] font-semibold",
             "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
             "hover:bg-emerald-500/30 active:scale-95 transition-all"
           )}
         >
           <LayoutDashboard className="w-3.5 h-3.5" />
-          View Dashboard
+          Go to Dashboard
         </button>
         <button
           onClick={() => onSendMessage?.("I want to add photos")}
@@ -142,7 +138,7 @@ export function CompletionCelebration({
           )}
         >
           <Camera className="w-3.5 h-3.5" />
-          Add Photos
+          Add Property Photos
         </button>
       </motion.div>
     </motion.div>

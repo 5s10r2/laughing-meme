@@ -34,7 +34,7 @@ export function QuickReplyChips({ options, onSendMessage }: QuickReplyChipsProps
               isSelected
                 ? "bg-amber-500/20 border-amber-500 text-amber-100"
                 : hasSelection
-                  ? "border-amber-500/30 bg-zinc-900/60 text-amber-200/90 opacity-40 hover:opacity-70"
+                  ? "border-amber-500/30 bg-zinc-900/60 text-amber-200/90 opacity-40 pointer-events-none"
                   : "border-amber-500/30 hover:border-amber-500/60 bg-zinc-900/60 text-amber-200/90 hover:bg-amber-500/10"
             )}
           >

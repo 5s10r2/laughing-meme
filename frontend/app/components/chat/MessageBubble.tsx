@@ -30,11 +30,11 @@ export function MessageBubble({ message, sendMessage }: MessageBubbleProps) {
     >
       {/* Avatar */}
       {isTarini ? (
-        <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-zinc-950 font-bold text-xs flex-shrink-0 mt-0.5">
+        <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center text-white font-bold text-xs flex-shrink-0 mt-0.5">
           T
         </div>
       ) : (
-        <div className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center text-zinc-300 text-xs flex-shrink-0 mt-0.5">
+        <div className="w-7 h-7 rounded-full bg-bg-subtle flex items-center justify-center text-content-secondary text-xs flex-shrink-0 mt-0.5">
           You
         </div>
       )}
@@ -44,11 +44,11 @@ export function MessageBubble({ message, sendMessage }: MessageBubbleProps) {
         <div className="max-w-[85%] space-y-0">
           {!hasContent ? (
             /* Typing indicator — no parts yet */
-            <div className="rounded-2xl rounded-tl-sm bg-zinc-900 px-4 py-3">
+            <div className="rounded-2xl rounded-tl-sm bg-bg-surface px-4 py-3">
               <span className="inline-flex gap-1 items-center py-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 animate-bounce [animation-delay:0ms]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 animate-bounce [animation-delay:150ms]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 animate-bounce [animation-delay:300ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-content-tertiary animate-bounce [animation-delay:0ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-content-tertiary animate-bounce [animation-delay:150ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-content-tertiary animate-bounce [animation-delay:300ms]" />
               </span>
             </div>
           ) : (
@@ -60,12 +60,12 @@ export function MessageBubble({ message, sendMessage }: MessageBubbleProps) {
                   return (
                     <div
                       key={i}
-                      className="rounded-2xl rounded-tl-sm bg-zinc-900 px-4 py-3 text-sm leading-relaxed text-zinc-100"
+                      className="rounded-2xl rounded-tl-sm bg-bg-surface px-4 py-3 text-sm leading-relaxed text-content"
                     >
                       <MessagePartRenderer part={part} sendMessage={sendMessage} />
                       {/* Streaming cursor — only on last text part while streaming */}
                       {message.streaming && i === message.parts.length - 1 && (
-                        <span className="inline-block w-0.5 h-3.5 bg-amber-400 ml-0.5 animate-pulse" />
+                        <span className="inline-block w-0.5 h-3.5 bg-accent-light ml-0.5 animate-pulse" />
                       )}
                     </div>
                   );
@@ -82,8 +82,8 @@ export function MessageBubble({ message, sendMessage }: MessageBubbleProps) {
           )}
         </div>
       ) : (
-        /* User message — simple text bubble */
-        <div className="rounded-2xl rounded-tr-sm bg-amber-500 px-4 py-3 text-sm leading-relaxed text-zinc-950 max-w-[85%]">
+        /* User message — subtle burgundy tint bubble */
+        <div className="rounded-2xl rounded-tr-sm bg-accent/10 border border-accent/20 px-4 py-3 text-sm leading-relaxed text-content max-w-[85%]">
           <span className="whitespace-pre-wrap">
             {message.parts
               .filter((p) => p.type === "text")

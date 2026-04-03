@@ -13,11 +13,11 @@
   --bg-elevated:  #1E1A2B;
   --bg-subtle:    #2A2538;
 
-  /* ── Primary Accent — Burgundy ── */
-  --accent-600: #7A1535;
-  --accent-500: #9B1B42;
-  --accent-400: #B52B56;
-  --accent-300: #D04470;
+  /* ── Primary Accent — Burgundy (deep wine, not pinkish) ── */
+  --accent-600: #6B1228;
+  --accent-500: #8B1538;
+  --accent-400: #A82048;
+  --accent-300: #C4355E;
 
   /* ── Text (warm cream, not pure white) ── */
   --text-primary:   #F0E6EA;
@@ -28,7 +28,7 @@
   /* ── Borders & Glass ── */
   --border-default:  rgba(255, 255, 255, 0.06);
   --border-strong:   rgba(255, 255, 255, 0.12);
-  --border-accent:   rgba(155, 27, 66, 0.30);
+  --border-accent:   rgba(139, 21, 56, 0.30);
   --glass-bg:        rgba(255, 255, 255, 0.03);
   --glass-border:    rgba(255, 255, 255, 0.08);
 
@@ -43,7 +43,7 @@
   --info-surface:    rgba(96, 165, 250, 0.08);
 
   /* ── Gradient ── */
-  --gradient-cta: linear-gradient(135deg, #9B1B42 0%, #C73660 100%);
+  --gradient-cta: linear-gradient(135deg, #8B1538 0%, #B52848 100%);
 
   /* ── Radius ── */
   --radius-card: 0.875rem;

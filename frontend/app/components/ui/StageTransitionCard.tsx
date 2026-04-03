@@ -12,10 +12,10 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
-  structure: "We'll set up your floors and rooms",
-  packages: "We'll define your rental options",
-  mapping: "We'll connect rooms to packages",
-  verification: "We'll review everything together",
+  structure: "Let's organize your floors and rooms",
+  packages: "Let's set up what you'll offer tenants",
+  mapping: "Let's assign each room its rental package",
+  verification: "Let's review everything before going live",
 };
 
 interface StageTransitionCardProps {
@@ -35,7 +35,7 @@ export function StageTransitionCard({
     <div className="bg-gradient-to-r from-zinc-900 to-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-3.5 my-2">
       {/* Completed stage */}
       <div className="flex items-center gap-2 mb-3">
-        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <CheckCircle2 className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.3)]" />
         <span className="text-xs font-medium text-emerald-300/90">
           {STAGE_LABELS[completedStage] || completedStage} complete
         </span>
@@ -57,7 +57,7 @@ export function StageTransitionCard({
               Next: {STAGE_LABELS[nextStage] || nextStage}
             </p>
             {STAGE_DESCRIPTIONS[nextStage] && (
-              <p className="text-[11px] text-zinc-500 mt-0.5">
+              <p className="text-xs text-zinc-500 mt-0.5">
                 {STAGE_DESCRIPTIONS[nextStage]}
               </p>
             )}
@@ -66,7 +66,7 @@ export function StageTransitionCard({
         <button
           onClick={() => onSendMessage?.(`Let's continue to ${nextStage}`)}
           className={cn(
-            "px-3 py-1.5 rounded-lg text-xs font-medium",
+            "px-3 py-2.5 rounded-lg text-[13px] font-semibold",
             "bg-amber-500/15 text-amber-300 border border-amber-500/25",
             "hover:bg-amber-500/25 hover:border-amber-500/40",
             "active:scale-95 transition-all duration-150"

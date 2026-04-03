@@ -35,8 +35,8 @@ export function IntroSummaryCard({
   ].filter((f) => f.value);
 
   return (
-    <div className="border border-zinc-800 bg-zinc-900/40 rounded-xl px-4 py-3 my-2">
-      <p className="text-[11px] text-zinc-500 font-medium uppercase tracking-wider mb-2.5">
+    <div className="border border-zinc-800 border-l-2 border-l-amber-500/30 bg-zinc-900/40 rounded-xl px-4 py-3 my-2">
+      <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider mb-2.5">
         Property Overview
       </p>
       <div className="space-y-0">
@@ -50,7 +50,7 @@ export function IntroSummaryCard({
               <span className="text-sm text-zinc-200">{field.value}</span>
               <button
                 onClick={() => onSendMessage?.(`I want to change the ${field.label.toLowerCase()}, currently '${field.value}'`)}
-                className="text-[11px] text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer"
+                className="text-xs text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
               >
                 change
               </button>
@@ -61,7 +61,7 @@ export function IntroSummaryCard({
       <div className="mt-3 pt-2.5 border-t border-zinc-800">
         <button
           onClick={() => onSendMessage?.("Looks good, let's continue to structure")}
-          className="w-full px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/25 hover:bg-amber-500/25 active:scale-[0.98] transition-all"
+          className="w-full px-3 py-2.5 rounded-lg text-[13px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/25 hover:bg-amber-500/25 active:scale-[0.98] transition-all"
         >
           Confirm &amp; continue →
         </button>

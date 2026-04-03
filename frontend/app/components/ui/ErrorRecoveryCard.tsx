@@ -32,7 +32,7 @@ export function ErrorRecoveryCard({ message, actions, onSendMessage }: ErrorReco
             key={action.label}
             onClick={() => onSendMessage?.(action.action)}
             className={cn(
-              "px-2.5 py-1 rounded-md text-[11px] font-medium",
+              "px-2.5 py-1 rounded-md text-xs font-medium",
               "bg-amber-500/10 text-amber-300 border border-amber-500/20",
               "hover:bg-amber-500/20 active:scale-95 transition-all duration-150"
             )}

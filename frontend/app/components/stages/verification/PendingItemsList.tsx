@@ -26,12 +26,12 @@ export function PendingItemsList({
       <div className="flex items-center gap-2 mb-2.5">
         <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
         <span className="text-xs font-semibold text-amber-300">
-          {items.length} item{items.length !== 1 ? "s" : ""} need attention
+          {items.length} quick fix{items.length !== 1 ? "es" : ""} remaining
         </span>
       </div>
 
-      <p className="text-[11px] text-zinc-400 mb-3">
-        Fix these issues before confirming your property setup.
+      <p className="text-xs text-zinc-400 mb-3">
+        Let&apos;s take care of these before going live:
       </p>
 
       <div className="space-y-1.5">
@@ -50,14 +50,14 @@ export function PendingItemsList({
               "active:scale-[0.98]"
             )}
           >
-            <span className="w-5 h-5 rounded-full bg-amber-500/15 text-amber-400 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+            <span className="w-5 h-5 rounded-full bg-amber-500/15 text-amber-400 text-xs font-bold flex items-center justify-center flex-shrink-0">
               {i + 1}
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-zinc-300 truncate">
                 {item.fixAction || item.description}
               </p>
-              <p className="text-[10px] text-zinc-600 capitalize">
+              <p className="text-xs text-zinc-600 capitalize">
                 {item.stage} stage
               </p>
             </div>

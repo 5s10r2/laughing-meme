@@ -49,7 +49,7 @@ export function DataConfirmationCard({ title, fields: rawFields, onSendMessage }
             {onSendMessage && (
               <button
                 onClick={() => onSendMessage(`I want to change ${field.label.toLowerCase()}, currently '${field.value}'`)}
-                className="text-[11px] text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer ml-2"
+                className="text-xs text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer ml-2 px-2 py-1.5 -mr-2 -my-1.5 rounded"
               >
                 change
               </button>

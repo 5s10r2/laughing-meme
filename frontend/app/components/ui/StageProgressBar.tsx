@@ -36,10 +36,10 @@ export function StageProgressBar() {
             <div
               className={cn(
                 "flex items-center justify-center rounded-full transition-all duration-300",
-                "w-5 h-5 text-[9px] font-bold",
-                isComplete && "bg-emerald-500/20 text-emerald-400",
-                isCurrent && "bg-amber-500/25 text-amber-300 ring-1 ring-amber-500/40",
-                isFuture && "bg-zinc-800 text-zinc-600"
+                "w-5 h-5 text-[11px] font-bold",
+                isComplete && "bg-success/20 text-success",
+                isCurrent && "bg-accent/25 text-accent-lighter ring-1 ring-accent/40",
+                isFuture && "bg-bg-subtle text-content-tertiary"
               )}
               title={stage.label}
             >
@@ -55,7 +55,7 @@ export function StageProgressBar() {
               <div
                 className={cn(
                   "w-3 h-px mx-0.5",
-                  i < currentIndex ? "bg-emerald-500/30" : "bg-zinc-800"
+                  i < currentIndex ? "bg-success/30" : "bg-bg-subtle"
                 )}
               />
             )}

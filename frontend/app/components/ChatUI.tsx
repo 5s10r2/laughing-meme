@@ -323,7 +323,7 @@ export default function ChatUI() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100">
+    <div className="flex flex-col h-screen bg-bg-deep text-content">
       {/* Header with stage progress bar */}
       <ChatHeader onNewSession={handleNewSession} isStreaming={isStreaming} />
 
@@ -331,7 +331,7 @@ export default function ChatUI() {
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
-            <p className="text-zinc-600 text-sm">Connecting to Tarini…</p>
+            <p className="text-content-tertiary text-sm">Connecting to Tarini…</p>
           </div>
         )}
 

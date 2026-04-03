@@ -3,11 +3,6 @@
 import { Grid3X3 } from "lucide-react";
 import { cn } from "../../../lib/cn";
 
-interface MappingCell {
-  count: number;
-  total: number;
-}
-
 interface MappingMatrixProps {
   floors: { index: number; label: string }[];
   packages: { id: string; name: string }[];
@@ -51,84 +46,82 @@ export function MappingMatrix({
   // Sort floors top-to-bottom (highest first)
   const sortedFloors = [...floors].sort((a, b) => b.index - a.index);
 
+  // Find max room count across all floors for proportional bar width
+  const maxRooms = Math.max(...sortedFloors.map((f) => floorTotals[f.index] || 0), 1);
+
   return (
     <div className="border border-zinc-800 bg-zinc-900/30 rounded-xl px-3 py-3 my-2">
       <div className="flex items-center gap-2 mb-3">
         <Grid3X3 className="w-3.5 h-3.5 text-amber-400/70" />
-        <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+        <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
           Mapping Overview
         </span>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-[10px]">
-          <thead>
-            <tr>
-              <th className="text-left text-zinc-500 font-medium pb-2 pr-3 whitespace-nowrap">
-                Floor
-              </th>
-              {packages.map((pkg) => (
-                <th
-                  key={pkg.id}
-                  className="text-center text-zinc-500 font-medium pb-2 px-2 whitespace-nowrap"
-                >
-                  {pkg.name}
-                </th>
-              ))}
-              {unmappedByFloor && (
-                <th className="text-center text-zinc-600 font-medium pb-2 px-2 whitespace-nowrap">
-                  Unmapped
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {sortedFloors.map((floor) => {
-              const floorMapping = mapping[floor.index] || {};
-              const total = floorTotals[floor.index] || 0;
-              const unmapped = unmappedByFloor?.[floor.index] ?? 0;
+      <div className="space-y-2.5">
+        {sortedFloors.map((floor) => {
+          const floorMapping = mapping[floor.index] || {};
+          const total = floorTotals[floor.index] || 0;
+          const unmapped = unmappedByFloor?.[floor.index] ?? 0;
 
-              return (
-                <tr key={floor.index} className="border-t border-zinc-800/50">
-                  <td className="py-1.5 pr-3 text-zinc-300 font-medium whitespace-nowrap">
-                    {floor.label}
-                    <span className="text-zinc-600 ml-1">({total})</span>
-                  </td>
-                  {packages.map((pkg) => {
-                    const count = floorMapping[pkg.id] || 0;
-                    return (
-                      <td key={pkg.id} className="py-1.5 px-2 text-center">
-                        {count > 0 ? (
-                          <span
-                            className={cn(
-                              "inline-block min-w-[20px] px-1.5 py-0.5 rounded",
-                              "bg-amber-500/15 text-amber-300 font-medium"
-                            )}
-                          >
-                            {count}
-                          </span>
-                        ) : (
-                          <span className="text-zinc-700">&mdash;</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                  {unmappedByFloor && (
-                    <td className="py-1.5 px-2 text-center">
-                      {unmapped > 0 ? (
-                        <span className="inline-block min-w-[20px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-medium">
-                          {unmapped}
-                        </span>
-                      ) : (
-                        <span className="text-emerald-500/60">&check;</span>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+          // Build segments for each package assigned to this floor
+          const segments = packages
+            .map((pkg) => ({
+              packageName: pkg.name,
+              count: floorMapping[pkg.id] || 0,
+            }))
+            .filter((s) => s.count > 0);
+
+          return (
+            <div key={floor.index} className="space-y-1">
+              {/* Floor header */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-zinc-300">
+                  {floor.label}
+                </span>
+                <span className="text-xs text-zinc-500">
+                  {total} room{total !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              {/* Stacked bars */}
+              <div className="space-y-1">
+                {segments.map((seg) => (
+                  <div key={seg.packageName} className="flex items-center gap-2">
+                    <div
+                      className="h-5 rounded bg-amber-500/20 flex items-center px-2 min-w-[40px]"
+                      style={{ width: `${Math.max((seg.count / maxRooms) * 100, 20)}%` }}
+                    >
+                      <span className="text-xs text-amber-300/90 font-medium truncate">
+                        {seg.count}
+                      </span>
+                    </div>
+                    <span className="text-xs text-zinc-400 whitespace-nowrap">
+                      {seg.packageName}
+                    </span>
+                  </div>
+                ))}
+
+                {/* Unmapped segment */}
+                {unmapped > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-5 rounded bg-orange-500/15 border border-dashed border-orange-500/30 flex items-center px-2 min-w-[40px]"
+                      style={{ width: `${Math.max((unmapped / maxRooms) * 100, 20)}%` }}
+                    >
+                      <span className="text-xs text-orange-400/90 font-medium truncate">
+                        {unmapped}
+                      </span>
+                    </div>
+                    <span className="text-xs text-orange-400/70 whitespace-nowrap">
+                      unmapped
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

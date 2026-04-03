@@ -18,8 +18,8 @@ const tierStyles: Record<ButtonTier, string> = {
     "bg-[var(--accent-500)]",
     "hover:bg-[var(--accent-400)]",
     "active:bg-[var(--accent-600)]",
-    "shadow-[0_2px_8px_rgba(155,27,66,0.25)]",
-    "hover:shadow-[0_4px_12px_rgba(155,27,66,0.35)]",
+    "shadow-[0_2px_8px_rgba(139,21,56,0.25)]",
+    "hover:shadow-[0_4px_12px_rgba(139,21,56,0.35)]",
   ].join(" "),
   secondary: [
     "text-accent-light font-medium",

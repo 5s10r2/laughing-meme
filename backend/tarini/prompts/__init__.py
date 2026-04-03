@@ -2,9 +2,11 @@ from pathlib import Path
 
 
 def load_system_prompt() -> str:
-    """Load Tarini's system prompt from the markdown file."""
-    prompt_file = Path(__file__).parent / "system_prompt.md"
-    return prompt_file.read_text(encoding="utf-8")
+    """Return Tarini's system prompt (cached at module load)."""
+    return _SYSTEM_PROMPT
+
+
+_SYSTEM_PROMPT = (Path(__file__).parent / "system_prompt.md").read_text(encoding="utf-8")
 
 
 # Single source of truth for the silent opening prompt that triggers the greeting.

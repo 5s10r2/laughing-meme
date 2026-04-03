@@ -23,7 +23,7 @@ from tarini.tools.ui import validate_emit_ui
 
 logger = logging.getLogger(__name__)
 
-MODEL = "claude-sonnet-4-20250514"
+MODEL = os.environ.get("MODEL_NAME", "claude-sonnet-4-20250514")
 MAX_TOOL_ROUNDS = 10  # safety limit to prevent infinite tool loops
 _MAX_API_HISTORY = 20  # ~5 tool-use turns of context for the API call
 
@@ -105,10 +105,13 @@ async def stream_chat(
         async with client.messages.stream(
             model=MODEL,
             max_tokens=4096,
-            system=system_prompt,
+            system=[{
+                "type": "text",
+                "text": system_prompt,
+                "cache_control": {"type": "ephemeral"},
+            }],
             messages=api_history,
             tools=TOOL_DEFINITIONS,
-            cache_control={"type": "ephemeral"},
         ) as stream:
             async for event in stream:
                 if event.type == "content_block_delta":

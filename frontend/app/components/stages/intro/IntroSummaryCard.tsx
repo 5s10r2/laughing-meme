@@ -35,22 +35,22 @@ export function IntroSummaryCard({
   ].filter((f) => f.value);
 
   return (
-    <div className="border border-zinc-800 border-l-2 border-l-amber-500/30 bg-zinc-900/40 rounded-xl px-4 py-3 my-2">
-      <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider mb-2.5">
+    <div className="border border-glass-border bg-glass rounded-[var(--radius-card)] px-4 py-3 my-2">
+      <p className="text-xs text-content-tertiary font-medium uppercase tracking-wider mb-2.5">
         Property Overview
       </p>
       <div className="space-y-0">
         {fields.map((field) => (
-          <div key={field.label} className="flex items-center justify-between py-1.5 border-b border-zinc-800/50 last:border-0">
+          <div key={field.label} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
             <div className="flex items-center gap-2">
-              <field.icon className="w-3.5 h-3.5 text-zinc-600 flex-shrink-0" />
-              <span className="text-xs text-zinc-500">{field.label}</span>
+              <field.icon className="w-3.5 h-3.5 text-content-tertiary flex-shrink-0" />
+              <span className="text-xs text-content-secondary">{field.label}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-zinc-200">{field.value}</span>
+              <span className="text-sm text-content">{field.value}</span>
               <button
                 onClick={() => onSendMessage?.(`I want to change the ${field.label.toLowerCase()}, currently '${field.value}'`)}
-                className="text-xs text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
+                className="text-xs text-content-tertiary hover:text-accent-lighter underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
               >
                 change
               </button>
@@ -58,10 +58,10 @@ export function IntroSummaryCard({
           </div>
         ))}
       </div>
-      <div className="mt-3 pt-2.5 border-t border-zinc-800">
+      <div className="mt-3 pt-2.5 border-t border-border">
         <button
           onClick={() => onSendMessage?.("Looks good, let's continue to structure")}
-          className="w-full px-3 py-2.5 rounded-lg text-[13px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/25 hover:bg-amber-500/25 active:scale-[0.98] transition-all"
+          className="w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold bg-accent/20 text-accent-lighter border border-accent/25 hover:bg-accent/25 active:scale-[0.98] transition-all"
         >
           Confirm &amp; continue →
         </button>

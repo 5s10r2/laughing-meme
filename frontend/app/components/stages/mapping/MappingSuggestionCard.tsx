@@ -117,11 +117,11 @@ function FlatSuggestionView({
   onSendMessage?: (text: string) => void;
 }) {
   return (
-    <div className="border border-zinc-800 border-l-2 border-l-amber-500/30 bg-zinc-900/40 rounded-xl px-4 py-3.5 my-2">
+    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-4 py-3.5 my-2">
       <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-        <span className="text-xs font-semibold text-zinc-200">Suggested Mapping</span>
-        <span className="text-xs text-zinc-600 ml-auto">
+        <Sparkles className="w-3.5 h-3.5 text-accent-light" />
+        <span className="text-xs font-semibold text-content">Suggested Mapping</span>
+        <span className="text-xs text-content-tertiary ml-auto">
           {suggestions.length} floor{suggestions.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -136,7 +136,7 @@ function FlatSuggestionView({
         ))}
       </div>
 
-      <div className="flex gap-2 pt-2 border-t border-zinc-800">
+      <div className="flex gap-2 pt-2 border-t border-border">
         <button
           onClick={() => {
             const summary = suggestions
@@ -150,16 +150,16 @@ function FlatSuggestionView({
             onSendMessage?.(`Apply this mapping: ${summary}`);
           }}
           className={cn(
-            "flex-1 px-3 py-2.5 rounded-lg text-[13px] font-semibold",
-            "bg-amber-500/20 text-amber-300 border border-amber-500/25",
-            "hover:bg-amber-500/25 active:scale-95 transition-all"
+            "flex-1 px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
+            "bg-accent/10 text-accent-lighter border border-accent/30",
+            "hover:bg-accent/20 active:scale-95 transition-all"
           )}
         >
           Apply mapping for {totalRooms} room{totalRooms !== 1 ? "s" : ""} →
         </button>
         <button
           onClick={() => onSendMessage?.("I want to map floors differently")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-zinc-700 hover:bg-zinc-800 active:scale-95 transition-all"
+          className="px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium text-content-secondary border border-border hover:bg-bg-elevated active:scale-95 transition-all"
         >
           Map differently
         </button>
@@ -230,11 +230,11 @@ function FloorByFloorReview({
   }
 
   return (
-    <div className="border border-zinc-800 border-l-2 border-l-amber-500/30 bg-zinc-900/40 rounded-xl px-4 py-3.5 my-2">
+    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-4 py-3.5 my-2">
       <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-        <span className="text-xs font-semibold text-zinc-200">Suggested Mapping</span>
-        <span className="text-xs text-zinc-600 ml-auto">
+        <Sparkles className="w-3.5 h-3.5 text-accent-light" />
+        <span className="text-xs font-semibold text-content">Suggested Mapping</span>
+        <span className="text-xs text-content-tertiary ml-auto">
           {Object.keys(decisions).length}/{total} reviewed
         </span>
       </div>
@@ -272,9 +272,9 @@ function FloorByFloorReview({
               <button
                 onClick={acceptFloor}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold",
-                  "bg-amber-500/20 text-amber-300 border border-amber-500/25",
-                  "hover:bg-amber-500/25 active:scale-95 transition-all"
+                  "flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold",
+                  "bg-accent/10 text-accent-lighter border border-accent/30",
+                  "hover:bg-accent/20 active:scale-95 transition-all"
                 )}
               >
                 <Check className="w-3 h-3" />
@@ -282,7 +282,7 @@ function FloorByFloorReview({
               </button>
               <button
                 onClick={modifyFloor}
-                className="px-3 py-2 rounded-lg text-xs font-medium text-zinc-400 border border-zinc-700 hover:bg-zinc-800 active:scale-95 transition-all"
+                className="px-3 py-2 rounded-[var(--radius-button)] text-xs font-medium text-content-secondary border border-border hover:bg-bg-elevated active:scale-95 transition-all"
               >
                 Modify
               </button>
@@ -292,7 +292,7 @@ function FloorByFloorReview({
           {currentDecision && (
             <p className={cn(
               "text-xs font-medium mt-2",
-              currentDecision === "accepted" ? "text-emerald-400" : "text-amber-400"
+              currentDecision === "accepted" ? "text-success" : "text-accent-light"
             )}>
               {currentDecision === "accepted" ? "Accepted" : "Modified — waiting for update"}
             </p>
@@ -302,16 +302,16 @@ function FloorByFloorReview({
 
       {/* ── Final submit after all reviewed ── */}
       {allReviewed && !submitted && (
-        <div className="pt-2 border-t border-zinc-800">
-          <p className="text-xs text-zinc-400 mb-2">
+        <div className="pt-2 border-t border-border">
+          <p className="text-xs text-content-secondary mb-2">
             {acceptedCount} of {total} floors accepted
           </p>
           <button
             onClick={handleFinalSubmit}
             className={cn(
-              "w-full px-3 py-2.5 rounded-lg text-[13px] font-semibold",
-              "bg-amber-500/20 text-amber-300 border border-amber-500/25",
-              "hover:bg-amber-500/25 active:scale-95 transition-all"
+              "w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
+              "bg-accent/10 text-accent-lighter border border-accent/30",
+              "hover:bg-accent/20 active:scale-95 transition-all"
             )}
           >
             Apply mapping for {totalRooms} room{totalRooms !== 1 ? "s" : ""} →
@@ -320,7 +320,7 @@ function FloorByFloorReview({
       )}
 
       {submitted && (
-        <p className="text-xs text-emerald-400 font-medium">Mapping applied</p>
+        <p className="text-xs text-success font-medium">Mapping applied</p>
       )}
     </div>
   );
@@ -339,22 +339,22 @@ function FloorAssignmentRow({
   const isMultiPackage = assignments.length > 1;
 
   return (
-    <div className="px-3 py-2 rounded-lg bg-zinc-800/40 border border-zinc-800">
+    <div className="px-3 py-2 rounded-[var(--radius-button)] bg-bg-elevated border border-border">
       <div className="flex items-center justify-between mb-1">
-        <p className="text-xs text-zinc-200 font-medium">{suggestion.floorLabel}</p>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-content font-medium">{suggestion.floorLabel}</p>
+        <p className="text-xs text-content-tertiary">
           {floorTotal} room{floorTotal !== 1 ? "s" : ""}
         </p>
       </div>
 
-      <div className={cn("space-y-1", isMultiPackage && "pl-2 border-l border-zinc-700/50")}>
+      <div className={cn("space-y-1", isMultiPackage && "pl-2 border-l border-border/50")}>
         {assignments.map((a, ai) => (
           <div key={ai} className="flex items-center gap-2">
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-content-tertiary">
               {a.unitCount} room{a.unitCount !== 1 ? "s" : ""}
             </span>
-            <ArrowRight className="w-2.5 h-2.5 text-zinc-600 flex-shrink-0" />
-            <span className="text-xs text-amber-300/80 font-medium">{a.packageName}</span>
+            <ArrowRight className="w-2.5 h-2.5 text-content-tertiary flex-shrink-0" />
+            <span className="text-xs text-accent-lighter/80 font-medium">{a.packageName}</span>
           </div>
         ))}
       </div>

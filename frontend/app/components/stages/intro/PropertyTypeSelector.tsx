@@ -37,8 +37,8 @@ export function PropertyTypeSelector({ options, onSendMessage }: PropertyTypeSel
 
   return (
     <div className="my-2">
-      <p className="text-xs text-zinc-500 mb-1 font-medium">What type of property is this?</p>
-      <p className="text-xs text-zinc-500 mb-2">This helps Tarini suggest the right packages for you</p>
+      <p className="text-xs text-content-tertiary mb-1 font-medium">What type of property is this?</p>
+      <p className="text-xs text-content-tertiary mb-2">This helps Tarini suggest the right packages for you</p>
       <div className="grid grid-cols-3 gap-2">
         {typeOptions.map((type) => {
           const Icon = type.icon;
@@ -49,17 +49,17 @@ export function PropertyTypeSelector({ options, onSendMessage }: PropertyTypeSel
               key={type.id}
               onClick={() => handleSelect(type)}
               className={cn(
-                "flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl",
+                "flex flex-col items-center gap-1.5 px-2 py-3 rounded-[var(--radius-card)]",
                 "border transition-all duration-200",
                 "active:scale-95 cursor-pointer",
                 isSelected
-                  ? "border-amber-500 bg-amber-500/15 text-amber-200 ring-2 ring-amber-500/30"
+                  ? "border-accent bg-accent/15 text-accent-lighter ring-2 ring-accent/30"
                   : hasSelection
-                    ? "border-zinc-800 bg-zinc-900/50 text-zinc-400 opacity-40 hover:opacity-70 hover:border-zinc-700"
-                    : "border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/50"
+                    ? "border-border bg-bg-surface text-content-secondary opacity-40 hover:opacity-70 hover:border-border"
+                    : "border-border bg-bg-surface text-content-secondary hover:border-border hover:bg-bg-elevated"
               )}
             >
-              <Icon className={cn("w-5 h-5", isSelected ? "text-amber-400" : "text-zinc-500")} />
+              <Icon className={cn("w-5 h-5", isSelected ? "text-accent-light" : "text-content-tertiary")} />
               <span className="text-xs font-medium text-center leading-tight">
                 {type.label}
               </span>
@@ -71,7 +71,7 @@ export function PropertyTypeSelector({ options, onSendMessage }: PropertyTypeSel
         <div className="flex justify-end mt-1.5">
           <button
             onClick={() => setSelected(null)}
-            className="text-xs text-zinc-500 hover:text-amber-400 transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
+            className="text-xs text-content-tertiary hover:text-accent-light transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
           >
             change ↺
           </button>

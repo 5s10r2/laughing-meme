@@ -64,8 +64,8 @@ function FloorRow({
         "border transition-all duration-200",
         tight ? "py-1" : "py-1.5",
         highlighted
-          ? "border-amber-500/30 bg-amber-500/5"
-          : "border-transparent bg-zinc-800/40"
+          ? "border-accent/30 bg-accent/5"
+          : "border-transparent bg-bg-elevated"
       )}
     >
       <div
@@ -73,22 +73,22 @@ function FloorRow({
           "rounded flex items-center justify-center text-[11px] font-bold flex-shrink-0",
           tight ? "w-5 h-5" : "w-6 h-6",
           highlighted
-            ? "bg-amber-500/20 text-amber-300"
-            : "bg-zinc-700/50 text-zinc-500"
+            ? "bg-accent/20 text-accent-lighter"
+            : "bg-bg-subtle/50 text-content-tertiary"
         )}
       >
         {floor.index === 0 ? "G" : floor.index}
       </div>
 
       <div className="flex-1 min-w-0">
-        <span className="text-zinc-300 font-medium">{floor.label}</span>
+        <span className="text-content-secondary font-medium">{floor.label}</span>
       </div>
 
       {summary && (
-        <div className="flex items-center gap-1 text-xs text-zinc-500 flex-shrink-0">
+        <div className="flex items-center gap-1 text-xs text-content-tertiary flex-shrink-0">
           <span>{summary}</span>
           {floor.nameRange && (
-            <span className="text-zinc-600">({floor.nameRange})</span>
+            <span className="text-content-tertiary">({floor.nameRange})</span>
           )}
         </div>
       )}
@@ -183,13 +183,13 @@ export function FloorBuilder({ floors: rawFloors, highlightFloor, ...rest }: Flo
     : sortedFloors;
 
   return (
-    <div className="border border-zinc-800 bg-zinc-900/30 rounded-xl px-3 py-3 my-2">
+    <div className="border border-border bg-bg-surface/30 rounded-[var(--radius-card)] px-3 py-3 my-2">
       <div className="flex items-center gap-2 mb-2.5">
-        <Layers className="w-3.5 h-3.5 text-amber-400/70" />
-        <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+        <Layers className="w-3.5 h-3.5 text-accent-light/70" />
+        <span className="text-xs font-medium text-content-secondary uppercase tracking-wider">
           Property Structure
         </span>
-        <span className="text-xs text-zinc-600 ml-auto">
+        <span className="text-xs text-content-tertiary ml-auto">
           {total} floor{total !== 1 ? "s" : ""}
           {headerSuffix}
         </span>
@@ -236,9 +236,9 @@ export function FloorBuilder({ floors: rawFloors, highlightFloor, ...rest }: Flo
               onClick={() => setExpanded(true)}
               className={cn(
                 "w-full flex items-center justify-center gap-1.5",
-                "py-2 my-0.5 rounded-lg",
-                "text-xs text-zinc-500 hover:text-amber-400",
-                "bg-zinc-800/20 hover:bg-zinc-800/40 border border-dashed border-zinc-700/50",
+                "py-2 my-0.5 rounded-[var(--radius-button)]",
+                "text-xs text-content-tertiary hover:text-accent-light",
+                "bg-bg-elevated/20 hover:bg-bg-elevated border border-dashed border-border/50",
                 "transition-all"
               )}
             >
@@ -268,7 +268,7 @@ export function FloorBuilder({ floors: rawFloors, highlightFloor, ...rest }: Flo
       {isSandwich && expanded && (
         <button
           onClick={() => setExpanded(false)}
-          className="flex items-center gap-1 mt-1.5 text-xs text-zinc-600 hover:text-zinc-400 transition-colors mx-auto"
+          className="flex items-center gap-1 mt-1.5 text-xs text-content-tertiary hover:text-content-secondary transition-colors mx-auto"
         >
           <ChevronUp className="w-3 h-3" />
           <span>Show less</span>

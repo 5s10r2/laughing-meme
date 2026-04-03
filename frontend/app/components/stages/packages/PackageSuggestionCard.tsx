@@ -90,12 +90,12 @@ function FlatSuggestionList({
   onSendMessage?: (text: string) => void;
 }) {
   return (
-    <div className="border border-zinc-800 border-l-2 border-l-amber-500/30 bg-zinc-900/40 rounded-xl px-4 py-3.5 my-2">
+    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-4 py-3.5 my-2">
       <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-        <span className="text-xs font-semibold text-zinc-200">Suggested Packages</span>
+        <Sparkles className="w-3.5 h-3.5 text-accent-light" />
+        <span className="text-xs font-semibold text-content">Suggested Packages</span>
         {location && (
-          <span className="text-xs text-zinc-600 ml-auto">Based on {location}</span>
+          <span className="text-xs text-content-tertiary ml-auto">Based on {location}</span>
         )}
       </div>
 
@@ -105,7 +105,7 @@ function FlatSuggestionList({
         ))}
       </div>
 
-      <div className="flex gap-2 pt-2 border-t border-zinc-800">
+      <div className="flex gap-2 pt-2 border-t border-border">
         <button
           onClick={() => {
             const summary = suggestions
@@ -116,16 +116,16 @@ function FlatSuggestionList({
             );
           }}
           className={cn(
-            "flex-1 px-3 py-2.5 rounded-lg text-[13px] font-semibold",
-            "bg-amber-500/20 text-amber-300 border border-amber-500/25",
-            "hover:bg-amber-500/25 active:scale-95 transition-all"
+            "flex-1 px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
+            "bg-accent/10 text-accent-lighter border border-accent/30",
+            "hover:bg-accent/15 active:scale-95 transition-all"
           )}
         >
           Use all {suggestions.length} package{suggestions.length !== 1 ? "s" : ""} →
         </button>
         <button
           onClick={() => onSendMessage?.("I want different packages")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-zinc-700 hover:bg-zinc-800 active:scale-95 transition-all"
+          className="px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium text-content-secondary border border-border hover:bg-bg-elevated active:scale-95 transition-all"
         >
           I want different packages
         </button>
@@ -195,12 +195,12 @@ function CardStack({
   const reviewedCount = Object.keys(decisions).length;
 
   return (
-    <div className="border border-zinc-800 border-l-2 border-l-amber-500/30 bg-zinc-900/40 rounded-xl px-4 py-3.5 my-2">
+    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-4 py-3.5 my-2">
       <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-        <span className="text-xs font-semibold text-zinc-200">Suggested Packages</span>
+        <Sparkles className="w-3.5 h-3.5 text-accent-light" />
+        <span className="text-xs font-semibold text-content">Suggested Packages</span>
         {location && (
-          <span className="text-xs text-zinc-600 ml-auto">Based on {location}</span>
+          <span className="text-xs text-content-tertiary ml-auto">Based on {location}</span>
         )}
       </div>
 
@@ -212,15 +212,15 @@ function CardStack({
               key={i}
               className={cn(
                 "w-1.5 h-1.5 rounded-full transition-all",
-                decisions[i] === "accepted" && "bg-emerald-400",
-                decisions[i] === "skipped" && "bg-zinc-600",
-                !decisions[i] && i === currentIdx && "bg-amber-400",
-                !decisions[i] && i !== currentIdx && "bg-zinc-700"
+                decisions[i] === "accepted" && "bg-success",
+                decisions[i] === "skipped" && "bg-content-tertiary",
+                !decisions[i] && i === currentIdx && "bg-accent-light",
+                !decisions[i] && i !== currentIdx && "bg-bg-subtle"
               )}
             />
           ))}
         </div>
-        <span className="text-[11px] text-zinc-600">
+        <span className="text-[11px] text-content-tertiary">
           {reviewedCount}/{total} reviewed
         </span>
       </div>
@@ -231,27 +231,27 @@ function CardStack({
           {/* Left arrow */}
           <button
             onClick={() => setCurrentIdx((currentIdx - 1 + total) % total)}
-            className="flex items-center justify-center w-7 rounded-lg text-zinc-600 hover:text-zinc-400 transition-colors flex-shrink-0"
+            className="flex items-center justify-center w-7 rounded-[var(--radius-button)] text-content-tertiary hover:text-content-secondary transition-colors flex-shrink-0"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
 
           {/* Card */}
-          <div className="flex-1 px-3 py-3 rounded-xl bg-zinc-800/50 border border-zinc-700/50">
+          <div className="flex-1 px-3 py-3 rounded-[var(--radius-card)] bg-bg-elevated border border-border">
             <div className="flex items-center gap-2 mb-2">
               {currentPkg.ac ? (
-                <Snowflake className="w-3.5 h-3.5 text-blue-400" />
+                <Snowflake className="w-3.5 h-3.5 text-info" />
               ) : (
-                <Fan className="w-3.5 h-3.5 text-zinc-500" />
+                <Fan className="w-3.5 h-3.5 text-content-tertiary" />
               )}
-              <span className="text-sm text-zinc-200 font-semibold">{currentPkg.name}</span>
+              <span className="text-sm text-content font-semibold">{currentPkg.name}</span>
               {currentDecision && (
                 <span
                   className={cn(
                     "ml-auto px-1.5 py-0.5 rounded text-[10px] font-medium",
                     currentDecision === "accepted"
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : "bg-zinc-700 text-zinc-500"
+                      ? "bg-success-surface text-success"
+                      : "bg-bg-subtle text-content-tertiary"
                   )}
                 >
                   {currentDecision === "accepted" ? "Accepted" : "Skipped"}
@@ -262,37 +262,37 @@ function CardStack({
             <div className="space-y-1 text-xs">
               {currentPkg.sharingType && (
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Type</span>
-                  <span className="text-zinc-300">{humanizeSharingType(currentPkg.sharingType)}</span>
+                  <span className="text-content-tertiary">Type</span>
+                  <span className="text-content-secondary">{humanizeSharingType(currentPkg.sharingType)}</span>
                 </div>
               )}
               {currentPkg.category && (
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Category</span>
-                  <span className="text-zinc-300">{humanizeCategorySingular(currentPkg.category)}</span>
+                  <span className="text-content-tertiary">Category</span>
+                  <span className="text-content-secondary">{humanizeCategorySingular(currentPkg.category)}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-zinc-500">AC</span>
-                <span className="text-zinc-300">{currentPkg.ac ? "Yes" : "No"}</span>
+                <span className="text-content-tertiary">AC</span>
+                <span className="text-content-secondary">{currentPkg.ac ? "Yes" : "No"}</span>
               </div>
               {currentPkg.estimatedRent && (
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Rent</span>
-                  <span className="text-zinc-200 font-semibold">{currentPkg.estimatedRent}</span>
+                  <span className="text-content-tertiary">Rent</span>
+                  <span className="text-content font-semibold">{currentPkg.estimatedRent}</span>
                 </div>
               )}
             </div>
 
             {/* Per-card actions */}
             {!currentDecision && (
-              <div className="flex gap-2 mt-3 pt-2 border-t border-zinc-700/50">
+              <div className="flex gap-2 mt-3 pt-2 border-t border-border">
                 <button
                   onClick={accept}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold",
-                    "bg-amber-500/20 text-amber-300 border border-amber-500/25",
-                    "hover:bg-amber-500/25 active:scale-95 transition-all"
+                    "flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold",
+                    "bg-accent/10 text-accent-lighter border border-accent/30",
+                    "hover:bg-accent/15 active:scale-95 transition-all"
                   )}
                 >
                   <Check className="w-3 h-3" />
@@ -301,9 +301,9 @@ function CardStack({
                 <button
                   onClick={skip}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-medium",
-                    "text-zinc-400 border border-zinc-700",
-                    "hover:bg-zinc-800 active:scale-95 transition-all"
+                    "flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-[var(--radius-button)] text-xs font-medium",
+                    "text-content-secondary border border-border",
+                    "hover:bg-bg-elevated active:scale-95 transition-all"
                   )}
                 >
                   <X className="w-3 h-3" />
@@ -316,7 +316,7 @@ function CardStack({
           {/* Right arrow */}
           <button
             onClick={() => setCurrentIdx((currentIdx + 1) % total)}
-            className="flex items-center justify-center w-7 rounded-lg text-zinc-600 hover:text-zinc-400 transition-colors flex-shrink-0"
+            className="flex items-center justify-center w-7 rounded-[var(--radius-button)] text-content-tertiary hover:text-content-secondary transition-colors flex-shrink-0"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -326,7 +326,7 @@ function CardStack({
       {/* ── Summary after all reviewed ── */}
       {allReviewed && !submitted && (
         <div className="mb-3">
-          <p className="text-xs text-zinc-400 mb-2">
+          <p className="text-xs text-content-secondary mb-2">
             {acceptedPackages.length > 0
               ? `${acceptedPackages.length} package${acceptedPackages.length !== 1 ? "s" : ""} accepted:`
               : "No packages accepted"}
@@ -343,13 +343,13 @@ function CardStack({
 
       {/* ── Final action ── */}
       {allReviewed && !submitted && (
-        <div className="pt-2 border-t border-zinc-800">
+        <div className="pt-2 border-t border-border">
           <button
             onClick={handleFinalSubmit}
             className={cn(
-              "w-full px-3 py-2.5 rounded-lg text-[13px] font-semibold",
-              "bg-amber-500/20 text-amber-300 border border-amber-500/25",
-              "hover:bg-amber-500/25 active:scale-95 transition-all"
+              "w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
+              "bg-accent/10 text-accent-lighter border border-accent/30",
+              "hover:bg-accent/15 active:scale-95 transition-all"
             )}
           >
             {acceptedPackages.length > 0
@@ -360,7 +360,7 @@ function CardStack({
       )}
 
       {submitted && (
-        <p className="text-xs text-emerald-400 font-medium mt-2">
+        <p className="text-xs text-success font-medium mt-2">
           {acceptedPackages.length > 0 ? "Packages submitted" : "Starting fresh"}
         </p>
       )}
@@ -374,32 +374,32 @@ function PackageRow({ pkg, compact }: { pkg: SuggestedPackage; compact?: boolean
   return (
     <div
       className={cn(
-        "flex items-center justify-between rounded-lg bg-zinc-800/40 border border-zinc-800",
+        "flex items-center justify-between rounded-[var(--radius-button)] bg-bg-elevated border border-border",
         compact ? "px-2.5 py-1.5" : "px-3 py-2"
       )}
     >
       <div className="flex items-center gap-2">
         {pkg.ac ? (
-          <Snowflake className="w-3 h-3 text-blue-400" />
+          <Snowflake className="w-3 h-3 text-info" />
         ) : (
-          <Fan className="w-3 h-3 text-zinc-500" />
+          <Fan className="w-3 h-3 text-content-tertiary" />
         )}
         <div>
           <div className="flex items-center gap-1.5">
-            <p className="text-xs text-zinc-200 font-medium">{pkg.name}</p>
+            <p className="text-xs text-content font-medium">{pkg.name}</p>
             {pkg.category && (
-              <span className="px-1.5 py-0.5 rounded bg-zinc-700/50 text-[10px] font-medium text-zinc-400">
+              <span className="px-1.5 py-0.5 rounded bg-bg-subtle text-[10px] font-medium text-content-secondary">
                 {humanizeCategorySingular(pkg.category)}
               </span>
             )}
           </div>
           {pkg.sharingType && !compact && (
-            <p className="text-[11px] text-zinc-500">{humanizeSharingType(pkg.sharingType)}</p>
+            <p className="text-[11px] text-content-tertiary">{humanizeSharingType(pkg.sharingType)}</p>
           )}
         </div>
       </div>
       {pkg.estimatedRent && (
-        <span className={cn("font-semibold text-zinc-200", compact ? "text-xs" : "text-sm")}>
+        <span className={cn("font-semibold text-content", compact ? "text-xs" : "text-sm")}>
           {pkg.estimatedRent}
         </span>
       )}

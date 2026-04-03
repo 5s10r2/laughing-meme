@@ -51,7 +51,7 @@ function ShowcaseItem({
 }) {
   return (
     <div className="mb-6">
-      <p className="text-[10px] text-zinc-600 font-mono mb-1 px-1">{name}</p>
+      <p className="text-[10px] text-content-tertiary font-mono mb-1 px-1">{name}</p>
       {children}
     </div>
   );
@@ -66,10 +66,10 @@ function SectionHeader({
   count: number;
 }) {
   return (
-    <div className="pt-8 pb-3 border-b border-zinc-800/50 mb-4">
-      <h2 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest">
+    <div className="pt-8 pb-3 border-b border-border mb-4">
+      <h2 className="text-[11px] font-semibold text-content-tertiary uppercase tracking-widest">
         {label}
-        <span className="text-zinc-700 ml-2 font-normal">({count})</span>
+        <span className="text-content-tertiary ml-2 font-normal">({count})</span>
       </h2>
     </div>
   );
@@ -79,7 +79,7 @@ function SectionHeader({
 function ScaleBadge({ scale }: { scale: "S" | "M" | "L" }) {
   const colors = {
     S: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
-    M: "bg-amber-500/15 text-amber-400 border-amber-500/20",
+    M: "bg-accent/15 text-accent-light border-accent/20",
     L: "bg-rose-500/15 text-rose-400 border-rose-500/20",
   };
   const labels = { S: "Small", M: "Medium", L: "Large" };
@@ -111,23 +111,23 @@ export default function ShowcasePage() {
   }, [toast, toastKey]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-bg-deep text-content">
       {/* Page header */}
       <div className="max-w-[480px] mx-auto px-4 pt-8 pb-4">
-        <h1 className="text-lg font-bold text-zinc-100 mb-1">
+        <h1 className="text-lg font-bold text-content mb-1">
           Component Showcase
         </h1>
-        <p className="text-xs text-zinc-500 mb-1">
+        <p className="text-xs text-content-tertiary mb-1">
           All 25 registered UI components rendered at multiple scales.
           Components adapt their interaction patterns based on data volume.
         </p>
         <div className="flex gap-2 mt-2">
           <ScaleBadge scale="S" />
-          <span className="text-[10px] text-zinc-600">1 floor, 3 rooms</span>
+          <span className="text-[10px] text-content-tertiary">1 floor, 3 rooms</span>
           <ScaleBadge scale="M" />
-          <span className="text-[10px] text-zinc-600">3 floors, 15 rooms</span>
+          <span className="text-[10px] text-content-tertiary">3 floors, 15 rooms</span>
           <ScaleBadge scale="L" />
-          <span className="text-[10px] text-zinc-600">8 floors, 40+ rooms</span>
+          <span className="text-[10px] text-content-tertiary">8 floors, 40+ rooms</span>
         </div>
       </div>
 
@@ -832,12 +832,12 @@ export default function ShowcasePage() {
       {toast && (
         <div
           key={toastKey}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-[440px] w-[90%] px-4 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700 shadow-2xl animate-in fade-in slide-in-from-bottom-4"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-[440px] w-[90%] px-4 py-2.5 rounded-xl bg-bg-elevated border border-border shadow-2xl animate-in fade-in slide-in-from-bottom-4"
         >
-          <p className="text-[10px] text-zinc-500 font-mono mb-0.5">
+          <p className="text-[10px] text-content-tertiary font-mono mb-0.5">
             onSendMessage:
           </p>
-          <p className="text-xs text-zinc-200 break-words">{toast}</p>
+          <p className="text-xs text-content break-words">{toast}</p>
         </div>
       )}
     </div>

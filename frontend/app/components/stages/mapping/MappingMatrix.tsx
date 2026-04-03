@@ -50,10 +50,10 @@ export function MappingMatrix({
   const maxRooms = Math.max(...sortedFloors.map((f) => floorTotals[f.index] || 0), 1);
 
   return (
-    <div className="border border-zinc-800 bg-zinc-900/30 rounded-xl px-3 py-3 my-2">
+    <div className="border border-border bg-bg-surface rounded-[var(--radius-card)] px-3 py-3 my-2">
       <div className="flex items-center gap-2 mb-3">
-        <Grid3X3 className="w-3.5 h-3.5 text-amber-400/70" />
-        <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+        <Grid3X3 className="w-3.5 h-3.5 text-accent-light" />
+        <span className="text-xs font-medium text-content-secondary uppercase tracking-wider">
           Mapping Overview
         </span>
       </div>
@@ -76,10 +76,10 @@ export function MappingMatrix({
             <div key={floor.index} className="space-y-1">
               {/* Floor header */}
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-zinc-300">
+                <span className="text-xs font-medium text-content">
                   {floor.label}
                 </span>
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-content-tertiary">
                   {total} room{total !== 1 ? "s" : ""}
                 </span>
               </div>
@@ -89,14 +89,14 @@ export function MappingMatrix({
                 {segments.map((seg) => (
                   <div key={seg.packageName} className="flex items-center gap-2">
                     <div
-                      className="h-5 rounded bg-amber-500/20 flex items-center px-2 min-w-[40px]"
+                      className="h-5 rounded bg-accent/10 flex items-center px-2 min-w-[40px]"
                       style={{ width: `${Math.max((seg.count / maxRooms) * 100, 20)}%` }}
                     >
-                      <span className="text-xs text-amber-300/90 font-medium truncate">
+                      <span className="text-xs text-accent-lighter font-medium truncate">
                         {seg.count}
                       </span>
                     </div>
-                    <span className="text-xs text-zinc-400 whitespace-nowrap">
+                    <span className="text-xs text-content-secondary whitespace-nowrap">
                       {seg.packageName}
                     </span>
                   </div>
@@ -106,14 +106,14 @@ export function MappingMatrix({
                 {unmapped > 0 && (
                   <div className="flex items-center gap-2">
                     <div
-                      className="h-5 rounded bg-orange-500/15 border border-dashed border-orange-500/30 flex items-center px-2 min-w-[40px]"
+                      className="h-5 rounded bg-warning-surface border border-dashed border-warning/30 flex items-center px-2 min-w-[40px]"
                       style={{ width: `${Math.max((unmapped / maxRooms) * 100, 20)}%` }}
                     >
-                      <span className="text-xs text-orange-400/90 font-medium truncate">
+                      <span className="text-xs text-warning font-medium truncate">
                         {unmapped}
                       </span>
                     </div>
-                    <span className="text-xs text-orange-400/70 whitespace-nowrap">
+                    <span className="text-xs text-warning whitespace-nowrap">
                       unmapped
                     </span>
                   </div>

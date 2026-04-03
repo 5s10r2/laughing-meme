@@ -19,15 +19,15 @@ export function CollapsibleSection({
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
-    <div className="border border-zinc-800 rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800/50 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-content hover:bg-bg-elevated transition-colors"
       >
         {title}
         <ChevronDown
           className={cn(
-            "w-3.5 h-3.5 text-zinc-500 transition-transform duration-200",
+            "w-3.5 h-3.5 text-content-tertiary transition-transform duration-200",
             expanded && "rotate-180"
           )}
         />

@@ -32,10 +32,10 @@ export function QuickReplyChips({ options, onSendMessage }: QuickReplyChipsProps
               "px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
               "border active:scale-95 cursor-pointer",
               isSelected
-                ? "bg-amber-500/20 border-amber-500 text-amber-100"
+                ? "bg-accent/10 border-accent text-accent-lighter"
                 : hasSelection
-                  ? "border-amber-500/30 bg-zinc-900/60 text-amber-200/90 opacity-40 pointer-events-none"
-                  : "border-amber-500/30 hover:border-amber-500/60 bg-zinc-900/60 text-amber-200/90 hover:bg-amber-500/10"
+                  ? "border-accent/30 bg-bg-surface text-accent-lighter opacity-40 pointer-events-none"
+                  : "border-accent/30 hover:border-accent/60 bg-bg-surface text-accent-lighter hover:bg-accent/10"
             )}
           >
             {isSelected ? "✓ " : ""}{option.label}

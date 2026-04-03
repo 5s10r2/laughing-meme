@@ -61,25 +61,25 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
               // Desktop: centered modal
               "md:bottom-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2",
               "md:max-h-[80vh] md:w-full md:max-w-lg md:rounded-2xl",
-              "bg-zinc-900 border border-zinc-700 shadow-2xl",
+              "bg-bg-surface border border-border shadow-2xl",
               "flex flex-col"
             )}
           >
             {/* Drag handle (mobile only) */}
             <div className="flex justify-center pt-2 md:hidden">
-              <div className="w-10 h-1 rounded-full bg-zinc-600" />
+              <div className="w-10 h-1 rounded-full bg-bg-subtle" />
             </div>
 
             {/* Header */}
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
               {title ? (
-                <h3 className="text-sm font-semibold text-zinc-200">{title}</h3>
+                <h3 className="text-sm font-semibold text-content">{title}</h3>
               ) : (
                 <div />
               )}
               <button
                 onClick={onClose}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-content-tertiary hover:text-content hover:bg-bg-elevated transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>

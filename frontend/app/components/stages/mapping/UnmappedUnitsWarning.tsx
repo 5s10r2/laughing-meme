@@ -95,14 +95,14 @@ export function UnmappedUnitsWarning({
         <div className="space-y-1.5">
           {Array.from(groupMap.entries()).map(([cat, names]) => (
             <div key={cat}>
-              <p className="text-[11px] text-zinc-500 mb-0.5">
+              <p className="text-[11px] text-content-tertiary mb-0.5">
                 {humanizeCategory(cat)} ({names.length})
               </p>
               <div className="flex flex-wrap gap-1">
                 {names.map((name) => (
                   <span
                     key={name}
-                    className="px-2 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-[11px] text-orange-300/80"
+                    className="px-2 py-0.5 rounded bg-warning-surface border border-warning/20 text-[11px] text-warning"
                   >
                     {name}
                   </span>
@@ -120,7 +120,7 @@ export function UnmappedUnitsWarning({
         {units.map((u) => (
           <span
             key={u.name}
-            className="px-2 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-[11px] text-orange-300/80"
+            className="px-2 py-0.5 rounded bg-warning-surface border border-warning/20 text-[11px] text-warning"
           >
             {u.name}
           </span>
@@ -132,15 +132,15 @@ export function UnmappedUnitsWarning({
   const selectedFloor = floors[selectedFloorIdx] || floors[0];
 
   return (
-    <div className="border border-orange-500/25 bg-orange-500/5 rounded-xl px-4 py-3.5 my-2">
+    <div className="border border-warning/25 bg-warning-surface rounded-[var(--radius-card)] px-4 py-3.5 my-2">
       <div className="flex items-center gap-2 mb-2.5">
-        <AlertCircle className="w-3.5 h-3.5 text-orange-400" />
-        <span className="text-xs font-semibold text-orange-300">
+        <AlertCircle className="w-3.5 h-3.5 text-warning" />
+        <span className="text-xs font-semibold text-warning">
           {totalUnmapped} Unmapped Room{totalUnmapped !== 1 ? "s" : ""}
         </span>
       </div>
 
-      <p className="text-xs text-zinc-400 mb-3">
+      <p className="text-xs text-content-secondary mb-3">
         Almost there! Assign a package to these rooms to continue.
       </p>
 
@@ -149,7 +149,7 @@ export function UnmappedUnitsWarning({
         <div className="space-y-2.5 mb-3">
           {floors.map((floor) => (
             <div key={floor.floorIndex}>
-              <p className="text-xs text-zinc-500 font-medium mb-1">
+              <p className="text-xs text-content-tertiary font-medium mb-1">
                 {floor.floorLabel}
               </p>
               {renderFloorUnits(floor)}
@@ -162,8 +162,8 @@ export function UnmappedUnitsWarning({
       {useAggregate && (
         <div className="mb-3">
           {/* Summary */}
-          <div className="px-3 py-2 rounded-lg bg-zinc-800/30 border border-zinc-800 mb-2">
-            <p className="text-xs text-zinc-300 font-medium mb-1">
+          <div className="px-3 py-2 rounded-[var(--radius-button)] bg-bg-elevated/30 border border-border mb-2">
+            <p className="text-xs text-content font-medium mb-1">
               {totalUnmapped} unmapped rooms across {floors.length} floor{floors.length !== 1 ? "s" : ""}
             </p>
             <div className="flex flex-wrap gap-1">
@@ -172,7 +172,7 @@ export function UnmappedUnitsWarning({
                 return (
                   <span
                     key={f.floorIndex}
-                    className="px-2 py-0.5 rounded bg-orange-500/10 text-[11px] text-orange-300/80 border border-orange-500/15"
+                    className="px-2 py-0.5 rounded bg-warning-surface text-[11px] text-warning border border-warning/15"
                   >
                     {f.floorLabel}: {count}
                   </span>
@@ -183,7 +183,7 @@ export function UnmappedUnitsWarning({
 
           <button
             onClick={() => setSheetOpen(true)}
-            className="text-xs text-orange-400 hover:text-orange-300 underline-offset-2 hover:underline transition-colors mb-2"
+            className="text-xs text-warning hover:text-warning underline-offset-2 hover:underline transition-colors mb-2"
           >
             View details →
           </button>
@@ -195,9 +195,9 @@ export function UnmappedUnitsWarning({
           onSendMessage?.(`Help me assign packages to the remaining ${totalUnmapped} rooms`)
         }
         className={cn(
-          "w-full px-3 py-1.5 rounded-lg text-xs font-medium",
-          "bg-orange-500/15 text-orange-300 border border-orange-500/25",
-          "hover:bg-orange-500/25 active:scale-95 transition-all"
+          "w-full px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium",
+          "bg-warning-surface text-warning border border-warning/25",
+          "hover:bg-warning/25 active:scale-95 transition-all"
         )}
       >
         Help me assign the remaining rooms
@@ -225,7 +225,7 @@ export function UnmappedUnitsWarning({
           {/* Selected floor's unmapped units */}
           {selectedFloor && (
             <div>
-              <p className="text-xs text-zinc-400 mb-2">
+              <p className="text-xs text-content-secondary mb-2">
                 {selectedFloor.units?.length || selectedFloor.unitNames.length} unmapped on {selectedFloor.floorLabel}
               </p>
               {renderFloorUnits(selectedFloor)}

@@ -91,17 +91,17 @@ export function PackageList({ packages: rawPackages, onSendMessage, ...rest }: P
     const isEditing = editingId === pkg.id;
     return (
       <div key={pkg.id}>
-        <div className="flex items-center justify-between px-2.5 py-2 rounded-lg bg-zinc-800/40 text-xs">
+        <div className="flex items-center justify-between px-2.5 py-2 rounded-[var(--radius-button)] bg-bg-elevated text-xs">
           <div className="flex items-center gap-2">
             {pkg.amenities?.includes("AC") ? (
-              <Snowflake className="w-3 h-3 text-blue-400" />
+              <Snowflake className="w-3 h-3 text-info" />
             ) : (
-              <Fan className="w-3 h-3 text-zinc-500" />
+              <Fan className="w-3 h-3 text-content-tertiary" />
             )}
-            <span className="text-zinc-300 font-medium">{pkg.name}</span>
+            <span className="text-content-secondary font-medium">{pkg.name}</span>
             {/* Sharing type badge — only in flat mode (accordion headers already show it) */}
             {!useAccordion && pkg.sharing_type && (
-              <span className="px-1.5 py-0.5 rounded bg-zinc-700/60 text-[10px] font-medium text-zinc-400">
+              <span className="px-1.5 py-0.5 rounded bg-bg-subtle text-[10px] font-medium text-content-secondary">
                 {humanizeSharingType(pkg.sharing_type)}
               </span>
             )}
@@ -109,13 +109,13 @@ export function PackageList({ packages: rawPackages, onSendMessage, ...rest }: P
 
           <div className="flex items-center gap-2">
             {pkg.starting_rent ? (
-              <span className="text-sm font-semibold text-zinc-200">
+              <span className="text-sm font-semibold text-content">
                 ₹{pkg.starting_rent.toLocaleString("en-IN")}
               </span>
             ) : null}
             <button
               onClick={() => setEditingId(isEditing ? null : pkg.id)}
-              className="text-xs text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
+              className="text-xs text-content-tertiary hover:text-accent-light underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
             >
               {isEditing ? "close" : "change"}
             </button>
@@ -148,13 +148,13 @@ export function PackageList({ packages: rawPackages, onSendMessage, ...rest }: P
   }
 
   return (
-    <div className="border border-zinc-800 bg-zinc-900/30 rounded-xl px-3 py-3 my-2">
+    <div className="border border-border bg-bg-surface rounded-[var(--radius-card)] px-3 py-3 my-2">
       <div className="flex items-center gap-2 mb-2.5">
-        <PackageIcon className="w-3.5 h-3.5 text-amber-400/70" />
-        <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+        <PackageIcon className="w-3.5 h-3.5 text-accent-light/70" />
+        <span className="text-xs font-medium text-content-secondary uppercase tracking-wider">
           Packages
         </span>
-        <span className="text-xs text-zinc-600 ml-auto">
+        <span className="text-xs text-content-tertiary ml-auto">
           {activePackages.length} active
         </span>
       </div>
@@ -169,24 +169,24 @@ export function PackageList({ packages: rawPackages, onSendMessage, ...rest }: P
                 <button
                   onClick={() => toggleGroup(group.sharingType)}
                   className={cn(
-                    "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-all",
+                    "w-full flex items-center justify-between px-2.5 py-2 rounded-[var(--radius-button)] text-xs transition-all",
                     isOpen
-                      ? "bg-zinc-800/60 border border-zinc-700/50"
-                      : "bg-zinc-800/30 border border-transparent hover:bg-zinc-800/50"
+                      ? "bg-bg-elevated border border-border"
+                      : "bg-bg-elevated/30 border border-transparent hover:bg-bg-elevated/50"
                   )}
                 >
                   <div className="flex items-center gap-2">
                     <ChevronDown
                       className={cn(
-                        "w-3 h-3 text-zinc-500 transition-transform duration-200",
+                        "w-3 h-3 text-content-tertiary transition-transform duration-200",
                         isOpen && "rotate-180"
                       )}
                     />
-                    <span className="text-zinc-300 font-medium">{group.label}</span>
-                    <span className="text-zinc-600">({group.packages.length})</span>
+                    <span className="text-content-secondary font-medium">{group.label}</span>
+                    <span className="text-content-tertiary">({group.packages.length})</span>
                   </div>
                   {group.rentRange && (
-                    <span className="text-zinc-500 text-[11px]">{group.rentRange}</span>
+                    <span className="text-content-tertiary text-[11px]">{group.rentRange}</span>
                   )}
                 </button>
 
@@ -245,10 +245,10 @@ function InlinePackageEdit({
   }
 
   return (
-    <div className="px-2.5 py-2.5 bg-zinc-800/30 rounded-b-lg border-x border-b border-zinc-800/50 space-y-2">
+    <div className="px-2.5 py-2.5 bg-bg-elevated/30 rounded-b-lg border-x border-b border-border space-y-2">
       {/* Sharing Type */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-zinc-500 w-16">Type</label>
+        <label className="text-xs text-content-tertiary w-16">Type</label>
         <div className="flex gap-1">
           {["private", "double", "triple", "dormitory"].map((opt) => (
             <button
@@ -257,8 +257,8 @@ function InlinePackageEdit({
               className={cn(
                 "px-2 py-0.5 rounded text-xs font-medium transition-all border capitalize",
                 sharingType === opt
-                  ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                  : "bg-zinc-800 text-zinc-500 border-zinc-700 hover:border-zinc-600"
+                  ? "bg-accent/10 text-accent-lighter border-accent/30"
+                  : "bg-bg-elevated text-content-tertiary border-border hover:border-border-strong"
               )}
             >
               {opt}
@@ -269,28 +269,28 @@ function InlinePackageEdit({
 
       {/* Rent */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-zinc-500 w-16">Rent</label>
+        <label className="text-xs text-content-tertiary w-16">Rent</label>
         <div className="flex items-center gap-1">
-          <span className="text-xs text-zinc-500">₹</span>
+          <span className="text-xs text-content-tertiary">₹</span>
           <input
             type="number"
             value={rent}
             onChange={(e) => setRent(e.target.value)}
-            className="w-24 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-200 focus:border-amber-500/50 focus:outline-none"
+            className="w-24 bg-bg-elevated border border-border rounded px-2 py-1 text-xs text-content focus:border-accent/50 focus:outline-none"
           />
         </div>
       </div>
 
       {/* AC toggle */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-zinc-500 w-16">AC</label>
+        <label className="text-xs text-content-tertiary w-16">AC</label>
         <button
           onClick={() => setAc(!ac)}
           className={cn(
             "px-2.5 py-0.5 rounded text-xs font-medium transition-all border",
             ac
-              ? "bg-blue-500/20 text-blue-300 border-blue-500/30"
-              : "bg-zinc-800 text-zinc-500 border-zinc-700"
+              ? "bg-info/20 text-info border-info/30"
+              : "bg-bg-elevated text-content-tertiary border-border"
           )}
           role="switch"
           aria-checked={ac}
@@ -301,7 +301,7 @@ function InlinePackageEdit({
 
       {/* Food */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-zinc-500 w-16">Food</label>
+        <label className="text-xs text-content-tertiary w-16">Food</label>
         <div className="flex gap-1">
           {["included", "optional", "not included"].map((opt) => (
             <button
@@ -310,8 +310,8 @@ function InlinePackageEdit({
               className={cn(
                 "px-2 py-0.5 rounded text-xs font-medium transition-all border",
                 food === opt
-                  ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                  : "bg-zinc-800 text-zinc-500 border-zinc-700 hover:border-zinc-600"
+                  ? "bg-accent/10 text-accent-lighter border-accent/30"
+                  : "bg-bg-elevated text-content-tertiary border-border hover:border-border-strong"
               )}
             >
               {opt}
@@ -322,7 +322,7 @@ function InlinePackageEdit({
 
       {/* Furnishing */}
       <div className="flex items-center gap-2">
-        <label className="text-xs text-zinc-500 w-16">Furnishing</label>
+        <label className="text-xs text-content-tertiary w-16">Furnishing</label>
         <div className="flex gap-1">
           {["furnished", "semi furnished", "unfurnished"].map((opt) => (
             <button
@@ -331,8 +331,8 @@ function InlinePackageEdit({
               className={cn(
                 "px-2 py-0.5 rounded text-xs font-medium transition-all border capitalize",
                 furnishing === opt
-                  ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                  : "bg-zinc-800 text-zinc-500 border-zinc-700 hover:border-zinc-600"
+                  ? "bg-accent/10 text-accent-lighter border-accent/30"
+                  : "bg-bg-elevated text-content-tertiary border-border hover:border-border-strong"
               )}
             >
               {opt}
@@ -342,16 +342,16 @@ function InlinePackageEdit({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 pt-1 border-t border-zinc-800/50">
+      <div className="flex gap-2 pt-1 border-t border-border">
         <button
           onClick={handleSave}
-          className="flex-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/25 hover:bg-amber-500/25 active:scale-95 transition-all"
+          className="flex-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium bg-accent/10 text-accent-lighter border border-accent/30 hover:bg-accent/15 active:scale-95 transition-all"
         >
           Save changes →
         </button>
         <button
           onClick={onCancel}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-zinc-700 hover:bg-zinc-800 active:scale-95 transition-all"
+          className="px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium text-content-secondary border border-border hover:bg-bg-elevated active:scale-95 transition-all"
         >
           Cancel
         </button>

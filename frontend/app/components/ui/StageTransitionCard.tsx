@@ -32,32 +32,32 @@ export function StageTransitionCard({
   onSendMessage,
 }: StageTransitionCardProps) {
   return (
-    <div className="bg-gradient-to-r from-zinc-900 to-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-3.5 my-2">
+    <div className="bg-gradient-to-r from-bg-surface to-bg-surface/60 border border-border rounded-[var(--radius-card)] px-4 py-3.5 my-2">
       {/* Completed stage */}
       <div className="flex items-center gap-2 mb-3">
-        <CheckCircle2 className="w-4 h-4 text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.3)]" />
-        <span className="text-xs font-medium text-emerald-300/90">
+        <CheckCircle2 className="w-4 h-4 text-success drop-shadow-[0_0_4px_rgba(52,211,153,0.3)]" />
+        <span className="text-xs font-medium text-success">
           {STAGE_LABELS[completedStage] || completedStage} complete
         </span>
       </div>
 
       {summary && (
-        <p className="text-xs text-zinc-400 mb-3 pl-6">{summary}</p>
+        <p className="text-xs text-content-secondary mb-3 pl-6">{summary}</p>
       )}
 
       {/* Divider */}
-      <div className="border-t border-zinc-800 my-2" />
+      <div className="border-t border-border my-2" />
 
       {/* Next stage */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+          <ArrowRight className="w-3.5 h-3.5 text-accent-light" />
           <div>
-            <p className="text-xs font-semibold text-zinc-200">
+            <p className="text-xs font-semibold text-content">
               Next: {STAGE_LABELS[nextStage] || nextStage}
             </p>
             {STAGE_DESCRIPTIONS[nextStage] && (
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-content-tertiary mt-0.5">
                 {STAGE_DESCRIPTIONS[nextStage]}
               </p>
             )}
@@ -66,9 +66,9 @@ export function StageTransitionCard({
         <button
           onClick={() => onSendMessage?.(`Let's continue to ${nextStage}`)}
           className={cn(
-            "px-3 py-2.5 rounded-lg text-[13px] font-semibold",
-            "bg-amber-500/15 text-amber-300 border border-amber-500/25",
-            "hover:bg-amber-500/25 hover:border-amber-500/40",
+            "px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
+            "bg-accent/10 text-accent-lighter border border-accent/30",
+            "hover:bg-accent/20 hover:border-accent/40",
             "active:scale-95 transition-all duration-150"
           )}
         >

@@ -76,14 +76,14 @@ function FieldRow({
   onChange?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between py-1 border-b border-zinc-800/30 last:border-0">
-      <span className="text-xs text-zinc-600">{label}</span>
+    <div className="flex items-center justify-between py-1 border-b border-border/30 last:border-0">
+      <span className="text-xs text-content-tertiary">{label}</span>
       <div className="flex items-center gap-2">
-        <span className="text-xs text-zinc-300">{value}</span>
+        <span className="text-xs text-content">{value}</span>
         {onChange && (
           <button
             onClick={onChange}
-            className="text-xs text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
+            className="text-xs text-content-tertiary hover:text-accent-light underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
           >
             change
           </button>
@@ -324,20 +324,20 @@ export function VerificationSummary({
 
   function renderBadge(badge: { type: "ok" | "warning" | "error"; text: string }) {
     if (badge.type === "ok") {
-      return <CheckCircle2 className="w-3 h-3 text-emerald-400" />;
+      return <CheckCircle2 className="w-3 h-3 text-success" />;
     }
     if (badge.type === "error") {
       return (
         <span className="flex items-center gap-0.5">
-          <AlertCircle className="w-3 h-3 text-red-400" />
-          {badge.text && <span className="text-[10px] text-red-400 font-medium">{badge.text}</span>}
+          <AlertCircle className="w-3 h-3 text-error" />
+          {badge.text && <span className="text-[10px] text-error font-medium">{badge.text}</span>}
         </span>
       );
     }
     return (
       <span className="flex items-center gap-0.5">
-        <AlertTriangle className="w-3 h-3 text-orange-400" />
-        {badge.text && <span className="text-[10px] text-orange-400 font-medium">{badge.text}</span>}
+        <AlertTriangle className="w-3 h-3 text-warning" />
+        {badge.text && <span className="text-[10px] text-warning font-medium">{badge.text}</span>}
       </span>
     );
   }
@@ -404,25 +404,25 @@ export function VerificationSummary({
               const sharingStr = pkg.sharingType || "";
               const attrs = pkg.attributes?.join(", ") || "";
               return (
-                <div key={i} className="flex items-center justify-between py-1 border-b border-zinc-800/30 last:border-0">
+                <div key={i} className="flex items-center justify-between py-1 border-b border-border/30 last:border-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-zinc-600">{pkg.name}</span>
+                    <span className="text-xs text-content-tertiary">{pkg.name}</span>
                     {sharingStr && (
-                      <span className="text-xs text-zinc-600 px-1.5 py-0.5 rounded bg-zinc-800/50 font-medium">
+                      <span className="text-xs text-content-tertiary px-1.5 py-0.5 rounded bg-bg-elevated font-medium">
                         {sharingStr}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs">
-                      {rentStr && <span className="font-semibold text-zinc-200">{rentStr}</span>}
-                      {rentStr && attrs && <span className="text-zinc-500"> · </span>}
-                      {attrs && <span className="text-zinc-500">{attrs}</span>}
-                      {!rentStr && !attrs && <span className="text-zinc-300">—</span>}
+                      {rentStr && <span className="font-semibold text-content">{rentStr}</span>}
+                      {rentStr && attrs && <span className="text-content-tertiary"> · </span>}
+                      {attrs && <span className="text-content-tertiary">{attrs}</span>}
+                      {!rentStr && !attrs && <span className="text-content">—</span>}
                     </span>
                     <button
                       onClick={() => onSendMessage?.(`I want to change the ${pkg.name} package${rentStr ? `, currently ${rentStr}` : ""}`)}
-                      className="text-xs text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
+                      className="text-xs text-content-tertiary hover:text-accent-light underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
                     >
                       change
                     </button>
@@ -454,24 +454,24 @@ export function VerificationSummary({
               }
 
               return (
-                <div key={i} className="py-1 border-b border-zinc-800/30 last:border-0">
+                <div key={i} className="py-1 border-b border-border/30 last:border-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-zinc-600">{m.floorLabel}</span>
+                    <span className="text-xs text-content-tertiary">{m.floorLabel}</span>
                     <button
                       onClick={() => onSendMessage?.(`I want to change the mapping for ${m.floorLabel}`)}
-                      className="text-xs text-zinc-500 hover:text-amber-400 underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
+                      className="text-xs text-content-tertiary hover:text-accent-light underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
                     >
                       change
                     </button>
                   </div>
-                  <div className="pl-2 border-l border-zinc-700/40 space-y-0.5">
+                  <div className="pl-2 border-l border-border space-y-0.5">
                     {assignments.map((a, ai) => (
                       <div key={ai} className="flex items-center gap-1.5 text-xs">
-                        <span className="text-zinc-500">
+                        <span className="text-content-tertiary">
                           {a.count} room{a.count !== 1 ? "s" : ""}
                         </span>
-                        <ArrowRight className="w-2.5 h-2.5 text-zinc-600" />
-                        <span className="text-zinc-300 font-medium">
+                        <ArrowRight className="w-2.5 h-2.5 text-content-tertiary" />
+                        <span className="text-content font-medium">
                           {a.packageName}
                         </span>
                       </div>
@@ -493,8 +493,8 @@ export function VerificationSummary({
                 className={cn(
                   "flex items-center gap-2 text-xs py-1 px-2 rounded",
                   item.severity === "error"
-                    ? "bg-red-500/10 text-red-300"
-                    : "bg-orange-500/10 text-orange-300"
+                    ? "bg-error/10 text-error"
+                    : "bg-warning-surface text-warning"
                 )}
               >
                 <AlertCircle className="w-3 h-3 flex-shrink-0" />
@@ -510,8 +510,8 @@ export function VerificationSummary({
   }
 
   return (
-    <div className="border border-zinc-800 bg-zinc-900/30 rounded-xl px-4 py-4 my-2">
-      <p className="text-xs font-semibold text-zinc-200 mb-3">Final Review</p>
+    <div className="border border-border bg-bg-surface rounded-[var(--radius-card)] px-4 py-4 my-2">
+      <p className="text-xs font-semibold text-content mb-3">Final Review</p>
 
       {/* ── Accordion sections ── */}
       <div className="space-y-1 mb-4">
@@ -524,24 +524,24 @@ export function VerificationSummary({
               <button
                 onClick={() => toggleSection(section.id)}
                 className={cn(
-                  "w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-all",
+                  "w-full flex items-center gap-2 px-2.5 py-2 rounded-[var(--radius-button)] text-xs transition-all",
                   isOpen
-                    ? "bg-zinc-800/50 border border-zinc-700/50"
-                    : "bg-zinc-800/20 border border-transparent hover:bg-zinc-800/40"
+                    ? "bg-bg-elevated border border-border"
+                    : "bg-bg-elevated/20 border border-transparent hover:bg-bg-elevated"
                 )}
               >
                 <ChevronDown
                   className={cn(
-                    "w-3 h-3 text-zinc-500 transition-transform duration-200 flex-shrink-0",
+                    "w-3 h-3 text-content-tertiary transition-transform duration-200 flex-shrink-0",
                     isOpen && "rotate-180"
                   )}
                 />
-                <Icon className="w-3 h-3 text-amber-400/70 flex-shrink-0" />
-                <span className="text-zinc-300 font-medium">{section.title}</span>
+                <Icon className="w-3 h-3 text-accent-light flex-shrink-0" />
+                <span className="text-content font-medium">{section.title}</span>
 
                 {/* Collapsed summary text */}
                 {!isOpen && (
-                  <span className="text-zinc-600 truncate text-[11px] ml-1">
+                  <span className="text-content-tertiary truncate text-[11px] ml-1">
                     — {section.summary}
                   </span>
                 )}
@@ -572,18 +572,18 @@ export function VerificationSummary({
       </div>
 
       {/* Actions */}
-      <div className="pt-2 border-t border-zinc-800">
+      <div className="pt-2 border-t border-border">
         {hasPending && (
-          <p className="text-xs text-amber-400/70 mb-2">
+          <p className="text-xs text-accent-light mb-2">
             Resolve {pending!.length} pending item{pending!.length !== 1 ? "s" : ""} first
           </p>
         )}
         <button
           onClick={() => onSendMessage?.("Everything looks correct, confirm")}
           className={cn(
-            "w-full px-3 py-2.5 rounded-lg text-[13px] font-semibold",
-            "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25",
-            "hover:bg-emerald-500/25 active:scale-95 transition-all",
+            "w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
+            "bg-success-surface text-success border border-success/25",
+            "hover:bg-success/25 active:scale-95 transition-all",
             hasPending && "opacity-50 cursor-not-allowed"
           )}
           disabled={!!hasPending}

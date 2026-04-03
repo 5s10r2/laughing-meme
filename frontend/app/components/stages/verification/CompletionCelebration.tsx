@@ -55,7 +55,7 @@ export function CompletionCelebration({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="border border-emerald-500/25 bg-gradient-to-b from-emerald-500/10 to-zinc-900/30 rounded-xl px-5 py-5 my-2"
+      className="border border-success/25 bg-gradient-to-b from-success/10 to-bg-surface rounded-[var(--radius-card)] px-5 py-5 my-2"
     >
       {/* Success Icon */}
       <div className="flex flex-col items-center text-center mb-4">
@@ -63,9 +63,9 @@ export function CompletionCelebration({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center mb-3"
+          className="w-12 h-12 rounded-full bg-success-surface flex items-center justify-center mb-3"
         >
-          <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+          <CheckCircle2 className="w-7 h-7 text-success" />
         </motion.div>
 
         <motion.div
@@ -74,13 +74,13 @@ export function CompletionCelebration({
           transition={{ delay: 0.3 }}
         >
           <div className="flex items-center gap-1.5 justify-center mb-1">
-            <PartyPopper className="w-4 h-4 text-amber-400" />
-            <h3 className="text-sm font-semibold text-zinc-100">
+            <PartyPopper className="w-4 h-4 text-accent-light" />
+            <h3 className="text-sm font-semibold text-content">
               You&apos;re All Set!
             </h3>
-            <PartyPopper className="w-4 h-4 text-amber-400 scale-x-[-1]" />
+            <PartyPopper className="w-4 h-4 text-accent-light scale-x-[-1]" />
           </div>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-content-secondary">
             Congratulations! {stats.propertyName} is ready for tenants
           </p>
         </motion.div>
@@ -103,10 +103,10 @@ export function CompletionCelebration({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.45 + i * 0.1, duration: 0.3, ease: "easeOut" }}
-            className="text-center py-2 px-2 rounded-lg bg-zinc-800/40"
+            className="text-center py-2 px-2 rounded-[var(--radius-button)] bg-bg-elevated"
           >
-            <p className="text-lg font-bold text-zinc-200">{stat.value}</p>
-            <p className="text-xs text-zinc-500">{stat.label}</p>
+            <p className="text-lg font-bold text-content">{stat.value}</p>
+            <p className="text-xs text-content-tertiary">{stat.label}</p>
           </motion.div>
         ))}
       </motion.div>
@@ -121,9 +121,9 @@ export function CompletionCelebration({
         <button
           onClick={() => onSendMessage?.("Take me to the dashboard")}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[13px] font-semibold",
-            "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
-            "hover:bg-emerald-500/30 active:scale-95 transition-all"
+            "flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
+            "bg-success-surface text-success border border-success/30",
+            "hover:bg-success/30 active:scale-95 transition-all"
           )}
         >
           <LayoutDashboard className="w-3.5 h-3.5" />
@@ -132,9 +132,9 @@ export function CompletionCelebration({
         <button
           onClick={() => onSendMessage?.("I want to add photos")}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium",
-            "text-zinc-400 border border-zinc-700",
-            "hover:bg-zinc-800 active:scale-95 transition-all"
+            "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-medium",
+            "text-content-secondary border border-border",
+            "hover:bg-bg-elevated active:scale-95 transition-all"
           )}
         >
           <Camera className="w-3.5 h-3.5" />

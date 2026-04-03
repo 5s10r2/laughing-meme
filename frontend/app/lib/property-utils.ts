@@ -54,9 +54,9 @@ export function humanizeSharingType(sharingType: string): string {
 
 /** Color palette for package assignment visualization */
 export const PACKAGE_COLORS = [
-  "bg-amber-500/20 text-amber-300 border-amber-500/30",
-  "bg-blue-500/20 text-blue-300 border-blue-500/30",
-  "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+  "bg-accent/20 text-accent-lighter border-accent/30",
+  "bg-info/20 text-info border-info/30",
+  "bg-success/20 text-success border-success/30",
   "bg-purple-500/20 text-purple-300 border-purple-500/30",
   "bg-rose-500/20 text-rose-300 border-rose-500/30",
   "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",

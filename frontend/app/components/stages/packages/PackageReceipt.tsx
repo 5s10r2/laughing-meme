@@ -27,19 +27,19 @@ export function PackageReceipt({ name: rawName, rent: rawRent, ac, food, furnish
   }
 
   return (
-    <div className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-emerald-950/15 border-l-2 border-emerald-500/30 my-1">
-      <Check className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+    <div className="flex items-center gap-2 py-1.5 px-3 rounded-[var(--radius-button)] bg-success-surface border-l-2 border-l-success my-1">
+      <Check className="w-3 h-3 text-success flex-shrink-0" />
       <div className="flex items-center gap-1.5 flex-1 min-w-0">
         {ac ? (
-          <Snowflake className="w-2.5 h-2.5 text-blue-400 flex-shrink-0" />
+          <Snowflake className="w-2.5 h-2.5 text-info flex-shrink-0" />
         ) : (
-          <Fan className="w-2.5 h-2.5 text-zinc-500 flex-shrink-0" />
+          <Fan className="w-2.5 h-2.5 text-content-tertiary flex-shrink-0" />
         )}
-        <span className="text-xs text-emerald-300/80 truncate">
+        <span className="text-xs text-success/80 truncate">
           {name}: <span className="font-semibold">₹{rent.toLocaleString("en-IN")}/mo</span>
         </span>
         {badges.length > 0 && (
-          <span className="text-xs text-emerald-400/50 flex-shrink-0">
+          <span className="text-xs text-success/50 flex-shrink-0">
             {badges.join(", ")}
           </span>
         )}

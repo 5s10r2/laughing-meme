@@ -72,9 +72,9 @@ function SingleStepper({
           onClick={() => onChange(Math.max(min, count - 1))}
           disabled={count <= min || disabled}
           className={cn(
-            "w-7 h-7 rounded-lg flex items-center justify-center",
-            "border border-zinc-700 bg-zinc-800 text-zinc-400",
-            "hover:bg-zinc-700 active:scale-95 transition-all",
+            "w-7 h-7 rounded-[var(--radius-button)] flex items-center justify-center",
+            "border border-border bg-bg-elevated text-content-secondary",
+            "hover:bg-bg-subtle active:scale-95 transition-all",
             "disabled:opacity-30 disabled:cursor-not-allowed"
           )}
         >
@@ -82,16 +82,16 @@ function SingleStepper({
         </button>
 
         <div className="w-10 text-center">
-          <span className="text-lg font-bold text-zinc-100">{count}</span>
+          <span className="text-lg font-bold text-content">{count}</span>
         </div>
 
         <button
           onClick={() => onChange(Math.min(max, count + 1))}
           disabled={count >= max || disabled}
           className={cn(
-            "w-7 h-7 rounded-lg flex items-center justify-center",
-            "border border-zinc-700 bg-zinc-800 text-zinc-400",
-            "hover:bg-zinc-700 active:scale-95 transition-all",
+            "w-7 h-7 rounded-[var(--radius-button)] flex items-center justify-center",
+            "border border-border bg-bg-elevated text-content-secondary",
+            "hover:bg-bg-subtle active:scale-95 transition-all",
             "disabled:opacity-30 disabled:cursor-not-allowed"
           )}
         >
@@ -100,8 +100,8 @@ function SingleStepper({
       </div>
 
       <div className="flex items-center gap-1.5">
-        {Icon && <Icon className="w-3 h-3 text-zinc-500" />}
-        <span className="text-xs text-zinc-500">{label}</span>
+        {Icon && <Icon className="w-3 h-3 text-content-tertiary" />}
+        <span className="text-xs text-content-tertiary">{label}</span>
       </div>
     </div>
   );
@@ -121,10 +121,10 @@ function TypeStepperRow({
 }) {
   const Icon = getCategoryIcon(type.category);
   return (
-    <div className="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-zinc-800/30">
+    <div className="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-bg-elevated/30">
       <div className="flex items-center gap-1.5 min-w-[80px]">
-        <Icon className="w-3 h-3 text-zinc-500" />
-        <span className="text-xs text-zinc-400 font-medium">{type.label}</span>
+        <Icon className="w-3 h-3 text-content-tertiary" />
+        <span className="text-xs text-content-secondary font-medium">{type.label}</span>
       </div>
       <div className="flex items-center gap-1.5 ml-auto">
         <button
@@ -132,23 +132,23 @@ function TypeStepperRow({
           disabled={count <= 0 || disabled}
           className={cn(
             "w-6 h-6 rounded flex items-center justify-center",
-            "border border-zinc-700 bg-zinc-800 text-zinc-400",
-            "hover:bg-zinc-700 active:scale-95 transition-all",
+            "border border-border bg-bg-elevated text-content-secondary",
+            "hover:bg-bg-subtle active:scale-95 transition-all",
             "disabled:opacity-30 disabled:cursor-not-allowed"
           )}
         >
           <Minus className="w-2.5 h-2.5" />
         </button>
         <div className="w-8 text-center">
-          <span className="text-sm font-bold text-zinc-100">{count}</span>
+          <span className="text-sm font-bold text-content">{count}</span>
         </div>
         <button
           onClick={() => onChange(Math.min(50, count + 1))}
           disabled={count >= 50 || disabled}
           className={cn(
             "w-6 h-6 rounded flex items-center justify-center",
-            "border border-zinc-700 bg-zinc-800 text-zinc-400",
-            "hover:bg-zinc-700 active:scale-95 transition-all",
+            "border border-border bg-bg-elevated text-content-secondary",
+            "hover:bg-bg-subtle active:scale-95 transition-all",
             "disabled:opacity-30 disabled:cursor-not-allowed"
           )}
         >
@@ -288,8 +288,8 @@ function BatchUnitInput({
   }));
 
   return (
-    <div className="border border-zinc-800 border-l-2 border-l-amber-500/30 bg-zinc-900/40 rounded-xl px-3.5 py-3 my-2">
-      <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider mb-2">
+    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-3.5 py-3 my-2">
+      <p className="text-xs text-content-tertiary font-medium uppercase tracking-wider mb-2">
         Set rooms per floor
       </p>
 
@@ -304,14 +304,14 @@ function BatchUnitInput({
 
       {/* Progress */}
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-zinc-300 font-medium">{selectedFloor?.label}</p>
-        <span className="text-[11px] text-zinc-600">
+        <p className="text-xs text-content-secondary font-medium">{selectedFloor?.label}</p>
+        <span className="text-[11px] text-content-tertiary">
           {confirmedCount}/{floors.length} set
         </span>
       </div>
 
       {selectedFloor?.suggestedRange && !isMulti && (
-        <p className="text-xs text-zinc-500 mb-2">
+        <p className="text-xs text-content-tertiary mb-2">
           Suggested: {selectedFloor.suggestedRange[0]}&ndash;{selectedFloor.suggestedRange[1]} rooms
         </p>
       )}
@@ -362,9 +362,9 @@ function BatchUnitInput({
             <button
               onClick={copyFromPrevious}
               className={cn(
-                "flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium",
-                "text-zinc-400 border border-zinc-700",
-                "hover:bg-zinc-800 active:scale-95 transition-all"
+                "flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-medium",
+                "text-content-secondary border border-border",
+                "hover:bg-bg-elevated active:scale-95 transition-all"
               )}
             >
               <Copy className="w-3 h-3" />
@@ -375,9 +375,9 @@ function BatchUnitInput({
             <button
               onClick={setForAllRemaining}
               className={cn(
-                "flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium",
-                "text-zinc-400 border border-zinc-700",
-                "hover:bg-zinc-800 active:scale-95 transition-all"
+                "flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-medium",
+                "text-content-secondary border border-border",
+                "hover:bg-bg-elevated active:scale-95 transition-all"
               )}
             >
               <ChevronsRight className="w-3 h-3" />
@@ -392,9 +392,9 @@ function BatchUnitInput({
         <button
           onClick={confirmCurrentFloor}
           className={cn(
-            "mt-3 w-full px-3 py-2 rounded-lg text-xs font-semibold",
-            "bg-zinc-800 text-zinc-300 border border-zinc-700",
-            "hover:bg-zinc-700 active:scale-95 transition-all"
+            "mt-3 w-full px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold",
+            "bg-bg-elevated text-content-secondary border border-border",
+            "hover:bg-bg-subtle active:scale-95 transition-all"
           )}
         >
           Confirm {selectedFloor?.label} →
@@ -402,7 +402,7 @@ function BatchUnitInput({
       )}
 
       {state.confirmed && !submitted && (
-        <div className="flex items-center gap-1.5 mt-3 text-xs text-emerald-400">
+        <div className="flex items-center gap-1.5 mt-3 text-xs text-success">
           <Check className="w-3 h-3" />
           <span>{selectedFloor?.label} set</span>
         </div>
@@ -413,9 +413,9 @@ function BatchUnitInput({
         <button
           onClick={handleFinalSubmit}
           className={cn(
-            "mt-3 w-full px-3 py-2.5 rounded-lg text-[13px] font-semibold",
-            "bg-amber-500/20 text-amber-300 border border-amber-500/25",
-            "hover:bg-amber-500/25 active:scale-95 transition-all"
+            "mt-3 w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
+            "bg-accent/20 text-accent-lighter border border-accent/25",
+            "hover:bg-accent/25 active:scale-95 transition-all"
           )}
         >
           Set all {floors.length} floors →
@@ -423,7 +423,7 @@ function BatchUnitInput({
       )}
 
       {submitted && (
-        <p className="mt-3 text-xs text-emerald-400 font-medium">
+        <p className="mt-3 text-xs text-success font-medium">
           All floors set
         </p>
       )}
@@ -589,11 +589,11 @@ export function UnitCountInput({
     : `Set ${simpleCount} ${unitTypes && unitTypes.length === 1 ? unitTypes[0].label.toLowerCase() : "rooms"} →`;
 
   return (
-    <div className="border border-zinc-800 border-l-2 border-l-amber-500/30 bg-zinc-900/40 rounded-xl px-3.5 py-3 my-2">
-      <p className="text-xs text-zinc-300 font-medium mb-1">{floorLabel}</p>
+    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-3.5 py-3 my-2">
+      <p className="text-xs text-content-secondary font-medium mb-1">{floorLabel}</p>
 
       {suggestedRange && !isMultiType && (
-        <p className="text-xs text-zinc-500 mb-2.5">
+        <p className="text-xs text-content-tertiary mb-2.5">
           Tarini suggests {suggestedRange[0]}&ndash;{suggestedRange[1]} rooms
           for this floor
         </p>
@@ -621,7 +621,7 @@ export function UnitCountInput({
 
           {quickFillValues.length > 0 && !submitted && (
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs text-zinc-600">Quick:</span>
+              <span className="text-xs text-content-tertiary">Quick:</span>
               {quickFillValues.map((v) => (
                 <button
                   key={v}
@@ -629,8 +629,8 @@ export function UnitCountInput({
                   className={cn(
                     "px-2.5 py-1 min-w-[36px] min-h-[32px] flex items-center justify-center rounded text-xs font-medium transition-all",
                     simpleCount === v
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                      : "bg-zinc-800/60 text-zinc-500 border border-zinc-700/50 hover:text-zinc-300"
+                      ? "bg-accent/20 text-accent-lighter border border-accent/30"
+                      : "bg-bg-elevated/60 text-content-tertiary border border-border/50 hover:text-content-secondary"
                   )}
                 >
                   {v}
@@ -643,9 +643,9 @@ export function UnitCountInput({
             onClick={handleSubmitSimple}
             disabled={submitted}
             className={cn(
-              "mt-3 w-full px-3 py-2.5 rounded-lg text-[13px] font-semibold",
-              "bg-amber-500/20 text-amber-300 border border-amber-500/25",
-              "hover:bg-amber-500/25 active:scale-95 transition-all",
+              "mt-3 w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
+              "bg-accent/20 text-accent-lighter border border-accent/25",
+              "hover:bg-accent/25 active:scale-95 transition-all",
               "disabled:opacity-40 disabled:cursor-not-allowed"
             )}
           >
@@ -656,7 +656,7 @@ export function UnitCountInput({
 
       {isMultiType && unitTypes && (
         <>
-          <p className="text-xs text-zinc-500 mb-2.5">
+          <p className="text-xs text-content-tertiary mb-2.5">
             This floor has mixed unit types. Set the count for each:
           </p>
 
@@ -673,17 +673,17 @@ export function UnitCountInput({
           </div>
 
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-500">Total units</span>
-            <span className="text-sm font-bold text-zinc-200">{multiTotal}</span>
+            <span className="text-xs text-content-tertiary">Total units</span>
+            <span className="text-sm font-bold text-content">{multiTotal}</span>
           </div>
 
           <button
             onClick={handleSubmitMulti}
             disabled={submitted || multiTotal === 0}
             className={cn(
-              "w-full px-3 py-2.5 rounded-lg text-[13px] font-semibold",
-              "bg-amber-500/20 text-amber-300 border border-amber-500/25",
-              "hover:bg-amber-500/25 active:scale-95 transition-all",
+              "w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
+              "bg-accent/20 text-accent-lighter border border-accent/25",
+              "hover:bg-accent/25 active:scale-95 transition-all",
               "disabled:opacity-40 disabled:cursor-not-allowed"
             )}
           >
@@ -692,7 +692,7 @@ export function UnitCountInput({
         </>
       )}
 
-      {hint && <p className="text-xs text-zinc-600 mt-2">{hint}</p>}
+      {hint && <p className="text-xs text-content-tertiary mt-2">{hint}</p>}
     </div>
   );
 }

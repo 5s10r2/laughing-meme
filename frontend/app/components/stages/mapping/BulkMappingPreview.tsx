@@ -145,12 +145,12 @@ export function BulkMappingPreview({
   }
 
   return (
-    <div className="border border-amber-500/20 border-l-2 border-l-amber-500/30 bg-amber-500/5 rounded-xl px-4 py-3.5 my-2">
+    <div className="border border-accent/30 border-l-2 border-l-accent/30 bg-accent/5 rounded-[var(--radius-card)] px-4 py-3.5 my-2">
       <div className="flex items-start gap-2 mb-3">
-        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
+        <AlertTriangle className="w-3.5 h-3.5 text-accent-light mt-0.5 flex-shrink-0" />
         <div>
-          <p className="text-xs text-zinc-200 font-medium">{description}</p>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-content font-medium">{description}</p>
+          <p className="text-xs text-content-tertiary mt-0.5">
             {totalUnits} room{totalUnits !== 1 ? "s" : ""} across {totalFloors}{" "}
             floor{totalFloors !== 1 ? "s" : ""}
           </p>
@@ -167,25 +167,25 @@ export function BulkMappingPreview({
                 <button
                   onClick={() => setExpandedPkg(isOpen ? null : group.packageName)}
                   className={cn(
-                    "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-all",
+                    "w-full flex items-center justify-between px-2.5 py-2 rounded-[var(--radius-button)] text-xs transition-all",
                     isOpen
-                      ? "bg-zinc-800/50 border border-zinc-700/50"
-                      : "bg-zinc-800/30 border border-transparent hover:bg-zinc-800/40"
+                      ? "bg-bg-elevated border border-border"
+                      : "bg-bg-elevated/30 border border-transparent hover:bg-bg-elevated"
                   )}
                 >
                   <div className="flex items-center gap-2">
                     <ChevronDown
                       className={cn(
-                        "w-3 h-3 text-zinc-500 transition-transform duration-200",
+                        "w-3 h-3 text-content-tertiary transition-transform duration-200",
                         isOpen && "rotate-180"
                       )}
                     />
-                    <span className="text-amber-300/80 font-medium">{group.packageName}</span>
-                    <span className="text-zinc-500">
+                    <span className="text-accent-lighter font-medium">{group.packageName}</span>
+                    <span className="text-content-tertiary">
                       ({group.totalUnits} room{group.totalUnits !== 1 ? "s" : ""})
                     </span>
                   </div>
-                  <span className="text-zinc-600 text-[11px]">
+                  <span className="text-content-tertiary text-[11px]">
                     {group.floors.length} floor{group.floors.length !== 1 ? "s" : ""}
                   </span>
                 </button>
@@ -205,8 +205,8 @@ export function BulkMappingPreview({
                             key={fi}
                             className="flex items-center justify-between text-xs py-0.5"
                           >
-                            <span className="text-zinc-400">{f.floorLabel}</span>
-                            <span className="text-zinc-500 font-mono">
+                            <span className="text-content-secondary">{f.floorLabel}</span>
+                            <span className="text-content-tertiary font-mono">
                               {f.unitCount} room{f.unitCount !== 1 ? "s" : ""}
                             </span>
                           </div>
@@ -229,31 +229,31 @@ export function BulkMappingPreview({
             return (
               <div
                 key={i}
-                className="px-2.5 py-1.5 rounded-lg bg-zinc-800/40 text-xs"
+                className="px-2.5 py-1.5 rounded-[var(--radius-button)] bg-bg-elevated text-xs"
               >
                 {!isMultiPackage ? (
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-400">{op.floorLabel}</span>
+                    <span className="text-content-secondary">{op.floorLabel}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-zinc-500 font-mono text-xs">
+                      <span className="text-content-tertiary font-mono text-xs">
                         {assignments[0]?.unitCount || 0} room{(assignments[0]?.unitCount || 0) !== 1 ? "s" : ""}
                       </span>
-                      <span className="text-amber-300/80 font-medium text-xs">
+                      <span className="text-accent-lighter font-medium text-xs">
                         {assignments[0]?.packageName || "—"}
                       </span>
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <p className="text-zinc-400 font-medium mb-1">{op.floorLabel}</p>
-                    <div className="pl-2 border-l border-zinc-700/50 space-y-0.5">
+                    <p className="text-content-secondary font-medium mb-1">{op.floorLabel}</p>
+                    <div className="pl-2 border-l border-border space-y-0.5">
                       {assignments.map((a, ai) => (
                         <div key={ai} className="flex items-center gap-2">
-                          <span className="text-zinc-500 font-mono">
+                          <span className="text-content-tertiary font-mono">
                             {a.unitCount} room{a.unitCount !== 1 ? "s" : ""}
                           </span>
-                          <ArrowRight className="w-2.5 h-2.5 text-zinc-600" />
-                          <span className="text-amber-300/80 font-medium">
+                          <ArrowRight className="w-2.5 h-2.5 text-content-tertiary" />
+                          <span className="text-accent-lighter font-medium">
                             {a.packageName}
                           </span>
                         </div>
@@ -267,20 +267,20 @@ export function BulkMappingPreview({
         </div>
       )}
 
-      <div className="flex gap-2 pt-2 border-t border-amber-500/10">
+      <div className="flex gap-2 pt-2 border-t border-accent/10">
         <button
           onClick={handleConfirm}
           className={cn(
-            "flex-1 px-3 py-2.5 rounded-lg text-[13px] font-semibold",
-            "bg-amber-500/20 text-amber-300 border border-amber-500/30",
-            "hover:bg-amber-500/30 active:scale-95 transition-all"
+            "flex-1 px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
+            "bg-accent/10 text-accent-lighter border border-accent/30",
+            "hover:bg-accent/20 active:scale-95 transition-all"
           )}
         >
           Confirm mapping for {totalUnits} room{totalUnits !== 1 ? "s" : ""}{useGrouped ? ` across ${packageGroups.length} package${packageGroups.length !== 1 ? "s" : ""}` : ""} →
         </button>
         <button
           onClick={() => onSendMessage?.("No, I want to change this")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 border border-zinc-700 hover:bg-zinc-800 active:scale-95 transition-all"
+          className="px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium text-content-secondary border border-border hover:bg-bg-elevated active:scale-95 transition-all"
         >
           Go back
         </button>

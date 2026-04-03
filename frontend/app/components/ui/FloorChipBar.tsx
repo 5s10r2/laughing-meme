@@ -61,10 +61,10 @@ export function FloorChipBar({ floors, selected, onSelect }: FloorChipBarProps) 
               "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap",
               "border transition-all duration-150 flex-shrink-0",
               "active:scale-95",
-              isSelected && "bg-amber-500/20 text-amber-300 border-amber-500/40",
-              !isSelected && status === "done" && "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-              !isSelected && status === "pending" && "bg-zinc-800/50 text-zinc-500 border-zinc-700 hover:text-zinc-300 hover:border-zinc-500",
-              !isSelected && status === "active" && "bg-zinc-800/50 text-zinc-300 border-zinc-600"
+              isSelected && "bg-accent/10 text-accent-lighter border-accent/40",
+              !isSelected && status === "done" && "bg-success-surface text-success border-success/30",
+              !isSelected && status === "pending" && "bg-bg-elevated text-content-tertiary border-border hover:text-content hover:border-border-strong",
+              !isSelected && status === "active" && "bg-bg-elevated text-content border-border-strong"
             )}
           >
             {status === "done" && !isSelected && (

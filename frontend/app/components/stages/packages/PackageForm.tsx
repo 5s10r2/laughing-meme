@@ -68,6 +68,9 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
   );
   const [rent, setRent] = useState(prefill?.rent?.toString() || (rest.rent as number)?.toString() || (rest.starting_rent as number)?.toString() || "");
 
+  // Progressive disclosure: step 1 = identity, step 2 = attributes
+  const [step, setStep] = useState<1 | 2>(1);
+
   // Multi-create session tracking
   const [createdPackages, setCreatedPackages] = useState<CreatedPackage[]>([]);
   const [done, setDone] = useState(false);
@@ -92,6 +95,7 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
     // Reset form with smart defaults for next package
     setPackageName("");
     setSharingType(nextSharingType(sharingType));
+    setStep(1); // Back to step 1 for next package
     // Keep AC and food — likely same across packages
     setRent("");
   }
@@ -132,159 +136,191 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
       {/* ── Form (hidden when done) ── */}
       {!done && (
         <>
-          <div className="space-y-3">
-            {/* Package name */}
-            <div>
-              <label className="text-xs text-content-tertiary mb-1 block">Package Name</label>
-              <input
-                type="text"
-                value={packageName}
-                onChange={(e) => setPackageName(e.target.value)}
-                placeholder="e.g. AC Double Sharing"
-                className="w-full px-3 py-1.5 rounded-[var(--radius-button)] bg-bg-elevated border border-border text-xs text-content placeholder-content-tertiary focus:outline-none focus:border-accent/50"
-              />
-            </div>
-
-            {/* Sharing Type */}
-            <div>
-              <label className="text-xs text-content-tertiary mb-1.5 block">Room Type</label>
-              <div className="flex gap-1">
-                {SHARING_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setSharingType(opt.value)}
-                    className={cn(
-                      "flex-1 px-2 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition-all",
-                      "border",
-                      sharingType === opt.value
-                        ? "border-accent/40 bg-accent/10 text-accent-lighter"
-                        : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-elevated"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* AC Toggle */}
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-content-secondary">Air Conditioning</label>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-content-tertiary font-medium">{ac ? "AC" : "Non-AC"}</span>
-                <button
-                  onClick={() => setAc(!ac)}
-                  role="switch"
-                  aria-checked={ac}
-                  className={cn(
-                    "w-10 h-5 rounded-full transition-all duration-200 relative",
-                    ac ? "bg-accent" : "bg-bg-subtle"
-                  )}
-                >
-                  <div
-                    className="w-4 h-4 rounded-full bg-white absolute top-0.5 transition-all duration-200"
-                    style={{ left: ac ? "22px" : "2px" }}
-                  />
-                </button>
-              </div>
-            </div>
-
-            {/* Food */}
-            <div>
-              <label className="text-xs text-content-tertiary mb-1.5 block">Food</label>
-              <div className="flex gap-1">
-                {FOOD_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setFood(opt.value)}
-                    className={cn(
-                      "flex-1 px-2 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition-all",
-                      "border",
-                      food === opt.value
-                        ? "border-accent/40 bg-accent/10 text-accent-lighter"
-                        : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-elevated"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Furnishing */}
-            <div>
-              <label className="text-xs text-content-tertiary mb-1.5 block">Furnishing</label>
-              <div className="flex gap-1">
-                {FURNISHING_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setFurnishing(opt.value)}
-                    className={cn(
-                      "flex-1 px-2 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition-all",
-                      "border",
-                      furnishing === opt.value
-                        ? "border-accent/40 bg-accent/10 text-accent-lighter"
-                        : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-elevated"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Rent */}
-            <div>
-              <label className="text-xs text-content-tertiary mb-1 block">Starting Rent</label>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-content-tertiary font-medium">₹</span>
+          {/* ── Step 1: Identity (name + sharing type) ── */}
+          {step === 1 && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-content-tertiary mb-1 block">Package Name</label>
                 <input
-                  type="number"
-                  value={rent}
-                  onChange={(e) => setRent(e.target.value)}
-                  placeholder="8000"
-                  className="flex-1 px-3 py-1.5 rounded-[var(--radius-button)] bg-bg-elevated border border-border text-xs text-content placeholder-content-tertiary focus:outline-none focus:border-accent/50"
+                  type="text"
+                  value={packageName}
+                  onChange={(e) => setPackageName(e.target.value)}
+                  placeholder="e.g. AC Double Sharing"
+                  className="w-full px-3 py-1.5 rounded-[var(--radius-button)] bg-bg-elevated border border-border text-xs text-content placeholder-content-tertiary focus:outline-none focus:border-accent/50"
                 />
-                <span className="text-xs text-content-tertiary">/month</span>
               </div>
-            </div>
-          </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={handleSubmit}
-              disabled={!packageName.trim() || !rent.trim()}
-              className={cn(
-                "flex-1 px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold transition-all",
-                "bg-accent/10 text-accent-lighter border border-accent/30",
-                "hover:bg-accent/15 active:scale-[0.98]",
-                "disabled:opacity-40 disabled:cursor-not-allowed"
-              )}
-            >
-              {createdPackages.length > 0 ? (
-                <span className="flex items-center justify-center gap-1">
-                  <Plus className="w-3.5 h-3.5" />
-                  Save &amp; add another
-                </span>
-              ) : (
-                `Save ${packageName.trim() || "package"} →`
-              )}
-            </button>
+              <div>
+                <label className="text-xs text-content-tertiary mb-1.5 block">Room Type</label>
+                <div className="flex gap-1">
+                  {SHARING_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setSharingType(opt.value)}
+                      className={cn(
+                        "flex-1 px-2 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition-all",
+                        "border",
+                        sharingType === opt.value
+                          ? "border-accent/40 bg-accent/10 text-accent-lighter"
+                          : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-elevated"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            {createdPackages.length > 0 && (
               <button
-                onClick={handleDone}
+                onClick={() => setStep(2)}
+                disabled={!packageName.trim()}
                 className={cn(
-                  "px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium",
-                  "text-success border border-success-surface",
-                  "hover:bg-success-surface active:scale-95 transition-all"
+                  "w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold transition-all",
+                  "bg-accent/10 text-accent-lighter border border-accent/30",
+                  "hover:bg-accent/15 active:scale-[0.98]",
+                  "disabled:opacity-40 disabled:cursor-not-allowed"
                 )}
               >
-                Done adding
+                Next — set pricing &amp; amenities →
               </button>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* ── Step 2: Attributes (AC, food, furnishing, rent) ── */}
+          {step === 2 && (
+            <div className="space-y-3">
+              {/* Step indicator */}
+              <div className="flex items-center justify-between mb-1">
+                <button
+                  onClick={() => setStep(1)}
+                  className="text-xs text-content-tertiary hover:text-accent-lighter transition-colors"
+                >
+                  ← Back
+                </button>
+                <span className="text-[11px] text-content-tertiary">
+                  {packageName} · {SHARING_OPTIONS.find((o) => o.value === sharingType)?.label}
+                </span>
+              </div>
+
+              {/* AC Toggle */}
+              <div className="flex items-center justify-between">
+                <label className="text-xs text-content-secondary">Air Conditioning</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-content-tertiary font-medium">{ac ? "AC" : "Non-AC"}</span>
+                  <button
+                    onClick={() => setAc(!ac)}
+                    role="switch"
+                    aria-checked={ac}
+                    className={cn(
+                      "w-10 h-5 rounded-full transition-all duration-200 relative",
+                      ac ? "bg-accent" : "bg-bg-subtle"
+                    )}
+                  >
+                    <div
+                      className="w-4 h-4 rounded-full bg-white absolute top-0.5 transition-all duration-200"
+                      style={{ left: ac ? "22px" : "2px" }}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Food */}
+              <div>
+                <label className="text-xs text-content-tertiary mb-1.5 block">Food</label>
+                <div className="flex gap-1">
+                  {FOOD_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setFood(opt.value)}
+                      className={cn(
+                        "flex-1 px-2 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition-all",
+                        "border",
+                        food === opt.value
+                          ? "border-accent/40 bg-accent/10 text-accent-lighter"
+                          : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-elevated"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Furnishing */}
+              <div>
+                <label className="text-xs text-content-tertiary mb-1.5 block">Furnishing</label>
+                <div className="flex gap-1">
+                  {FURNISHING_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setFurnishing(opt.value)}
+                      className={cn(
+                        "flex-1 px-2 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition-all",
+                        "border",
+                        furnishing === opt.value
+                          ? "border-accent/40 bg-accent/10 text-accent-lighter"
+                          : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-elevated"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rent */}
+              <div>
+                <label className="text-xs text-content-tertiary mb-1 block">Starting Rent</label>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-content-tertiary font-medium">₹</span>
+                  <input
+                    type="number"
+                    value={rent}
+                    onChange={(e) => setRent(e.target.value)}
+                    placeholder="8000"
+                    className="flex-1 px-3 py-1.5 rounded-[var(--radius-button)] bg-bg-elevated border border-border text-xs text-content placeholder-content-tertiary focus:outline-none focus:border-accent/50"
+                  />
+                  <span className="text-xs text-content-tertiary">/month</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSubmit}
+                  disabled={!rent.trim()}
+                  className={cn(
+                    "flex-1 px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold transition-all",
+                    "bg-accent/10 text-accent-lighter border border-accent/30",
+                    "hover:bg-accent/15 active:scale-[0.98]",
+                    "disabled:opacity-40 disabled:cursor-not-allowed"
+                  )}
+                >
+                  {createdPackages.length > 0 ? (
+                    <span className="flex items-center justify-center gap-1">
+                      <Plus className="w-3.5 h-3.5" />
+                      Save &amp; add another
+                    </span>
+                  ) : (
+                    `Save ${packageName.trim() || "package"} →`
+                  )}
+                </button>
+
+                {createdPackages.length > 0 && (
+                  <button
+                    onClick={handleDone}
+                    className={cn(
+                      "px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium",
+                      "text-success border border-success-surface",
+                      "hover:bg-success-surface active:scale-95 transition-all"
+                    )}
+                  >
+                    Done
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
 

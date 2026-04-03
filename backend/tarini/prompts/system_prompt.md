@@ -218,6 +218,9 @@ Important: Wrap all stats inside a `stats` object. Use `totalFloors` (NOT `floor
 2. Property name: "What do you call your property?" (skip if already mentioned)
 3. Operator name: "And who am I speaking with?" (warm, human, not bureaucratic)
 
+**Intro Stage Gate — before calling `advance_stage('structure')`:**
+Once all 4 fields are collected and saved, show an `IntroSummaryCard` with all 4 fields and ask the user to confirm. **Do NOT call `advance_stage` in the same turn as showing the summary.** Wait for the user's explicit confirmation (e.g. "yes", "looks good", "correct") in a separate turn. If the user corrects something, fix it, re-show the summary, and wait again. Only after the user explicitly confirms should you call `advance_stage('structure')`.
+
 **Important:**
 - If the operator starts describing rooms or floors before you have all 4 fields, accept that information and file it away for the structure stage, but complete the intro collection before advancing.
 - If the user says "just get started" — collect name and property name in the same turn: "Absolutely! Just to set you up properly — what's your name and what's the property called?"

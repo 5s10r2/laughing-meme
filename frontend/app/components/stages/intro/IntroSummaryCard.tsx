@@ -35,7 +35,7 @@ export function IntroSummaryCard({
   ].filter((f) => f.value);
 
   return (
-    <div className="border border-glass-border bg-glass rounded-[var(--radius-card)] px-4 py-3 my-2">
+    <div className="border border-border bg-bg-surface rounded-[var(--radius-card)] px-4 py-3 my-2">
       <p className="text-xs text-content-tertiary font-medium uppercase tracking-wider mb-2.5">
         Property Overview
       </p>

@@ -51,16 +51,35 @@ def _trim_history_for_api(history: list[dict]) -> list[dict]:
     get_state provides all captured property data, so old conversation turns
     are redundant — the state IS the memory.
 
-    Ensures the trimmed window starts with a 'user' message to maintain
-    valid alternation (Anthropic API rejects assistant-first histories).
+    Ensures the trimmed window:
+    1. Starts with a 'user' message (API rejects assistant-first)
+    2. Does NOT start with a tool_result (which references a tool_use in a
+       prior assistant message that may have been trimmed away)
     """
     if len(history) <= _MAX_API_HISTORY:
         return history
     trimmed = history[-_MAX_API_HISTORY:]
-    # Walk forward to find the first 'user' message
-    while trimmed and trimmed[0].get("role") != "user":
+    # Walk forward past any assistant messages or tool_result user messages
+    while trimmed and not _is_plain_user_message(trimmed[0]):
         trimmed = trimmed[1:]
     return trimmed or history[-2:]  # fallback: at least last exchange
+
+
+def _is_plain_user_message(msg: dict) -> bool:
+    """Check if a message is a plain user message (not a tool_result)."""
+    if msg.get("role") != "user":
+        return False
+    content = msg.get("content")
+    # Plain text user message
+    if isinstance(content, str):
+        return True
+    # List content — check it's not tool_result blocks
+    if isinstance(content, list):
+        return not any(
+            isinstance(block, dict) and block.get("type") == "tool_result"
+            for block in content
+        )
+    return False
 
 
 # ---------------------------------------------------------------------------

@@ -9,23 +9,23 @@ Requirements for backend hardening milestone. Each maps to roadmap phases.
 
 ### Cost Optimization
 
-- [ ] **COST-01**: System prompt uses Anthropic prompt caching (cache_control on system content block) to reduce input token costs by ~80%
-- [ ] **COST-02**: System prompt is cached at module load time, not read from disk on every chat turn
+- [x] **COST-01**: System prompt uses Anthropic prompt caching (cache_control on system content block) to reduce input token costs by ~80%
+- [x] **COST-02**: System prompt is cached at module load time, not read from disk on every chat turn
 
 ### Configuration
 
-- [ ] **CONF-01**: AI model name is configurable via environment variable (MODEL_NAME) with sensible default
+- [x] **CONF-01**: AI model name is configurable via environment variable (MODEL_NAME) with sensible default
 
 ### Reliability
 
-- [ ] **RELY-01**: History trimming maintains valid user/assistant message alternation when applying sliding window
-- [ ] **RELY-02**: Anthropic API stream calls have a timeout (60s) with clear error event on timeout
-- [ ] **RELY-03**: Anthropic client is a module-level singleton that reuses HTTP connection pool across chat turns
+- [x] **RELY-01**: History trimming maintains valid user/assistant message alternation when applying sliding window
+- [x] **RELY-02**: Anthropic API stream calls have a timeout (60s) with clear error event on timeout
+- [x] **RELY-03**: Anthropic client is a module-level singleton that reuses HTTP connection pool across chat turns
 
 ### Data Integrity
 
-- [ ] **DATA-01**: Stage advancement and state update happen atomically in a single database transaction
-- [ ] **DATA-02**: Tool error responses use proper JSON serialization (json.dumps) instead of f-string interpolation
+- [x] **DATA-01**: Stage advancement and state update happen atomically in a single database transaction
+- [x] **DATA-02**: Tool error responses use proper JSON serialization (json.dumps) instead of f-string interpolation
 
 ## v2 Requirements
 
@@ -58,14 +58,14 @@ Deferred to future milestones. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COST-01 | Phase 6 | Pending |
-| COST-02 | Phase 6 | Pending |
-| CONF-01 | Phase 6 | Pending |
-| RELY-01 | Phase 7 | Pending |
-| RELY-02 | Phase 7 | Pending |
-| RELY-03 | Phase 7 | Pending |
-| DATA-01 | Phase 8 | Pending |
-| DATA-02 | Phase 8 | Pending |
+| COST-01 | Phase 6 | Complete |
+| COST-02 | Phase 6 | Complete |
+| CONF-01 | Phase 6 | Complete |
+| RELY-01 | Phase 7 | Complete |
+| RELY-02 | Phase 7 | Complete |
+| RELY-03 | Phase 7 | Complete |
+| DATA-01 | Phase 8 | Complete |
+| DATA-02 | Phase 8 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 8 total

@@ -1,33 +1,103 @@
 @import "tailwindcss";
 
-:root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+/* ═══════════════════════════════════════════════════════════
+   TARINI DESIGN SYSTEM — Premium Dark Theme
+   Inspired by Swiggy One BLCK. Burgundy accent on plum-dark canvas.
+   All colors flow from these tokens. Components never use raw hex.
+   ═══════════════════════════════════════════════════════════ */
 
-  /* Tarini Component Design System */
-  --tarini-amber: #f59e0b;
-  --tarini-amber-soft: rgba(245, 158, 11, 0.15);
-  --tarini-emerald: #10b981;
-  --tarini-emerald-soft: rgba(16, 185, 129, 0.15);
-  --tarini-orange: #f97316;
-  --tarini-orange-soft: rgba(249, 115, 22, 0.1);
-  --tarini-blue: #60a5fa;
-  --tarini-surface: rgba(39, 39, 42, 0.4);
-  --tarini-border: rgb(39, 39, 42);
-  --tarini-radius: 0.75rem;
+:root {
+  /* ── Backgrounds (warm dark — purple undertone, NOT cold zinc) ── */
+  --bg-deep:      #0C0810;
+  --bg-surface:   #161221;
+  --bg-elevated:  #1E1A2B;
+  --bg-subtle:    #2A2538;
+
+  /* ── Primary Accent — Burgundy ── */
+  --accent-600: #7A1535;
+  --accent-500: #9B1B42;
+  --accent-400: #B52B56;
+  --accent-300: #D04470;
+
+  /* ── Text (warm cream, not pure white) ── */
+  --text-primary:   #F0E6EA;
+  --text-secondary: #A89CA0;
+  --text-tertiary:  #6B6065;
+  --text-on-accent: #FFFFFF;
+
+  /* ── Borders & Glass ── */
+  --border-default:  rgba(255, 255, 255, 0.06);
+  --border-strong:   rgba(255, 255, 255, 0.12);
+  --border-accent:   rgba(155, 27, 66, 0.30);
+  --glass-bg:        rgba(255, 255, 255, 0.03);
+  --glass-border:    rgba(255, 255, 255, 0.08);
+
+  /* ── Semantic ── */
+  --success:         #4ADE80;
+  --success-surface: rgba(74, 222, 128, 0.08);
+  --warning:         #FBBF24;
+  --warning-surface: rgba(251, 191, 36, 0.08);
+  --error:           #EF4444;
+  --error-surface:   rgba(239, 68, 68, 0.08);
+  --info:            #60A5FA;
+  --info-surface:    rgba(96, 165, 250, 0.08);
+
+  /* ── Gradient ── */
+  --gradient-cta: linear-gradient(135deg, #9B1B42 0%, #C73660 100%);
+
+  /* ── Radius ── */
+  --radius-card: 0.875rem;
+  --radius-button: 0.625rem;
+  --radius-chip: 9999px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Backgrounds */
+  --color-bg-deep: var(--bg-deep);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-subtle: var(--bg-subtle);
+
+  /* Accent */
+  --color-accent: var(--accent-500);
+  --color-accent-light: var(--accent-400);
+  --color-accent-lighter: var(--accent-300);
+  --color-accent-dark: var(--accent-600);
+
+  /* Content */
+  --color-content: var(--text-primary);
+  --color-content-secondary: var(--text-secondary);
+  --color-content-tertiary: var(--text-tertiary);
+
+  /* Semantic */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+
+  /* Surfaces */
+  --color-success-surface: var(--success-surface);
+  --color-warning-surface: var(--warning-surface);
+  --color-error-surface: var(--error-surface);
+  --color-info-surface: var(--info-surface);
+
+  /* Borders */
+  --color-border: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-accent: var(--border-accent);
+
+  /* Glass */
+  --color-glass: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+
+  /* Font */
+  --font-sans: var(--font-inter);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-sans, Inter, system-ui, -apple-system, sans-serif);
 }
 
 /* Smooth scrolling for chat messages */

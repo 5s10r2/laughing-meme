@@ -35,7 +35,7 @@ export function MessagePartRenderer({ part, sendMessage }: MessagePartRendererPr
       );
       if (!rendered) {
         // Fallback: subtle em-dash instead of blank space
-        return <span className="text-zinc-700">&mdash;</span>;
+        return <span className="text-content-tertiary">&mdash;</span>;
       }
       return <div className="my-1">{rendered}</div>;
     }

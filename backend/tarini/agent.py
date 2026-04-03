@@ -10,6 +10,7 @@ It yields SSE-ready dicts including:
   - {"type": "state_snapshot", ...}        — full state update for frontend
   - {"type": "done"}                       — stream end
 """
+import asyncio
 import json
 import logging
 import os
@@ -26,6 +27,17 @@ logger = logging.getLogger(__name__)
 MODEL = os.environ.get("MODEL_NAME", "claude-sonnet-4-20250514")
 MAX_TOOL_ROUNDS = 10  # safety limit to prevent infinite tool loops
 _MAX_API_HISTORY = 20  # ~5 tool-use turns of context for the API call
+_STREAM_TIMEOUT = 60  # seconds — max time for a single Anthropic stream call
+
+# Lazy singleton — initialized on first use so env vars are available
+_client: anthropic.AsyncAnthropic | None = None
+
+
+def _get_anthropic_client() -> anthropic.AsyncAnthropic:
+    global _client
+    if _client is None:
+        _client = anthropic.AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    return _client
 
 
 # ---------------------------------------------------------------------------
@@ -38,10 +50,17 @@ def _trim_history_for_api(history: list[dict]) -> list[dict]:
     The full history stays intact in SessionManager for Supabase persistence.
     get_state provides all captured property data, so old conversation turns
     are redundant — the state IS the memory.
+
+    Ensures the trimmed window starts with a 'user' message to maintain
+    valid alternation (Anthropic API rejects assistant-first histories).
     """
     if len(history) <= _MAX_API_HISTORY:
         return history
-    return history[-_MAX_API_HISTORY:]
+    trimmed = history[-_MAX_API_HISTORY:]
+    # Walk forward to find the first 'user' message
+    while trimmed and trimmed[0].get("role") != "user":
+        trimmed = trimmed[1:]
+    return trimmed or history[-2:]  # fallback: at least last exchange
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +102,7 @@ async def stream_chat(
         SSE event dicts with various types (text, tool_start, tool_complete,
         component, state_snapshot, done, etc.)
     """
-    client = anthropic.AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    client = _get_anthropic_client()
     system_prompt = load_system_prompt()
 
     # Add the user message to history
@@ -102,26 +121,32 @@ async def stream_chat(
         collected_text = ""
         tool_use_blocks = []
 
-        async with client.messages.stream(
-            model=MODEL,
-            max_tokens=4096,
-            system=[{
-                "type": "text",
-                "text": system_prompt,
-                "cache_control": {"type": "ephemeral"},
-            }],
-            messages=api_history,
-            tools=TOOL_DEFINITIONS,
-        ) as stream:
-            async for event in stream:
-                if event.type == "content_block_delta":
-                    if event.delta.type == "text_delta":
-                        text = event.delta.text
-                        collected_text += text
-                        yield {"type": "text", "text": text}
+        try:
+            async with asyncio.timeout(_STREAM_TIMEOUT):
+                async with client.messages.stream(
+                    model=MODEL,
+                    max_tokens=4096,
+                    system=[{
+                        "type": "text",
+                        "text": system_prompt,
+                        "cache_control": {"type": "ephemeral"},
+                    }],
+                    messages=api_history,
+                    tools=TOOL_DEFINITIONS,
+                ) as stream:
+                    async for event in stream:
+                        if event.type == "content_block_delta":
+                            if event.delta.type == "text_delta":
+                                text = event.delta.text
+                                collected_text += text
+                                yield {"type": "text", "text": text}
 
-            # Get the final message to check for tool use
-            final_message = await stream.get_final_message()
+                    # Get the final message to check for tool use
+                    final_message = await stream.get_final_message()
+        except TimeoutError:
+            logger.error("[stream_chat] Anthropic stream timed out after %ds for session %s", _STREAM_TIMEOUT, session_id)
+            yield {"type": "error", "message": "Response timed out. Please try again."}
+            return
 
         # Log token usage for cost tracking
         _log_usage(session_id, _round, final_message)

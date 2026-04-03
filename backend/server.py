@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-load_dotenv()
+load_dotenv(override=True)
 
 from tarini.db import client as db
 from tarini.prompts import INITIAL_PROMPT

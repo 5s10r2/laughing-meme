@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "../../lib/cn";
+import { CARD } from "./primitives";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface CollapsibleSectionProps {
@@ -19,15 +20,15 @@ export function CollapsibleSection({
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div className="bg-bg-surface border border-border rounded-2xl overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-content hover:bg-bg-elevated transition-colors"
+        className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-medium text-content hover:bg-bg-elevated transition-colors cursor-pointer"
       >
         {title}
         <ChevronDown
           className={cn(
-            "w-3.5 h-3.5 text-content-tertiary transition-transform duration-200",
+            "w-4 h-4 text-content-tertiary transition-transform duration-200",
             expanded && "rotate-180"
           )}
         />
@@ -40,7 +41,7 @@ export function CollapsibleSection({
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="px-3 pb-3">{children}</div>
+            <div className="px-5 pb-4">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>

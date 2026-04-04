@@ -1,7 +1,10 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 import { cn } from "../../lib/cn";
+import {
+  ICON_CIRCLE, BTN_PRIMARY, BTN_SECONDARY,
+} from "./primitives";
 
 interface RecoveryAction {
   label: string;
@@ -21,25 +24,32 @@ export function ErrorRecoveryCard({ message, actions, onSendMessage }: ErrorReco
   ];
 
   return (
-    <div className="border-l-2 border-accent/40 bg-accent/5 rounded-r-lg px-3.5 py-2.5 my-1.5">
-      <div className="flex items-start gap-2 mb-2">
-        <AlertTriangle className="w-4 h-4 text-accent-light flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-accent-lighter">{message}</p>
+    <div className="bg-error/5 border border-error/15 rounded-2xl p-5">
+      <div className="flex items-center gap-3 mb-3">
+        <div className={cn(ICON_CIRCLE, "bg-error/10")}>
+          <AlertTriangle className="w-4 h-4 text-error" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-content">Something went wrong</p>
+          <p className="text-xs text-content-tertiary mt-0.5">{message}</p>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2 pl-6">
-        {defaultActions.map((action) => (
-          <button
-            key={action.label}
-            onClick={() => onSendMessage?.(action.action)}
-            className={cn(
-              "px-2.5 py-1 rounded-md text-xs font-medium",
-              "bg-accent/10 text-accent-lighter border border-accent/30",
-              "hover:bg-accent/20 active:scale-95 transition-all duration-150"
-            )}
-          >
-            {action.label}
-          </button>
-        ))}
+      <div className="flex gap-2.5 mt-4">
+        <button
+          onClick={() => onSendMessage?.(defaultActions.find((a) => a.label.toLowerCase().includes("show") || a.label.toLowerCase().includes("saved"))?.action || defaultActions[1]?.action || "What do you have saved?")}
+          className={cn(BTN_SECONDARY, "flex-1")}
+        >
+          {defaultActions.find((a) => a.label.toLowerCase().includes("show") || a.label.toLowerCase().includes("saved"))?.label || "Show what's saved"}
+        </button>
+        <button
+          onClick={() => onSendMessage?.(defaultActions.find((a) => a.label.toLowerCase().includes("try") || a.label.toLowerCase().includes("again"))?.action || defaultActions[0]?.action || "Please try again")}
+          className={cn(BTN_PRIMARY, "flex-1 bg-error hover:bg-error/80")}
+        >
+          <span className="inline-flex items-center gap-2">
+            {defaultActions.find((a) => a.label.toLowerCase().includes("try") || a.label.toLowerCase().includes("again"))?.label || "Try again"}
+            <ArrowRight className="w-4 h-4" />
+          </span>
+        </button>
       </div>
     </div>
   );

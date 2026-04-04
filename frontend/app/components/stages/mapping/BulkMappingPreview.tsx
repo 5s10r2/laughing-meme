@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, ArrowRight, ChevronDown } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, ChevronDown } from "lucide-react";
 import { cn } from "../../../lib/cn";
+import {
+  CARD, ICON_CIRCLE, BTN_PRIMARY, BTN_SECONDARY,
+} from "../../ui/primitives";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface FloorAssignment {
@@ -145,13 +148,15 @@ export function BulkMappingPreview({
   }
 
   return (
-    <div className="border border-accent/30 border-l-2 border-l-accent/30 bg-accent/5 rounded-[var(--radius-card)] px-4 py-3.5 my-2">
-      <div className="flex items-start gap-2 mb-3">
-        <AlertTriangle className="w-3.5 h-3.5 text-accent-light mt-0.5 flex-shrink-0" />
+    <div className="bg-warning/5 border border-warning/15 rounded-2xl p-5">
+      <div className="flex items-center gap-3 mb-4">
+        <div className={cn(ICON_CIRCLE, "bg-warning/10")}>
+          <AlertTriangle className="w-4 h-4 text-warning" />
+        </div>
         <div>
-          <p className="text-xs text-content font-medium">{description}</p>
-          <p className="text-xs text-content-tertiary mt-0.5">
-            {totalUnits} room{totalUnits !== 1 ? "s" : ""} across {totalFloors}{" "}
+          <p className="text-sm font-semibold text-content">{description}</p>
+          <p className="text-[11px] text-content-tertiary mt-0.5">
+            This will assign packages to {totalUnits} room{totalUnits !== 1 ? "s" : ""} across {totalFloors}{" "}
             floor{totalFloors !== 1 ? "s" : ""}
           </p>
         </div>
@@ -159,7 +164,7 @@ export function BulkMappingPreview({
 
       {/* ── Package-grouped accordion (4+ assignment rows) ── */}
       {useGrouped ? (
-        <div className="space-y-1 mb-3">
+        <div className="space-y-2 mb-5">
           {packageGroups.map((group) => {
             const isOpen = expandedPkg === group.packageName;
             return (
@@ -167,21 +172,21 @@ export function BulkMappingPreview({
                 <button
                   onClick={() => setExpandedPkg(isOpen ? null : group.packageName)}
                   className={cn(
-                    "w-full flex items-center justify-between px-2.5 py-2 rounded-[var(--radius-button)] text-xs transition-all",
+                    "w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-all cursor-pointer",
                     isOpen
-                      ? "bg-bg-elevated border border-border"
-                      : "bg-bg-elevated/30 border border-transparent hover:bg-bg-elevated"
+                      ? "bg-bg-surface/50 border border-border"
+                      : "bg-bg-surface/50 border border-border hover:bg-bg-elevated"
                   )}
                 >
                   <div className="flex items-center gap-2">
                     <ChevronDown
                       className={cn(
-                        "w-3 h-3 text-content-tertiary transition-transform duration-200",
+                        "w-3.5 h-3.5 text-content-tertiary transition-transform duration-200",
                         isOpen && "rotate-180"
                       )}
                     />
-                    <span className="text-accent-lighter font-medium">{group.packageName}</span>
-                    <span className="text-content-tertiary">
+                    <span className="text-content font-medium">{group.packageName}</span>
+                    <span className="text-content-tertiary text-[11px]">
                       ({group.totalUnits} room{group.totalUnits !== 1 ? "s" : ""})
                     </span>
                   </div>
@@ -199,11 +204,11 @@ export function BulkMappingPreview({
                       transition={{ duration: 0.15 }}
                       className="overflow-hidden"
                     >
-                      <div className="pl-5 pt-1 space-y-0.5">
+                      <div className="pl-8 pt-1 space-y-0.5">
                         {group.floors.map((f, fi) => (
                           <div
                             key={fi}
-                            className="flex items-center justify-between text-xs py-0.5"
+                            className="flex items-center justify-between text-xs py-1"
                           >
                             <span className="text-content-secondary">{f.floorLabel}</span>
                             <span className="text-content-tertiary font-mono">
@@ -221,68 +226,45 @@ export function BulkMappingPreview({
         </div>
       ) : (
         /* ── Flat floor-based view (< 4 assignment rows) ── */
-        <div className="space-y-1 mb-3">
+        <div className="space-y-2 mb-5">
           {operations.map((op, i) => {
             const assignments = getAssignments(op);
-            const isMultiPackage = assignments.length > 1;
 
             return (
               <div
                 key={i}
-                className="px-2.5 py-1.5 rounded-[var(--radius-button)] bg-bg-elevated text-xs"
+                className="flex items-center gap-3 py-3 px-4 rounded-xl bg-bg-surface/50 border border-border"
               >
-                {!isMultiPackage ? (
-                  <div className="flex items-center justify-between">
-                    <span className="text-content-secondary">{op.floorLabel}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-content-tertiary font-mono text-xs">
-                        {assignments[0]?.unitCount || 0} room{(assignments[0]?.unitCount || 0) !== 1 ? "s" : ""}
-                      </span>
-                      <span className="text-accent-lighter font-medium text-xs">
-                        {assignments[0]?.packageName || "—"}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-content-secondary font-medium mb-1">{op.floorLabel}</p>
-                    <div className="pl-2 border-l border-border space-y-0.5">
-                      {assignments.map((a, ai) => (
-                        <div key={ai} className="flex items-center gap-2">
-                          <span className="text-content-tertiary font-mono">
-                            {a.unitCount} room{a.unitCount !== 1 ? "s" : ""}
-                          </span>
-                          <ArrowRight className="w-2.5 h-2.5 text-content-tertiary" />
-                          <span className="text-accent-lighter font-medium">
-                            {a.packageName}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="flex-1">
+                  <p className="text-sm text-content">{op.floorLabel}</p>
+                  <p className="text-[11px] text-content-tertiary">
+                    {assignments.reduce((sum, a) => sum + a.unitCount, 0)} rooms
+                  </p>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-content-tertiary" />
+                <p className="text-sm text-content font-medium">
+                  {assignments.map((a) => a.packageName).join(", ")}
+                </p>
               </div>
             );
           })}
         </div>
       )}
 
-      <div className="flex gap-2 pt-2 border-t border-accent/10">
-        <button
-          onClick={handleConfirm}
-          className={cn(
-            "flex-1 px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
-            "bg-accent/10 text-accent-lighter border border-accent/30",
-            "hover:bg-accent/20 active:scale-95 transition-all"
-          )}
-        >
-          Confirm mapping for {totalUnits} room{totalUnits !== 1 ? "s" : ""}{useGrouped ? ` across ${packageGroups.length} package${packageGroups.length !== 1 ? "s" : ""}` : ""} →
-        </button>
+      <div className="flex gap-3">
         <button
           onClick={() => onSendMessage?.("No, I want to change this")}
-          className="px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium text-content-secondary border border-border hover:bg-bg-elevated active:scale-95 transition-all"
+          className={cn(BTN_SECONDARY, "flex-1")}
         >
           Go back
+        </button>
+        <button
+          onClick={handleConfirm}
+          className={cn(BTN_PRIMARY, "flex-1")}
+        >
+          <span className="inline-flex items-center gap-2">
+            Confirm <Check className="w-4 h-4" />
+          </span>
         </button>
       </div>
     </div>

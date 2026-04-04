@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Sparkles, ArrowRight, Check } from "lucide-react";
 import { cn } from "../../../lib/cn";
+import {
+  CARD, ICON_SM, BTN_PRIMARY, BTN_SECONDARY,
+} from "../../ui/primitives";
 import { FloorChipBar } from "../../ui/FloorChipBar";
 
 interface FloorAssignment {
@@ -102,7 +105,7 @@ export function MappingSuggestionCard({
 }
 
 // ════════════════════════════════════════
-//  FLAT VIEW — simple inline (1-2 floors)
+//  FLAT VIEW -- simple inline (1-2 floors)
 // ════════════════════════════════════════
 
 function FlatSuggestionView({
@@ -117,16 +120,14 @@ function FlatSuggestionView({
   onSendMessage?: (text: string) => void;
 }) {
   return (
-    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-4 py-3.5 my-2">
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="w-3.5 h-3.5 text-accent-light" />
-        <span className="text-xs font-semibold text-content">Suggested Mapping</span>
-        <span className="text-xs text-content-tertiary ml-auto">
-          {suggestions.length} floor{suggestions.length !== 1 ? "s" : ""}
-        </span>
+    <div className={CARD}>
+      <div className="flex items-center gap-2 mb-1">
+        <Sparkles className="w-3.5 h-3.5 text-accent-lighter" />
+        <p className="text-xs font-medium text-content-tertiary">Suggested mapping</p>
       </div>
+      <p className="text-[11px] text-content-tertiary/70 mb-4">Assign rooms to packages</p>
 
-      <div className="space-y-1.5 mb-3">
+      <div className="space-y-2 mb-5">
         {suggestions.map((s) => (
           <FloorAssignmentRow
             key={s.floorIndex}
@@ -136,7 +137,13 @@ function FlatSuggestionView({
         ))}
       </div>
 
-      <div className="flex gap-2 pt-2 border-t border-border">
+      <div className="flex gap-3">
+        <button
+          onClick={() => onSendMessage?.("I want to map floors differently")}
+          className={cn(BTN_SECONDARY, "flex-1")}
+        >
+          Adjust
+        </button>
         <button
           onClick={() => {
             const summary = suggestions
@@ -149,19 +156,11 @@ function FlatSuggestionView({
               .join("; ");
             onSendMessage?.(`Apply this mapping: ${summary}`);
           }}
-          className={cn(
-            "flex-1 px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
-            "bg-accent/10 text-accent-lighter border border-accent/30",
-            "hover:bg-accent/20 active:scale-95 transition-all"
-          )}
+          className={cn(BTN_PRIMARY, "flex-1")}
         >
-          Apply mapping for {totalRooms} room{totalRooms !== 1 ? "s" : ""} →
-        </button>
-        <button
-          onClick={() => onSendMessage?.("I want to map floors differently")}
-          className="px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium text-content-secondary border border-border hover:bg-bg-elevated active:scale-95 transition-all"
-        >
-          Map differently
+          <span className="inline-flex items-center gap-2">
+            Apply <ArrowRight className="w-4 h-4" />
+          </span>
         </button>
       </div>
     </div>
@@ -169,7 +168,7 @@ function FlatSuggestionView({
 }
 
 // ════════════════════════════════════════════
-//  FLOOR-BY-FLOOR REVIEW — FloorChipBar (3+)
+//  FLOOR-BY-FLOOR REVIEW -- FloorChipBar (3+)
 // ════════════════════════════════════════════
 
 function FloorByFloorReview({
@@ -230,14 +229,14 @@ function FloorByFloorReview({
   }
 
   return (
-    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-4 py-3.5 my-2">
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="w-3.5 h-3.5 text-accent-light" />
-        <span className="text-xs font-semibold text-content">Suggested Mapping</span>
-        <span className="text-xs text-content-tertiary ml-auto">
-          {Object.keys(decisions).length}/{total} reviewed
-        </span>
+    <div className={CARD}>
+      <div className="flex items-center gap-2 mb-1">
+        <Sparkles className="w-3.5 h-3.5 text-accent-lighter" />
+        <p className="text-xs font-medium text-content-tertiary">Suggested mapping</p>
       </div>
+      <p className="text-[11px] text-content-tertiary/70 mb-4">
+        {Object.keys(decisions).length}/{total} reviewed
+      </p>
 
       {/* ── FloorChipBar with status ── */}
       <div className="mb-3">
@@ -268,59 +267,66 @@ function FloorByFloorReview({
 
           {/* Per-floor actions */}
           {!currentDecision && (
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={acceptFloor}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold",
-                  "bg-accent/10 text-accent-lighter border border-accent/30",
-                  "hover:bg-accent/20 active:scale-95 transition-all"
-                )}
-              >
-                <Check className="w-3 h-3" />
-                Accept {current.floorLabel}
-              </button>
+            <div className="flex gap-3 mt-4">
               <button
                 onClick={modifyFloor}
-                className="px-3 py-2 rounded-[var(--radius-button)] text-xs font-medium text-content-secondary border border-border hover:bg-bg-elevated active:scale-95 transition-all"
+                className={cn(BTN_SECONDARY, "flex-1")}
               >
                 Modify
+              </button>
+              <button
+                onClick={acceptFloor}
+                className={cn(BTN_PRIMARY, "flex-1")}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  Accept {current.floorLabel}
+                </span>
               </button>
             </div>
           )}
 
           {currentDecision && (
-            <p className={cn(
-              "text-xs font-medium mt-2",
-              currentDecision === "accepted" ? "text-success" : "text-accent-light"
-            )}>
-              {currentDecision === "accepted" ? "Accepted" : "Modified — waiting for update"}
-            </p>
+            <div className="flex items-center gap-2 mt-3">
+              <div className={cn(ICON_SM, "bg-success/12")}>
+                <Check className="w-3 h-3 text-success" />
+              </div>
+              <span className={cn(
+                "text-sm font-medium",
+                currentDecision === "accepted" ? "text-success" : "text-accent-light"
+              )}>
+                {currentDecision === "accepted" ? "Accepted" : "Modified -- waiting for update"}
+              </span>
+            </div>
           )}
         </div>
       )}
 
       {/* ── Final submit after all reviewed ── */}
       {allReviewed && !submitted && (
-        <div className="pt-2 border-t border-border">
-          <p className="text-xs text-content-secondary mb-2">
+        <div className="pt-4 border-t border-border">
+          <p className="text-xs text-content-secondary mb-3">
             {acceptedCount} of {total} floors accepted
           </p>
           <button
             onClick={handleFinalSubmit}
-            className={cn(
-              "w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
-              "bg-accent/10 text-accent-lighter border border-accent/30",
-              "hover:bg-accent/20 active:scale-95 transition-all"
-            )}
+            className={BTN_PRIMARY}
           >
-            Apply mapping for {totalRooms} room{totalRooms !== 1 ? "s" : ""} →
+            <span className="inline-flex items-center gap-2">
+              Apply mapping for {totalRooms} room{totalRooms !== 1 ? "s" : ""}
+              <ArrowRight className="w-4 h-4" />
+            </span>
           </button>
         </div>
       )}
 
       {submitted && (
-        <p className="text-xs text-success font-medium">Mapping applied</p>
+        <div className="flex items-center gap-2">
+          <div className={cn(ICON_SM, "bg-success/12")}>
+            <Check className="w-3 h-3 text-success" />
+          </div>
+          <span className="text-sm text-success font-medium">Mapping applied</span>
+        </div>
       )}
     </div>
   );
@@ -336,26 +342,21 @@ function FloorAssignmentRow({
   assignments: FloorAssignment[];
 }) {
   const floorTotal = assignments.reduce((sum, a) => sum + (a.unitCount || 0), 0);
-  const isMultiPackage = assignments.length > 1;
 
   return (
-    <div className="px-3 py-2 rounded-[var(--radius-button)] bg-bg-elevated border border-border">
-      <div className="flex items-center justify-between mb-1">
-        <p className="text-xs text-content font-medium">{suggestion.floorLabel}</p>
-        <p className="text-xs text-content-tertiary">
+    <div className="flex items-center gap-3 py-3.5 px-4 rounded-xl bg-bg-elevated">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-content font-medium">{suggestion.floorLabel}</p>
+        <p className="text-[11px] text-content-tertiary mt-0.5">
           {floorTotal} room{floorTotal !== 1 ? "s" : ""}
         </p>
       </div>
-
-      <div className={cn("space-y-1", isMultiPackage && "pl-2 border-l border-border/50")}>
+      <div className={cn(ICON_SM, "bg-bg-subtle")}>
+        <ArrowRight className="w-3 h-3 text-content-tertiary" />
+      </div>
+      <div className="flex-1 min-w-0 text-right">
         {assignments.map((a, ai) => (
-          <div key={ai} className="flex items-center gap-2">
-            <span className="text-xs text-content-tertiary">
-              {a.unitCount} room{a.unitCount !== 1 ? "s" : ""}
-            </span>
-            <ArrowRight className="w-2.5 h-2.5 text-content-tertiary flex-shrink-0" />
-            <span className="text-xs text-accent-lighter/80 font-medium">{a.packageName}</span>
-          </div>
+          <p key={ai} className="text-sm text-content font-medium">{a.packageName}</p>
         ))}
       </div>
     </div>

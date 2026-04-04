@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, ChevronDown, ChevronUp } from "lucide-react";
+import { Layers, ChevronDown, ChevronUp, Check, ArrowRight } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { BottomSheet } from "../../ui/BottomSheet";
+import {
+  CARD, CARD_DIVIDER, ICON_CIRCLE, ICON_SM, BTN_PRIMARY, EditButton,
+} from "../../ui/primitives";
 
 interface UnitBreakdown {
   category: string;
@@ -64,19 +67,17 @@ function groupConsecutiveFloors(
     const currentText = formatFloorUnits(current);
     let j = i + 1;
 
-    // Find consecutive floors with same unit config
     while (j < floors.length && formatFloorUnits(floors[j]) === currentText) {
       j++;
     }
 
     const count = j - i;
     if (count >= 2) {
-      // Group them
       const groupFloors = floors.slice(i, j);
       const firstLabel = groupFloors[0].label;
       const lastLabel = groupFloors[count - 1].label;
       groups.push({
-        label: `${firstLabel} – ${lastLabel}`,
+        label: `${firstLabel} \u2013 ${lastLabel}`,
         unitsText: `${currentText} each`,
         floors: groupFloors,
       });
@@ -92,38 +93,6 @@ function groupConsecutiveFloors(
   }
 
   return groups;
-}
-
-function FloorRow({
-  label,
-  unitsText,
-  nameRange,
-  onChangeClick,
-}: {
-  label: string;
-  unitsText: string;
-  nameRange?: string;
-  onChangeClick: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0 text-xs">
-      <span className="text-content-secondary font-medium">{label}</span>
-      <div className="flex items-center gap-2">
-        <span className="text-content-tertiary">
-          {unitsText}
-          {nameRange && (
-            <span className="text-content-tertiary text-xs ml-1">({nameRange})</span>
-          )}
-        </span>
-        <button
-          onClick={onChangeClick}
-          className="text-xs text-content-tertiary hover:text-accent-light underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
-        >
-          change
-        </button>
-      </div>
-    </div>
-  );
 }
 
 export function StructureSummaryCard({
@@ -172,39 +141,6 @@ export function StructureSummaryCard({
   const totalFloors = rawTotalFloors || floors.length || 0;
   const totalUnits = rawTotalUnits || floors.reduce((sum, f) => sum + (f.unitCount || 0), 0) || 0;
 
-  // Build multi-type totals for header
-  const hasBreakdowns = floors.some((f) => f.unitBreakdown && f.unitBreakdown.length > 1);
-  let headerUnitsText = `${totalUnits} room${totalUnits !== 1 ? "s" : ""} total`;
-
-  if (hasBreakdowns) {
-    const totals = new Map<string, { label: string; count: number }>();
-    for (const floor of floors) {
-      if (floor.unitBreakdown) {
-        for (const b of floor.unitBreakdown) {
-          const existing = totals.get(b.category);
-          if (existing) {
-            existing.count += b.count;
-          } else {
-            totals.set(b.category, { label: b.label, count: b.count });
-          }
-        }
-      } else if (floor.unitCount) {
-        const existing = totals.get("room");
-        if (existing) {
-          existing.count += floor.unitCount;
-        } else {
-          totals.set("room", { label: "Rooms", count: floor.unitCount });
-        }
-      }
-    }
-    const parts = Array.from(totals.values())
-      .filter((t) => t.count > 0)
-      .map((t) => `${t.count} ${t.label.toLowerCase()}`);
-    if (parts.length > 1) {
-      headerUnitsText = `${parts.join(", ")} total`;
-    }
-  }
-
   // Group consecutive identical floors for compact display
   const groupedFloors = groupConsecutiveFloors(floors);
   const shouldCollapse = groupedFloors.length >= COLLAPSE_THRESHOLD;
@@ -216,52 +152,52 @@ export function StructureSummaryCard({
     : 0;
 
   return (
-    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-4 py-3.5 my-2">
+    <div className={cn(CARD, "my-2")}>
       {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
-        <Building2 className="w-4 h-4 text-accent-light/70" />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-content">
-            {propertyName || "Property"} Structure
-          </p>
-          <p className="text-xs text-content-tertiary">
-            {totalFloors} floor{totalFloors !== 1 ? "s" : ""}, {headerUnitsText}
-          </p>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <p className="text-xs font-medium text-content-tertiary">Structure</p>
+          <p className="text-base font-semibold text-content mt-1">{propertyName || "Property"}</p>
         </div>
-        {/* View all button for large structures */}
-        {shouldCollapse && (
-          <button
-            onClick={() => setSheetOpen(true)}
-            className="text-[11px] text-content-tertiary hover:text-accent-light transition-colors flex-shrink-0"
-          >
-            View all
-          </button>
-        )}
+        <div className="text-right">
+          <p className="text-2xl font-bold text-content">{totalUnits}</p>
+          <p className="text-[11px] text-content-tertiary">rooms</p>
+        </div>
       </div>
 
       {/* Floor table */}
-      <div className="space-y-0 mb-3">
+      <div className="space-y-0">
         {visibleGroups.map((group, idx) => (
-          <FloorRow
+          <div
             key={group.label || idx}
-            label={group.label}
-            unitsText={group.unitsText}
-            nameRange={group.nameRange}
-            onChangeClick={() => {
-              const firstFloor = group.floors[0];
-              const text = formatFloorUnits(firstFloor);
-              onSendMessage?.(
-                `I want to change ${group.label}, it currently has ${text}${firstFloor.nameRange ? ` (${firstFloor.nameRange})` : ""}`
-              );
-            }}
-          />
+            className={cn(
+              "flex items-center justify-between py-3.5",
+              idx < visibleGroups.length - 1 && CARD_DIVIDER
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className={cn(ICON_CIRCLE, "bg-bg-elevated")}>
+                <Layers className="w-4 h-4 text-content-tertiary" />
+              </div>
+              <div>
+                <p className="text-sm text-content font-medium">{group.label}</p>
+                <p className="text-[11px] text-content-tertiary mt-0.5">
+                  {group.unitsText}
+                  {group.nameRange && ` \u00b7 ${group.nameRange}`}
+                </p>
+              </div>
+            </div>
+            <div className={cn(ICON_SM, "bg-success/12")}>
+              <Check className="w-3 h-3 text-success" />
+            </div>
+          </div>
         ))}
 
         {/* Expand toggle */}
         {hiddenCount > 0 && (
           <button
             onClick={() => setExpanded(true)}
-            className="flex items-center gap-1 w-full justify-center py-2 text-xs text-content-tertiary hover:text-accent-light transition-colors"
+            className="flex items-center gap-1 w-full justify-center py-2.5 text-xs text-content-tertiary hover:text-accent-lighter transition-colors cursor-pointer"
           >
             <ChevronDown className="w-3 h-3" />
             <span>{hiddenCount} more floor{hiddenCount !== 1 ? " groups" : ""}</span>
@@ -271,7 +207,7 @@ export function StructureSummaryCard({
         {expanded && shouldCollapse && (
           <button
             onClick={() => setExpanded(false)}
-            className="flex items-center gap-1 w-full justify-center py-1 text-xs text-content-tertiary hover:text-content-secondary transition-colors"
+            className="flex items-center gap-1 w-full justify-center py-1 text-xs text-content-tertiary hover:text-content-secondary transition-colors cursor-pointer"
           >
             <ChevronUp className="w-3 h-3" />
             <span>Show less</span>
@@ -280,16 +216,14 @@ export function StructureSummaryCard({
       </div>
 
       {/* Actions */}
-      <div className="pt-2 border-t border-border">
+      <div className="mt-5">
         <button
           onClick={() => onSendMessage?.("Looks right, let's continue to packages")}
-          className={cn(
-            "w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
-            "bg-accent/20 text-accent-lighter border border-accent/25",
-            "hover:bg-accent/25 active:scale-[0.98] transition-all"
-          )}
+          className={BTN_PRIMARY}
         >
-          Confirm &amp; continue →
+          <span className="inline-flex items-center gap-2">
+            Confirm & continue <ArrowRight className="w-4 h-4" />
+          </span>
         </button>
       </div>
 
@@ -297,7 +231,7 @@ export function StructureSummaryCard({
       <BottomSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title={`${propertyName || "Property"} — All Floors`}
+        title={`${propertyName || "Property"} \u2014 All Floors`}
       >
         <div className="space-y-0">
           {floors.map((floor, idx) => {
@@ -305,15 +239,32 @@ export function StructureSummaryCard({
             return (
               <div
                 key={floor.label || idx}
-                className="flex items-center justify-between py-2 border-b border-border/50 last:border-0 text-xs"
+                className={cn(
+                  "flex items-center justify-between py-3.5",
+                  idx < floors.length - 1 && CARD_DIVIDER
+                )}
               >
-                <span className="text-content-secondary font-medium">{floor.label}</span>
-                <span className="text-content-tertiary">
-                  {unitsText}
-                  {floor.nameRange && (
-                    <span className="text-content-tertiary ml-1">({floor.nameRange})</span>
-                  )}
-                </span>
+                <div className="flex items-center gap-3">
+                  <div className={cn(ICON_CIRCLE, "bg-bg-elevated")}>
+                    <Layers className="w-4 h-4 text-content-tertiary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-content font-medium">{floor.label}</p>
+                    <p className="text-[11px] text-content-tertiary mt-0.5">
+                      {unitsText}
+                      {floor.nameRange && ` \u00b7 ${floor.nameRange}`}
+                    </p>
+                  </div>
+                </div>
+                <EditButton
+                  onClick={() => {
+                    const text = formatFloorUnits(floor);
+                    onSendMessage?.(
+                      `I want to change ${floor.label}, it currently has ${text}${floor.nameRange ? ` (${floor.nameRange})` : ""}`
+                    );
+                    setSheetOpen(false);
+                  }}
+                />
               </div>
             );
           })}

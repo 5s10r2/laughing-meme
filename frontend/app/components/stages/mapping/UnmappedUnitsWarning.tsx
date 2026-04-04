@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ArrowRight } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { humanizeCategory } from "../../../lib/property-utils";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { FloorChipBar } from "../../ui/FloorChipBar";
+import {
+  ICON_CIRCLE, BTN_GHOST,
+} from "../../ui/primitives";
 
 interface UnmappedUnit {
   name: string;
@@ -102,7 +105,7 @@ export function UnmappedUnitsWarning({
                 {names.map((name) => (
                   <span
                     key={name}
-                    className="px-2 py-0.5 rounded bg-warning-surface border border-warning/20 text-[11px] text-warning"
+                    className="px-2 py-0.5 rounded bg-warning/10 border border-warning/20 text-[11px] text-warning"
                   >
                     {name}
                   </span>
@@ -120,7 +123,7 @@ export function UnmappedUnitsWarning({
         {units.map((u) => (
           <span
             key={u.name}
-            className="px-2 py-0.5 rounded bg-warning-surface border border-warning/20 text-[11px] text-warning"
+            className="px-2 py-0.5 rounded bg-warning/10 border border-warning/20 text-[11px] text-warning"
           >
             {u.name}
           </span>
@@ -132,27 +135,32 @@ export function UnmappedUnitsWarning({
   const selectedFloor = floors[selectedFloorIdx] || floors[0];
 
   return (
-    <div className="border border-warning/25 bg-warning-surface rounded-[var(--radius-card)] px-4 py-3.5 my-2">
-      <div className="flex items-center gap-2 mb-2.5">
-        <AlertCircle className="w-3.5 h-3.5 text-warning" />
-        <span className="text-xs font-semibold text-warning">
-          {totalUnmapped} Unmapped Room{totalUnmapped !== 1 ? "s" : ""}
-        </span>
+    <div className="bg-warning/5 border border-warning/15 rounded-2xl p-5">
+      <div className="flex items-center gap-3 mb-3">
+        <div className={cn(ICON_CIRCLE, "bg-warning/10")}>
+          <AlertCircle className="w-4 h-4 text-warning" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-content">
+            {totalUnmapped} room{totalUnmapped !== 1 ? "s" : ""} unmapped
+          </p>
+          <p className="text-[11px] text-content-tertiary mt-0.5">
+            Assign a package to continue
+          </p>
+        </div>
       </div>
-
-      <p className="text-xs text-content-secondary mb-3">
-        Almost there! Assign a package to these rooms to continue.
-      </p>
 
       {/* ── Inline view (< 11 unmapped) ── */}
       {!useAggregate && (
-        <div className="space-y-2.5 mb-3">
+        <div className="pl-12 space-y-1.5 mb-4">
           {floors.map((floor) => (
-            <div key={floor.floorIndex}>
-              <p className="text-xs text-content-tertiary font-medium mb-1">
-                {floor.floorLabel}
-              </p>
-              {renderFloorUnits(floor)}
+            <div key={floor.floorIndex} className="flex items-center gap-2">
+              <span className="text-xs text-content-secondary">{floor.floorLabel}</span>
+              <span className="text-xs text-content-tertiary">
+                · {(floor.units?.length || floor.unitNames.length) > 3
+                  ? `${floor.units?.length || floor.unitNames.length} rooms`
+                  : `Rooms ${floor.unitNames.join(", ")}`}
+              </span>
             </div>
           ))}
         </div>
@@ -160,9 +168,8 @@ export function UnmappedUnitsWarning({
 
       {/* ── Aggregate view (11+ unmapped) ── */}
       {useAggregate && (
-        <div className="mb-3">
-          {/* Summary */}
-          <div className="px-3 py-2 rounded-[var(--radius-button)] bg-bg-elevated/30 border border-border mb-2">
+        <div className="pl-12 mb-4">
+          <div className="px-3 py-2 rounded-xl bg-bg-surface/50 border border-border mb-2">
             <p className="text-xs text-content font-medium mb-1">
               {totalUnmapped} unmapped rooms across {floors.length} floor{floors.length !== 1 ? "s" : ""}
             </p>
@@ -172,7 +179,7 @@ export function UnmappedUnitsWarning({
                 return (
                   <span
                     key={f.floorIndex}
-                    className="px-2 py-0.5 rounded bg-warning-surface text-[11px] text-warning border border-warning/15"
+                    className="px-2 py-0.5 rounded bg-warning/10 text-[11px] text-warning border border-warning/15"
                   >
                     {f.floorLabel}: {count}
                   </span>
@@ -183,9 +190,9 @@ export function UnmappedUnitsWarning({
 
           <button
             onClick={() => setSheetOpen(true)}
-            className="text-xs text-warning hover:text-warning underline-offset-2 hover:underline transition-colors mb-2"
+            className="text-xs text-warning hover:text-warning underline-offset-2 hover:underline transition-colors cursor-pointer mb-2"
           >
-            View details →
+            View details
           </button>
         </div>
       )}
@@ -194,13 +201,11 @@ export function UnmappedUnitsWarning({
         onClick={() =>
           onSendMessage?.(`Help me assign packages to the remaining ${totalUnmapped} rooms`)
         }
-        className={cn(
-          "w-full px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium",
-          "bg-warning-surface text-warning border border-warning/25",
-          "hover:bg-warning/25 active:scale-95 transition-all"
-        )}
+        className={cn(BTN_GHOST, "w-full")}
       >
-        Help me assign the remaining rooms
+        <span className="inline-flex items-center gap-2">
+          Help me assign these rooms <ArrowRight className="w-4 h-4" />
+        </span>
       </button>
 
       {/* ── BottomSheet with FloorChipBar drill-down ── */}

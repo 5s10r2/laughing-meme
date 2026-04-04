@@ -8,11 +8,16 @@ import {
   AlertCircle,
   ArrowRight,
   ChevronDown,
-  CheckCircle2,
+  Check,
   AlertTriangle,
+  Layers,
+  Box,
 } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { humanizeSharingType } from "../../../lib/property-utils";
+import {
+  CARD, CARD_DIVIDER, ICON_CIRCLE, ICON_SM, BTN_PRIMARY, EditButton,
+} from "../../ui/primitives";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface PropertySection {
@@ -65,33 +70,6 @@ interface VerificationSummaryProps {
 }
 
 type SectionId = "property" | "structure" | "packages" | "mapping" | "pending";
-
-function FieldRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange?: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between py-1 border-b border-border/30 last:border-0">
-      <span className="text-xs text-content-tertiary">{label}</span>
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-content">{value}</span>
-        {onChange && (
-          <button
-            onClick={onChange}
-            className="text-xs text-content-tertiary hover:text-accent-light underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
-          >
-            change
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export function VerificationSummary({
   property: rawProperty,
@@ -228,26 +206,29 @@ export function VerificationSummary({
   ) || 0;
   const allMapped = mappings && totalMappedRooms > 0;
   const hasPending = pending && pending.length > 0;
-  const errorCount = pending?.filter((p) => p.severity === "error").length || 0;
-  const warningCount = pending?.filter((p) => p.severity === "warning").length || 0;
+
+  // ── Section icon map ──
+  const sectionIcons: Record<SectionId, React.ElementType> = {
+    property: Building2,
+    structure: Layers,
+    packages: Box,
+    mapping: ArrowRightLeft,
+    pending: AlertCircle,
+  };
 
   // ── Section data for accordion ──
   const sections: {
     id: SectionId;
-    icon: React.ElementType;
     title: string;
     summary: string;
-    badge?: { type: "ok" | "warning" | "error"; text: string };
     hasContent: boolean;
   }[] = [];
 
   if (property) {
     sections.push({
       id: "property",
-      icon: Building2,
       title: "Property",
       summary: [property.propertyName, property.propertyType, property.location].filter(Boolean).join(" · "),
-      badge: { type: "ok", text: "" },
       hasContent: true,
     });
   }
@@ -255,26 +236,21 @@ export function VerificationSummary({
   if (floors && floors.length > 0) {
     sections.push({
       id: "structure",
-      icon: Building2,
       title: "Structure",
-      summary: `${floors.length} floor${floors.length !== 1 ? "s" : ""}, ${totalRooms} room${totalRooms !== 1 ? "s" : ""}`,
-      badge: { type: "ok", text: "" },
+      summary: `${floors.length} floor${floors.length !== 1 ? "s" : ""} · ${totalRooms} room${totalRooms !== 1 ? "s" : ""}`,
       hasContent: true,
     });
   }
 
   if (packages && packages.length > 0) {
-    // Group packages by sharing type for compact summary
     const sharingTypes = new Set(packages.map((p) => p.sharingType).filter(Boolean));
     const sharingStr = sharingTypes.size > 0
       ? Array.from(sharingTypes).map((st) => humanizeSharingType(st!)).join(", ")
       : "";
     sections.push({
       id: "packages",
-      icon: Package,
       title: "Packages",
       summary: `${packages.length} package${packages.length !== 1 ? "s" : ""}${sharingStr ? ` (${sharingStr})` : ""}`,
-      badge: { type: "ok", text: "" },
       hasContent: true,
     });
   }
@@ -282,10 +258,8 @@ export function VerificationSummary({
   if (mappings && mappings.length > 0) {
     sections.push({
       id: "mapping",
-      icon: ArrowRightLeft,
       title: "Mapping",
       summary: allMapped ? `${totalMappedRooms} room${totalMappedRooms !== 1 ? "s" : ""} mapped` : "Incomplete",
-      badge: allMapped ? { type: "ok", text: "" } : { type: "warning", text: "!" },
       hasContent: true,
     });
   }
@@ -293,18 +267,14 @@ export function VerificationSummary({
   if (hasPending) {
     sections.push({
       id: "pending",
-      icon: AlertCircle,
       title: "Pending",
       summary: `${pending!.length} issue${pending!.length !== 1 ? "s" : ""}`,
-      badge: errorCount > 0
-        ? { type: "error", text: String(errorCount) }
-        : { type: "warning", text: String(warningCount) },
       hasContent: true,
     });
   }
 
-  // Default expanded: pending if it exists, otherwise nothing
-  const defaultExpanded: SectionId | null = hasPending ? "pending" : null;
+  // Default expanded: first section if it exists
+  const defaultExpanded: SectionId | null = sections.length > 0 ? sections[0].id : null;
   const [expandedSection, setExpandedSection] = useState<SectionId | null>(defaultExpanded);
 
   function toggleSection(id: SectionId) {
@@ -322,60 +292,39 @@ export function VerificationSummary({
     return `${floor.unitCount} room${floor.unitCount !== 1 ? "s" : ""}`;
   }
 
-  function renderBadge(badge: { type: "ok" | "warning" | "error"; text: string }) {
-    if (badge.type === "ok") {
-      return <CheckCircle2 className="w-3 h-3 text-success" />;
-    }
-    if (badge.type === "error") {
-      return (
-        <span className="flex items-center gap-0.5">
-          <AlertCircle className="w-3 h-3 text-error" />
-          {badge.text && <span className="text-[10px] text-error font-medium">{badge.text}</span>}
-        </span>
-      );
-    }
-    return (
-      <span className="flex items-center gap-0.5">
-        <AlertTriangle className="w-3 h-3 text-warning" />
-        {badge.text && <span className="text-[10px] text-warning font-medium">{badge.text}</span>}
-      </span>
-    );
-  }
-
   // ── Render section content ──
   function renderSectionContent(id: SectionId) {
     switch (id) {
       case "property":
         if (!property) return null;
         return (
-          <div className="space-y-0 px-1">
-            {property.propertyName && (
-              <FieldRow
-                label="Name"
-                value={property.propertyName}
-                onChange={() => onSendMessage?.(`I want to change the property name, currently '${property.propertyName}'`)}
-              />
+          <div className="pl-12 pb-3 space-y-2.5">
+            {property.ownerName && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-content-tertiary">Owner</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-content font-medium">{property.ownerName}</span>
+                  <EditButton onClick={() => onSendMessage?.(`I want to change the owner name, currently '${property.ownerName}'`)} />
+                </div>
+              </div>
             )}
             {property.propertyType && (
-              <FieldRow
-                label="Type"
-                value={property.propertyType}
-                onChange={() => onSendMessage?.(`I want to change the property type, currently '${property.propertyType}'`)}
-              />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-content-tertiary">Type</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-content font-medium">{property.propertyType}</span>
+                  <EditButton onClick={() => onSendMessage?.(`I want to change the property type, currently '${property.propertyType}'`)} />
+                </div>
+              </div>
             )}
             {property.location && (
-              <FieldRow
-                label="Location"
-                value={property.location}
-                onChange={() => onSendMessage?.(`I want to change the location, currently '${property.location}'`)}
-              />
-            )}
-            {property.ownerName && (
-              <FieldRow
-                label="Owner"
-                value={property.ownerName}
-                onChange={() => onSendMessage?.(`I want to change the owner name, currently '${property.ownerName}'`)}
-              />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-content-tertiary">Location</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-content font-medium">{property.location}</span>
+                  <EditButton onClick={() => onSendMessage?.(`I want to change the location, currently '${property.location}'`)} />
+                </div>
+              </div>
             )}
           </div>
         );
@@ -383,14 +332,17 @@ export function VerificationSummary({
       case "structure":
         if (!floors) return null;
         return (
-          <div className="space-y-0 px-1">
+          <div className="pl-12 pb-3 space-y-2.5">
             {floors.map((floor, i) => (
-              <FieldRow
-                key={i}
-                label={floor.label}
-                value={`${formatUnitBreakdown(floor)}${floor.nameRange ? ` (${floor.nameRange})` : ""}`}
-                onChange={() => onSendMessage?.(`I want to change ${floor.label}, it currently has ${formatUnitBreakdown(floor)}${floor.nameRange ? ` (${floor.nameRange})` : ""}`)}
-              />
+              <div key={i} className="flex items-center justify-between">
+                <span className="text-xs text-content-tertiary">{floor.label}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-content font-medium">
+                    {formatUnitBreakdown(floor)}{floor.nameRange ? ` (${floor.nameRange})` : ""}
+                  </span>
+                  <EditButton onClick={() => onSendMessage?.(`I want to change ${floor.label}`)} />
+                </div>
+              </div>
             ))}
           </div>
         );
@@ -398,34 +350,15 @@ export function VerificationSummary({
       case "packages":
         if (!packages) return null;
         return (
-          <div className="space-y-0 px-1">
+          <div className="pl-12 pb-3 space-y-2.5">
             {packages.map((pkg, i) => {
               const rentStr = pkg.rent ? `₹${pkg.rent.toLocaleString("en-IN")}` : "";
-              const sharingStr = pkg.sharingType || "";
-              const attrs = pkg.attributes?.join(", ") || "";
               return (
-                <div key={i} className="flex items-center justify-between py-1 border-b border-border/30 last:border-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-content-tertiary">{pkg.name}</span>
-                    {sharingStr && (
-                      <span className="text-xs text-content-tertiary px-1.5 py-0.5 rounded bg-bg-elevated font-medium">
-                        {sharingStr}
-                      </span>
-                    )}
-                  </div>
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-xs text-content-tertiary">{pkg.name}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs">
-                      {rentStr && <span className="font-semibold text-content">{rentStr}</span>}
-                      {rentStr && attrs && <span className="text-content-tertiary"> · </span>}
-                      {attrs && <span className="text-content-tertiary">{attrs}</span>}
-                      {!rentStr && !attrs && <span className="text-content">—</span>}
-                    </span>
-                    <button
-                      onClick={() => onSendMessage?.(`I want to change the ${pkg.name} package${rentStr ? `, currently ${rentStr}` : ""}`)}
-                      className="text-xs text-content-tertiary hover:text-accent-light underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
-                    >
-                      change
-                    </button>
+                    <span className="text-sm text-content font-medium">{rentStr || "---"}</span>
+                    <EditButton onClick={() => onSendMessage?.(`I want to change the ${pkg.name} package`)} />
                   </div>
                 </div>
               );
@@ -436,7 +369,7 @@ export function VerificationSummary({
       case "mapping":
         if (!mappings) return null;
         return (
-          <div className="space-y-0 px-1">
+          <div className="pl-12 pb-3 space-y-2.5">
             {mappings.map((m, i) => {
               const assignments = getAssignments(m);
               const isMultiPackage = assignments.length > 1;
@@ -444,25 +377,23 @@ export function VerificationSummary({
               if (!isMultiPackage) {
                 const a = assignments[0];
                 return (
-                  <FieldRow
-                    key={i}
-                    label={m.floorLabel}
-                    value={a ? `${a.count} room${a.count !== 1 ? "s" : ""} → ${a.packageName}` : "—"}
-                    onChange={() => onSendMessage?.(`I want to change the mapping for ${m.floorLabel}`)}
-                  />
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-xs text-content-tertiary">{m.floorLabel}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-content font-medium">
+                        {a ? `${a.count} room${a.count !== 1 ? "s" : ""} → ${a.packageName}` : "---"}
+                      </span>
+                      <EditButton onClick={() => onSendMessage?.(`I want to change the mapping for ${m.floorLabel}`)} />
+                    </div>
+                  </div>
                 );
               }
 
               return (
-                <div key={i} className="py-1 border-b border-border/30 last:border-0">
+                <div key={i}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-content-tertiary">{m.floorLabel}</span>
-                    <button
-                      onClick={() => onSendMessage?.(`I want to change the mapping for ${m.floorLabel}`)}
-                      className="text-xs text-content-tertiary hover:text-accent-light underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
-                    >
-                      change
-                    </button>
+                    <EditButton onClick={() => onSendMessage?.(`I want to change the mapping for ${m.floorLabel}`)} />
                   </div>
                   <div className="pl-2 border-l border-border space-y-0.5">
                     {assignments.map((a, ai) => (
@@ -486,7 +417,7 @@ export function VerificationSummary({
       case "pending":
         if (!pending) return null;
         return (
-          <div className="space-y-1 px-1">
+          <div className="pl-12 pb-3 space-y-1">
             {pending.map((item, i) => (
               <div
                 key={i}
@@ -494,7 +425,7 @@ export function VerificationSummary({
                   "flex items-center gap-2 text-xs py-1 px-2 rounded",
                   item.severity === "error"
                     ? "bg-error/10 text-error"
-                    : "bg-warning-surface text-warning"
+                    : "bg-warning/10 text-warning"
                 )}
               >
                 <AlertCircle className="w-3 h-3 flex-shrink-0" />
@@ -510,45 +441,48 @@ export function VerificationSummary({
   }
 
   return (
-    <div className="border border-border bg-bg-surface rounded-[var(--radius-card)] px-4 py-4 my-2">
-      <p className="text-xs font-semibold text-content mb-3">Final Review</p>
+    <div className={CARD}>
+      <p className="text-xs font-medium text-content-tertiary mb-4">Final review</p>
 
       {/* ── Accordion sections ── */}
-      <div className="space-y-1 mb-4">
-        {sections.map((section) => {
+      <div className="space-y-0">
+        {sections.map((section, i) => {
           const isOpen = expandedSection === section.id;
-          const Icon = section.icon;
+          const Icon = sectionIcons[section.id];
 
           return (
-            <div key={section.id}>
+            <div key={section.id} className={cn(i < sections.length - 1 && CARD_DIVIDER)}>
               <button
                 onClick={() => toggleSection(section.id)}
-                className={cn(
-                  "w-full flex items-center gap-2 px-2.5 py-2 rounded-[var(--radius-button)] text-xs transition-all",
-                  isOpen
-                    ? "bg-bg-elevated border border-border"
-                    : "bg-bg-elevated/20 border border-transparent hover:bg-bg-elevated"
-                )}
+                className="flex items-center justify-between w-full py-3.5 cursor-pointer"
               >
-                <ChevronDown
-                  className={cn(
-                    "w-3 h-3 text-content-tertiary transition-transform duration-200 flex-shrink-0",
-                    isOpen && "rotate-180"
+                <div className="flex items-center gap-3">
+                  <div className={cn(ICON_CIRCLE, "bg-bg-elevated")}>
+                    <Icon className="w-4 h-4 text-content-tertiary" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm text-content font-medium">{section.title}</p>
+                    {!isOpen && (
+                      <p className="text-[11px] text-content-tertiary mt-0.5">{section.summary}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {section.id !== "pending" && (
+                    <div className={cn(ICON_SM, "bg-success/12")}>
+                      <Check className="w-3 h-3 text-success" />
+                    </div>
                   )}
-                />
-                <Icon className="w-3 h-3 text-accent-light flex-shrink-0" />
-                <span className="text-content font-medium">{section.title}</span>
-
-                {/* Collapsed summary text */}
-                {!isOpen && (
-                  <span className="text-content-tertiary truncate text-[11px] ml-1">
-                    — {section.summary}
-                  </span>
-                )}
-
-                <span className="ml-auto flex-shrink-0">
-                  {section.badge && renderBadge(section.badge)}
-                </span>
+                  {section.id === "pending" && (
+                    <AlertTriangle className="w-3.5 h-3.5 text-warning" />
+                  )}
+                  <ChevronDown
+                    className={cn(
+                      "w-4 h-4 text-content-tertiary transition-transform",
+                      isOpen && "rotate-180"
+                    )}
+                  />
+                </div>
               </button>
 
               <AnimatePresence>
@@ -560,9 +494,7 @@ export function VerificationSummary({
                     transition={{ duration: 0.15 }}
                     className="overflow-hidden"
                   >
-                    <div className="pt-1 pb-2 px-1">
-                      {renderSectionContent(section.id)}
-                    </div>
+                    {renderSectionContent(section.id)}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -572,23 +504,23 @@ export function VerificationSummary({
       </div>
 
       {/* Actions */}
-      <div className="pt-2 border-t border-border">
+      <div className="mt-5">
         {hasPending && (
-          <p className="text-xs text-accent-light mb-2">
+          <p className="text-xs text-warning mb-2">
             Resolve {pending!.length} pending item{pending!.length !== 1 ? "s" : ""} first
           </p>
         )}
         <button
           onClick={() => onSendMessage?.("Everything looks correct, confirm")}
           className={cn(
-            "w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
-            "bg-success-surface text-success border border-success/25",
-            "hover:bg-success/25 active:scale-95 transition-all",
+            BTN_PRIMARY,
             hasPending && "opacity-50 cursor-not-allowed"
           )}
           disabled={!!hasPending}
         >
-          Everything looks great — go live! →
+          <span className="inline-flex items-center gap-2">
+            Confirm & finish <Check className="w-4 h-4" />
+          </span>
         </button>
       </div>
     </div>

@@ -1,6 +1,10 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { cn } from "../../lib/cn";
+import {
+  ICON_SM, EditButton,
+} from "./primitives";
 
 function formatFieldLabel(key: string): string {
   return key
@@ -31,29 +35,27 @@ export function DataConfirmationCard({ title, fields: rawFields, onSendMessage }
           value: Array.isArray(value) ? `${value.length} items` : String(value),
         }))
       : [];
+
   return (
-    <div className="border-l-2 border-success/40 bg-success-surface rounded-r-lg px-3.5 py-2.5 my-1.5">
-      <div className="flex items-center gap-2 mb-1.5">
-        <div className="w-4 h-4 rounded-full bg-success-surface flex items-center justify-center flex-shrink-0">
-          <Check className="w-2.5 h-2.5 text-success" />
+    <div className="bg-success/5 border border-success/15 rounded-2xl p-4">
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className={cn(ICON_SM, "bg-success/12")}>
+          <Check className="w-3.5 h-3.5 text-success" />
         </div>
-        <span className="text-xs font-semibold text-success">{title}</span>
+        <p className="text-sm font-medium text-success">{title}</p>
       </div>
-      <div className="space-y-0 pl-6">
+      <div className="pl-8 space-y-2">
         {fields.map((field) => (
-          <div key={field.label} className="flex items-center justify-between py-0.5 border-b border-border/20 last:border-0">
-            <div className="flex items-baseline gap-1.5 text-xs">
-              <span className="text-content-tertiary">{field.label}:</span>
-              <span className="text-content">{field.value}</span>
+          <div key={field.label} className="flex items-center justify-between">
+            <span className="text-xs text-content-tertiary">{field.label}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-content font-medium">{field.value}</span>
+              {onSendMessage && (
+                <EditButton
+                  onClick={() => onSendMessage(`I want to change ${field.label.toLowerCase()}, currently '${field.value}'`)}
+                />
+              )}
             </div>
-            {onSendMessage && (
-              <button
-                onClick={() => onSendMessage(`I want to change ${field.label.toLowerCase()}, currently '${field.value}'`)}
-                className="text-xs text-content-tertiary hover:text-accent-light underline-offset-2 hover:underline transition-colors cursor-pointer ml-2 px-2 py-1.5 -mr-2 -my-1.5 rounded"
-              >
-                change
-              </button>
-            )}
           </div>
         ))}
       </div>

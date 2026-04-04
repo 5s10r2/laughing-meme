@@ -33,22 +33,28 @@ export function ToolActivityIndicator({ tool, status, description }: ToolActivit
   return (
     <div
       className={cn(
-        "flex items-center gap-2 py-1.5 px-3 rounded-lg text-xs font-medium transition-all duration-300",
-        status === "running" && "text-content-secondary bg-bg-surface",
-        status === "complete" && "text-success/80 bg-success-surface",
-        status === "error" && "text-error/80 bg-error-surface"
+        "flex items-center gap-2 py-1.5 px-3 rounded-lg bg-bg-surface border border-border transition-all duration-300"
       )}
     >
       {status === "running" && (
-        <Loader2 className="w-3 h-3 animate-spin text-accent-light/70" />
+        <Loader2 className="w-3.5 h-3.5 text-accent-lighter animate-spin" />
       )}
       {status === "complete" && (
-        <Check className="w-3 h-3 text-success" />
+        <Check className="w-3.5 h-3.5 text-success" />
       )}
       {status === "error" && (
-        <AlertCircle className="w-3 h-3 text-error" />
+        <AlertCircle className="w-3.5 h-3.5 text-error" />
       )}
-      <span>{label}{status === "running" ? "..." : ""}</span>
+      <span
+        className={cn(
+          "text-xs",
+          status === "running" && "text-content-secondary",
+          status === "complete" && "text-success",
+          status === "error" && "text-error"
+        )}
+      >
+        {label}{status === "running" ? "..." : ""}
+      </span>
     </div>
   );
 }

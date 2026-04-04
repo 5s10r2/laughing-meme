@@ -1,6 +1,10 @@
 "use client";
 
-import { MapPin, Building2, User, Tag } from "lucide-react";
+import { MapPin, Building2, User, Tag, ArrowRight } from "lucide-react";
+import {
+  CARD, CARD_DIVIDER, ICON_CIRCLE, BTN_PRIMARY, EditButton,
+} from "../../ui/primitives";
+import { cn } from "../../../lib/cn";
 
 interface IntroSummaryCardProps {
   user_name?: string;
@@ -28,7 +32,6 @@ export function IntroSummaryCard({
   onSendMessage,
   ...rest
 }: IntroSummaryCardProps & Record<string, unknown>) {
-  // Claude may send { fields: [{label, value}] } or individual props — handle both
   const rawFields = rest.fields as Array<{ label: string; value: string }> | undefined;
 
   const ICON_MAP: Record<string, typeof User> = {
@@ -54,35 +57,40 @@ export function IntroSummaryCard({
       ].filter((f) => f.value);
 
   return (
-    <div className="border border-border bg-bg-surface rounded-[var(--radius-card)] px-4 py-3 my-2">
-      <p className="text-xs text-content-tertiary font-medium uppercase tracking-wider mb-2.5">
-        Property Overview
-      </p>
+    <div className={cn(CARD, "my-2")}>
+      <p className="text-xs font-medium text-content-tertiary mb-4">Property details</p>
       <div className="space-y-0">
-        {fields.map((field) => (
-          <div key={field.label} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-            <div className="flex items-center gap-2">
-              <field.icon className="w-3.5 h-3.5 text-content-tertiary flex-shrink-0" />
-              <span className="text-xs text-content-secondary">{field.label}</span>
+        {fields.map((field, i) => (
+          <div
+            key={field.label}
+            className={cn(
+              "flex items-center justify-between py-3.5",
+              i < fields.length - 1 && CARD_DIVIDER
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className={cn(ICON_CIRCLE, "bg-bg-elevated")}>
+                <field.icon className="w-4 h-4 text-content-tertiary" />
+              </div>
+              <div>
+                <p className="text-[11px] text-content-tertiary">{field.label}</p>
+                <p className="text-sm text-content font-medium mt-0.5">{field.value}</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-content">{field.value}</span>
-              <button
-                onClick={() => onSendMessage?.(`I want to change the ${field.label.toLowerCase()}, currently '${field.value}'`)}
-                className="text-xs text-content-tertiary hover:text-accent-lighter underline-offset-2 hover:underline transition-colors cursor-pointer px-2 py-1.5 -mr-2 -my-1.5 rounded"
-              >
-                change
-              </button>
-            </div>
+            <EditButton
+              onClick={() => onSendMessage?.(`I want to change the ${field.label.toLowerCase()}, currently '${field.value}'`)}
+            />
           </div>
         ))}
       </div>
-      <div className="mt-3 pt-2.5 border-t border-border">
+      <div className="mt-5">
         <button
           onClick={() => onSendMessage?.("Looks good, let's continue to structure")}
-          className="w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold bg-accent/20 text-accent-lighter border border-accent/25 hover:bg-accent/25 active:scale-[0.98] transition-all"
+          className={BTN_PRIMARY}
         >
-          Confirm &amp; continue →
+          <span className="inline-flex items-center gap-2">
+            Confirm & continue <ArrowRight className="w-4 h-4" />
+          </span>
         </button>
       </div>
     </div>

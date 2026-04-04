@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { humanizeCategory, getPackageColor } from "../../../lib/property-utils";
 import { BottomSheet } from "../../ui/BottomSheet";
+import {
+  CARD, BTN_PRIMARY,
+} from "../../ui/primitives";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface UnitChip {
@@ -138,7 +141,7 @@ export function FloorMappingRow({
   // ── Chip rendering ──
   function renderUnitChips(unitList: UnitChip[]) {
     return (
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-2">
         {unitList.map((unit) => {
           const isSelected = selected.has(unit.id);
           return (
@@ -146,12 +149,12 @@ export function FloorMappingRow({
               key={unit.id}
               onClick={() => toggleUnit(unit.id)}
               className={cn(
-                "px-2 py-1 rounded text-xs font-medium border transition-all",
-                unit.packageId
-                  ? getPackageColor(unit.packageId, packages)
-                  : "bg-bg-elevated text-content-tertiary border-border hover:border-border-strong",
-                !unit.packageId && !isSelected && "border-dashed",
-                isSelected && "ring-2 ring-accent bg-accent/10 border-accent/30"
+                "px-3.5 py-2.5 rounded-lg text-sm font-mono font-medium transition-all cursor-pointer border",
+                isSelected
+                  ? "border-accent bg-accent/10 text-accent-lighter ring-1 ring-accent/20"
+                  : unit.packageId
+                    ? getPackageColor(unit.packageId, packages)
+                    : "border-border border-dashed bg-bg-elevated text-content-tertiary hover:bg-bg-subtle"
               )}
             >
               {unit.name}
@@ -170,14 +173,14 @@ export function FloorMappingRow({
         <div className="flex flex-wrap gap-1.5 mb-3">
           <button
             onClick={selectAll}
-            className="px-2.5 py-1 rounded-full text-[11px] font-medium text-content-secondary border border-border hover:bg-bg-elevated transition-colors"
+            className="px-2.5 py-1 rounded-full text-[11px] font-medium text-content-secondary border border-border hover:bg-bg-elevated transition-colors cursor-pointer"
           >
             Select all
           </button>
           {hasUnmapped && (
             <button
               onClick={selectUnmapped}
-              className="px-2.5 py-1 rounded-full text-[11px] font-medium text-accent-light border border-accent/30 hover:bg-accent/10 transition-colors"
+              className="px-2.5 py-1 rounded-full text-[11px] font-medium text-accent-light border border-accent/30 hover:bg-accent/10 transition-colors cursor-pointer"
             >
               Select unmapped
             </button>
@@ -186,7 +189,7 @@ export function FloorMappingRow({
             <button
               key={g.category}
               onClick={() => selectCategory(g.category)}
-              className="px-2.5 py-1 rounded-full text-[11px] font-medium text-content-secondary border border-border hover:bg-bg-elevated transition-colors"
+              className="px-2.5 py-1 rounded-full text-[11px] font-medium text-content-secondary border border-border hover:bg-bg-elevated transition-colors cursor-pointer"
             >
               All {g.label.toLowerCase()}
             </button>
@@ -194,7 +197,7 @@ export function FloorMappingRow({
           {selected.size > 0 && (
             <button
               onClick={clearSelection}
-              className="px-2.5 py-1 rounded-full text-[11px] font-medium text-content-tertiary border border-border hover:bg-bg-elevated transition-colors"
+              className="px-2.5 py-1 rounded-full text-[11px] font-medium text-content-tertiary border border-border hover:bg-bg-elevated transition-colors cursor-pointer"
             >
               Clear
             </button>
@@ -236,7 +239,7 @@ export function FloorMappingRow({
                     key={pkg.id}
                     onClick={() => assignSelected(pkg)}
                     className={cn(
-                      "px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium border transition-all",
+                      "px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer",
                       "hover:scale-[1.02] active:scale-95",
                       getPackageColor(pkg.id, packages)
                     )}
@@ -253,30 +256,33 @@ export function FloorMappingRow({
   }
 
   return (
-    <div className="border border-border bg-bg-surface rounded-[var(--radius-card)] px-3 py-3 my-1">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-content font-medium">{floorLabel}</span>
-        <span
-          className={cn(
-            "text-xs font-medium",
-            mappedCount === totalCount ? "text-success" : "text-content-tertiary"
-          )}
+    <div className={CARD}>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-sm text-content font-semibold">{floorLabel}</p>
+          <p className="text-[11px] text-content-tertiary mt-0.5">
+            {selected.size}/{totalCount} selected
+          </p>
+        </div>
+        <button
+          onClick={selectAll}
+          className="text-xs text-accent-lighter hover:underline cursor-pointer"
         >
-          {mappedCount}/{totalCount} mapped
-        </span>
+          Select all
+        </button>
       </div>
 
       {/* Helper text */}
-      {hasUnmapped && packages.length > 0 && (
-        <p className="text-xs text-content-tertiary italic mb-2">
+      {hasUnmapped && packages.length > 0 && !shouldCollapse && (
+        <p className="text-[11px] text-content-tertiary/70 mb-4">
           Tap rooms to select, then assign a package
         </p>
       )}
 
       {/* ── Collapsed summary for 20+ units ── */}
       {shouldCollapse && !expanded && (
-        <div className="mb-2">
-          <div className="flex items-center justify-between px-2 py-1.5 rounded-[var(--radius-button)] bg-bg-elevated/30 text-xs text-content-secondary">
+        <div className="mb-4">
+          <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-bg-elevated text-xs text-content-secondary">
             <span>
               {mappedCount === 0 ? `${totalCount} unmapped` : `${totalCount - mappedCount} unmapped / ${totalCount} total`}
               {hasCategories &&
@@ -284,10 +290,9 @@ export function FloorMappingRow({
             </span>
             <button
               onClick={() => setSheetOpen(true)}
-              className="flex items-center gap-1 text-accent-light hover:text-accent-lighter transition-colors"
+              className="text-accent-lighter hover:underline transition-colors cursor-pointer"
             >
-              <span>View all rooms</span>
-              <ChevronDown className="w-3 h-3" />
+              View all rooms
             </button>
           </div>
         </div>
@@ -297,17 +302,11 @@ export function FloorMappingRow({
       {!shouldCollapse && (
         <>
           {/* Quick select buttons */}
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            <button
-              onClick={selectAll}
-              className="px-2 py-0.5 rounded-full text-[11px] font-medium text-content-tertiary border border-border hover:bg-bg-elevated transition-colors"
-            >
-              Select all
-            </button>
+          <div className="flex flex-wrap gap-1.5 mb-4">
             {hasUnmapped && (
               <button
                 onClick={selectUnmapped}
-                className="px-2 py-0.5 rounded-full text-[11px] font-medium text-accent-light border border-accent/30 hover:bg-accent/10 transition-colors"
+                className="px-2.5 py-1 rounded-full text-[11px] font-medium text-accent-light border border-accent/30 hover:bg-accent/10 transition-colors cursor-pointer"
               >
                 Unmapped
               </button>
@@ -316,7 +315,7 @@ export function FloorMappingRow({
               <button
                 key={g.category}
                 onClick={() => selectCategory(g.category)}
-                className="px-2 py-0.5 rounded-full text-[11px] font-medium text-content-tertiary border border-border hover:bg-bg-elevated transition-colors"
+                className="px-2.5 py-1 rounded-full text-[11px] font-medium text-content-secondary border border-border hover:bg-bg-elevated transition-colors cursor-pointer"
               >
                 {g.label}
               </button>
@@ -324,7 +323,7 @@ export function FloorMappingRow({
             {selected.size > 0 && (
               <button
                 onClick={clearSelection}
-                className="px-2 py-0.5 rounded-full text-[11px] font-medium text-content-tertiary border border-border hover:bg-bg-elevated transition-colors"
+                className="px-2.5 py-1 rounded-full text-[11px] font-medium text-content-tertiary border border-border hover:bg-bg-elevated transition-colors cursor-pointer"
               >
                 Clear
               </button>
@@ -355,26 +354,13 @@ export function FloorMappingRow({
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 20, opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="mt-2 pt-2 border-t border-border/50"
+                className="mt-4"
               >
-                <p className="text-[11px] text-content-tertiary mb-1.5">
-                  Assign {selected.size} room{selected.size !== 1 ? "s" : ""} to:
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {packages.map((pkg) => (
-                    <button
-                      key={pkg.id}
-                      onClick={() => assignSelected(pkg)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium border transition-all",
-                        "hover:scale-[1.02] active:scale-95",
-                        getPackageColor(pkg.id, packages)
-                      )}
-                    >
-                      {pkg.name}
-                    </button>
-                  ))}
-                </div>
+                <button className={BTN_PRIMARY}>
+                  <span className="inline-flex items-center gap-2">
+                    Assign {selected.size} rooms to package <ArrowRight className="w-4 h-4" />
+                  </span>
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -385,7 +371,7 @@ export function FloorMappingRow({
       <BottomSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title={`${floorLabel} — All Rooms`}
+        title={`${floorLabel} -- All Rooms`}
       >
         {renderFullGrid()}
       </BottomSheet>

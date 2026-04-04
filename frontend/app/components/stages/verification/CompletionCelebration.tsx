@@ -1,7 +1,10 @@
 "use client";
 
-import { PartyPopper, CheckCircle2, LayoutDashboard, Camera } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 import { cn } from "../../../lib/cn";
+import {
+  CARD, BTN_PRIMARY, BTN_SECONDARY,
+} from "../../ui/primitives";
 import { motion } from "framer-motion";
 
 interface PropertyStats {
@@ -55,43 +58,37 @@ export function CompletionCelebration({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="border border-success/25 bg-gradient-to-b from-success/10 to-bg-surface rounded-[var(--radius-card)] px-5 py-5 my-2"
+      className={cn(CARD, "text-center py-8")}
     >
       {/* Success Icon */}
-      <div className="flex flex-col items-center text-center mb-4">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="w-12 h-12 rounded-full bg-success-surface flex items-center justify-center mb-3"
-        >
-          <CheckCircle2 className="w-7 h-7 text-success" />
-        </motion.div>
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+        className="w-14 h-14 rounded-full bg-success/12 flex items-center justify-center mx-auto mb-4"
+      >
+        <Check className="w-7 h-7 text-success" />
+      </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="flex items-center gap-1.5 justify-center mb-1">
-            <PartyPopper className="w-4 h-4 text-accent-light" />
-            <h3 className="text-sm font-semibold text-content">
-              You&apos;re All Set!
-            </h3>
-            <PartyPopper className="w-4 h-4 text-accent-light scale-x-[-1]" />
-          </div>
-          <p className="text-xs text-content-secondary">
-            Congratulations! {stats.propertyName} is ready for tenants
-          </p>
-        </motion.div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <h3 className="text-lg font-bold text-content mb-1">
+          You&apos;re all set!
+        </h3>
+        <p className="text-sm text-content-secondary mb-6">
+          {stats.propertyName} is ready to go live on RentOk
+        </p>
+      </motion.div>
 
       {/* Stats */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="grid grid-cols-3 gap-2 mb-4"
+        className="grid grid-cols-3 gap-3 mb-6"
       >
         {[
           { value: stats.totalFloors, label: `Floor${stats.totalFloors !== 1 ? "s" : ""}` },
@@ -103,10 +100,10 @@ export function CompletionCelebration({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.45 + i * 0.1, duration: 0.3, ease: "easeOut" }}
-            className="text-center py-2 px-2 rounded-[var(--radius-button)] bg-bg-elevated"
+            className="py-3 rounded-xl bg-bg-elevated"
           >
-            <p className="text-lg font-bold text-content">{stat.value}</p>
-            <p className="text-xs text-content-tertiary">{stat.label}</p>
+            <p className="text-xl font-bold text-content">{stat.value}</p>
+            <p className="text-[11px] text-content-tertiary mt-0.5">{stat.label}</p>
           </motion.div>
         ))}
       </motion.div>
@@ -116,29 +113,21 @@ export function CompletionCelebration({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="flex gap-2"
+        className="space-y-2.5"
       >
         <button
           onClick={() => onSendMessage?.("Take me to the dashboard")}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
-            "bg-success-surface text-success border border-success/30",
-            "hover:bg-success/30 active:scale-95 transition-all"
-          )}
+          className={BTN_PRIMARY}
         >
-          <LayoutDashboard className="w-3.5 h-3.5" />
-          Go to Dashboard
+          <span className="inline-flex items-center gap-2">
+            Go to dashboard <ArrowRight className="w-4 h-4" />
+          </span>
         </button>
         <button
           onClick={() => onSendMessage?.("I want to add photos")}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-medium",
-            "text-content-secondary border border-border",
-            "hover:bg-bg-elevated active:scale-95 transition-all"
-          )}
+          className={cn(BTN_SECONDARY, "w-full")}
         >
-          <Camera className="w-3.5 h-3.5" />
-          Add Property Photos
+          Add property photos
         </button>
       </motion.div>
     </motion.div>

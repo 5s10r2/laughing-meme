@@ -1,7 +1,7 @@
 "use client";
 
-import { Grid3X3 } from "lucide-react";
 import { cn } from "../../../lib/cn";
+import { CARD } from "../../ui/primitives";
 
 interface MappingMatrixProps {
   floors: { index: number; label: string }[];
@@ -46,19 +46,11 @@ export function MappingMatrix({
   // Sort floors top-to-bottom (highest first)
   const sortedFloors = [...floors].sort((a, b) => b.index - a.index);
 
-  // Find max room count across all floors for proportional bar width
-  const maxRooms = Math.max(...sortedFloors.map((f) => floorTotals[f.index] || 0), 1);
-
   return (
-    <div className="border border-border bg-bg-surface rounded-[var(--radius-card)] px-3 py-3 my-2">
-      <div className="flex items-center gap-2 mb-3">
-        <Grid3X3 className="w-3.5 h-3.5 text-accent-light" />
-        <span className="text-xs font-medium text-content-secondary uppercase tracking-wider">
-          Mapping Overview
-        </span>
-      </div>
+    <div className={CARD}>
+      <p className="text-xs font-medium text-content-tertiary mb-4">Mapping overview</p>
 
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {sortedFloors.map((floor) => {
           const floorMapping = mapping[floor.index] || {};
           const total = floorTotals[floor.index] || 0;
@@ -72,51 +64,38 @@ export function MappingMatrix({
             }))
             .filter((s) => s.count > 0);
 
+          // Calculate total mapped for bar proportions
+          const totalSegments = segments.reduce((sum, s) => sum + s.count, 0) + unmapped;
+
           return (
-            <div key={floor.index} className="space-y-1">
-              {/* Floor header */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-content">
+            <div key={floor.index}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-content-secondary font-medium">
                   {floor.label}
                 </span>
-                <span className="text-xs text-content-tertiary">
+                <span className="text-[11px] text-content-tertiary">
                   {total} room{total !== 1 ? "s" : ""}
                 </span>
               </div>
 
-              {/* Stacked bars */}
-              <div className="space-y-1">
+              {/* Stacked horizontal bar */}
+              <div className="flex gap-1 h-3 rounded-full overflow-hidden">
                 {segments.map((seg) => (
-                  <div key={seg.packageName} className="flex items-center gap-2">
-                    <div
-                      className="h-5 rounded bg-accent/10 flex items-center px-2 min-w-[40px]"
-                      style={{ width: `${Math.max((seg.count / maxRooms) * 100, 20)}%` }}
-                    >
-                      <span className="text-xs text-accent-lighter font-medium truncate">
-                        {seg.count}
-                      </span>
-                    </div>
-                    <span className="text-xs text-content-secondary whitespace-nowrap">
-                      {seg.packageName}
-                    </span>
-                  </div>
+                  <div
+                    key={seg.packageName}
+                    className="rounded-full bg-accent/30"
+                    style={{ flex: seg.count }}
+                    title={`${seg.packageName}: ${seg.count}`}
+                  />
                 ))}
 
                 {/* Unmapped segment */}
                 {unmapped > 0 && (
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-5 rounded bg-warning-surface border border-dashed border-warning/30 flex items-center px-2 min-w-[40px]"
-                      style={{ width: `${Math.max((unmapped / maxRooms) * 100, 20)}%` }}
-                    >
-                      <span className="text-xs text-warning font-medium truncate">
-                        {unmapped}
-                      </span>
-                    </div>
-                    <span className="text-xs text-warning whitespace-nowrap">
-                      unmapped
-                    </span>
-                  </div>
+                  <div
+                    className="rounded-full bg-warning/20 border border-dashed border-warning/30"
+                    style={{ flex: unmapped }}
+                    title={`Unmapped: ${unmapped}`}
+                  />
                 )}
               </div>
             </div>

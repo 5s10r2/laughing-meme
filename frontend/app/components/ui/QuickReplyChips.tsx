@@ -20,7 +20,7 @@ export function QuickReplyChips({ options, onSendMessage }: QuickReplyChipsProps
   }
 
   return (
-    <div className="flex flex-wrap gap-2 mt-2">
+    <div className="flex gap-2 overflow-x-auto py-3 px-1">
       {options.map((option) => {
         const isSelected = selected === option.value;
         const hasSelection = !!selected;
@@ -28,17 +28,18 @@ export function QuickReplyChips({ options, onSendMessage }: QuickReplyChipsProps
           <button
             key={option.value}
             onClick={() => handleSelect(option)}
+            disabled={hasSelection && !isSelected}
             className={cn(
-              "px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
-              "border active:scale-95 cursor-pointer",
+              "flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap cursor-pointer",
+              "border active:scale-[0.97]",
               isSelected
-                ? "bg-accent/10 border-accent text-accent-lighter"
+                ? "border-accent bg-accent text-white"
                 : hasSelection
-                  ? "border-accent/30 bg-bg-surface text-accent-lighter opacity-40 pointer-events-none"
-                  : "border-accent/30 hover:border-accent/60 bg-bg-surface text-accent-lighter hover:bg-accent/10"
+                  ? "border-border text-content-secondary opacity-40 pointer-events-none"
+                  : "border-border text-content-secondary hover:bg-bg-elevated hover:border-border-strong"
             )}
           >
-            {isSelected ? "✓ " : ""}{option.label}
+            {option.label}
           </button>
         );
       })}

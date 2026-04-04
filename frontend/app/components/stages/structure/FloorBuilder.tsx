@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Layers, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { motion } from "framer-motion";
+import { CARD, ICON_SM } from "../../ui/primitives";
 
 interface UnitBreakdown {
   category: string;
@@ -60,38 +61,26 @@ function FloorRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-2.5 px-2.5 rounded-lg text-xs",
-        "border transition-all duration-200",
-        tight ? "py-1" : "py-1.5",
+        "flex items-center gap-3 px-4 rounded-xl transition-colors cursor-pointer",
+        tight ? "py-2" : "py-3",
         highlighted
-          ? "border-accent/30 bg-accent/5"
-          : "border-transparent bg-bg-elevated"
+          ? "bg-accent/8 border border-accent/20"
+          : "bg-bg-elevated hover:bg-bg-subtle"
       )}
     >
-      <div
-        className={cn(
-          "rounded flex items-center justify-center text-[11px] font-bold flex-shrink-0",
-          tight ? "w-5 h-5" : "w-6 h-6",
-          highlighted
-            ? "bg-accent/20 text-accent-lighter"
-            : "bg-bg-subtle/50 text-content-tertiary"
-        )}
-      >
+      <div className={cn(ICON_SM, "bg-accent/10 text-accent-lighter text-[10px] font-bold")}>
         {floor.index === 0 ? "G" : floor.index}
       </div>
 
       <div className="flex-1 min-w-0">
-        <span className="text-content-secondary font-medium">{floor.label}</span>
+        <p className="text-sm text-content font-medium">{floor.label}</p>
+        {summary && (
+          <p className="text-[11px] text-content-tertiary">
+            {summary}
+            {floor.nameRange && ` \u00b7 ${floor.nameRange}`}
+          </p>
+        )}
       </div>
-
-      {summary && (
-        <div className="flex items-center gap-1 text-xs text-content-tertiary flex-shrink-0">
-          <span>{summary}</span>
-          {floor.nameRange && (
-            <span className="text-content-tertiary">({floor.nameRange})</span>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -142,6 +131,7 @@ export function FloorBuilder({ floors: rawFloors, highlightFloor, ...rest }: Flo
 
   // Compute total unit summary for header
   const hasBreakdowns = floors.some((f) => f.unitBreakdown && f.unitBreakdown.length > 1);
+  const totalUnits = floors.reduce((sum, f) => sum + (f.unitCount ?? 0), 0);
   let headerSuffix = "";
   if (hasBreakdowns) {
     const totals = new Map<string, { label: string; count: number }>();
@@ -168,7 +158,7 @@ export function FloorBuilder({ floors: rawFloors, highlightFloor, ...rest }: Flo
       .filter((t) => t.count > 0)
       .map((t) => `${t.count} ${t.label.toLowerCase()}`);
     if (parts.length > 1) {
-      headerSuffix = ` · ${parts.join(", ")}`;
+      headerSuffix = ` \u00b7 ${parts.join(", ")}`;
     }
   }
 
@@ -183,27 +173,23 @@ export function FloorBuilder({ floors: rawFloors, highlightFloor, ...rest }: Flo
     : sortedFloors;
 
   return (
-    <div className="border border-border bg-bg-surface/30 rounded-[var(--radius-card)] px-3 py-3 my-2">
-      <div className="flex items-center gap-2 mb-2.5">
-        <Layers className="w-3.5 h-3.5 text-accent-light/70" />
-        <span className="text-xs font-medium text-content-secondary uppercase tracking-wider">
-          Property Structure
-        </span>
-        <span className="text-xs text-content-tertiary ml-auto">
-          {total} floor{total !== 1 ? "s" : ""}
-          {headerSuffix}
+    <div className={cn(CARD, "my-2")}>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-medium text-content-tertiary">Building structure</p>
+        <span className="text-sm font-bold text-content">
+          {totalUnits > 0 ? `${totalUnits} rooms` : `${total} floor${total !== 1 ? "s" : ""}${headerSuffix}`}
         </span>
       </div>
 
-      <div className={cn("space-y-1", isTight && !isSandwich && "space-y-0.5")}>
+      <div className={cn("space-y-1.5", isTight && !isSandwich && "space-y-1")}>
         {/* ── Full list (< SANDWICH_THRESHOLD or expanded) ── */}
         {visibleRows &&
           visibleRows.map((floor, i) => (
             <motion.div
               key={floor.index}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.03, duration: 0.15 }}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05, duration: 0.2 }}
             >
               <FloorRow
                 floor={floor}
@@ -219,9 +205,9 @@ export function FloorBuilder({ floors: rawFloors, highlightFloor, ...rest }: Flo
             {topSlice.map((floor, i) => (
               <motion.div
                 key={floor.index}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.03, duration: 0.15 }}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.2 }}
               >
                 <FloorRow
                   floor={floor}
@@ -236,10 +222,10 @@ export function FloorBuilder({ floors: rawFloors, highlightFloor, ...rest }: Flo
               onClick={() => setExpanded(true)}
               className={cn(
                 "w-full flex items-center justify-center gap-1.5",
-                "py-2 my-0.5 rounded-[var(--radius-button)]",
-                "text-xs text-content-tertiary hover:text-accent-light",
+                "py-2.5 my-0.5 rounded-xl",
+                "text-xs text-content-tertiary hover:text-accent-lighter",
                 "bg-bg-elevated/20 hover:bg-bg-elevated border border-dashed border-border/50",
-                "transition-all"
+                "transition-all cursor-pointer"
               )}
             >
               <ChevronDown className="w-3 h-3" />
@@ -249,9 +235,9 @@ export function FloorBuilder({ floors: rawFloors, highlightFloor, ...rest }: Flo
             {bottomSlice.map((floor, i) => (
               <motion.div
                 key={floor.index}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: (SANDWICH_TOP + 1 + i) * 0.03, duration: 0.15 }}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: (SANDWICH_TOP + 1 + i) * 0.05, duration: 0.2 }}
               >
                 <FloorRow
                   floor={floor}
@@ -268,7 +254,7 @@ export function FloorBuilder({ floors: rawFloors, highlightFloor, ...rest }: Flo
       {isSandwich && expanded && (
         <button
           onClick={() => setExpanded(false)}
-          className="flex items-center gap-1 mt-1.5 text-xs text-content-tertiary hover:text-content-secondary transition-colors mx-auto"
+          className="flex items-center gap-1 mt-2 text-xs text-content-tertiary hover:text-content-secondary transition-colors mx-auto cursor-pointer"
         >
           <ChevronUp className="w-3 h-3" />
           <span>Show less</span>

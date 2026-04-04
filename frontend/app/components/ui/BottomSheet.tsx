@@ -71,7 +71,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-4 pt-3 pb-2">
+            <div className="flex items-center justify-between px-5 pt-3.5 pb-2">
               {title ? (
                 <h3 className="text-sm font-semibold text-content">{title}</h3>
               ) : (
@@ -79,14 +79,14 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
               )}
               <button
                 onClick={onClose}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-content-tertiary hover:text-content hover:bg-bg-elevated transition-colors"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-content-tertiary hover:text-content hover:bg-bg-elevated transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4 overscroll-contain">
+            <div className="flex-1 overflow-y-auto px-5 pb-5 overscroll-contain">
               {children}
             </div>
           </motion.div>

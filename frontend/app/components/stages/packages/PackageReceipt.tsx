@@ -1,6 +1,8 @@
 "use client";
 
 import { Check, Snowflake, Fan } from "lucide-react";
+import { cn } from "../../../lib/cn";
+import { ICON_SM, AttrChip } from "../../ui/primitives";
 
 interface PackageReceiptProps {
   name: string;
@@ -15,34 +17,34 @@ export function PackageReceipt({ name: rawName, rent: rawRent, ac, food, furnish
   const name = rawName || (rest.package_name as string) || (rest.packageName as string) || "Package";
   const rent = rawRent || (rest.starting_rent as number) || (rest.price as number) || 0;
 
-  const badges: string[] = [];
-  if (ac) badges.push("AC");
-  if (food) badges.push(food);
-  if (furnishing) {
-    // Normalize: "semi_furnished" → "Semi Furnished"
-    const formatted = String(furnishing)
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-    badges.push(formatted);
-  }
-
   return (
-    <div className="flex items-center gap-2 py-1.5 px-3 rounded-[var(--radius-button)] bg-success-surface border-l-2 border-l-success my-1">
-      <Check className="w-3 h-3 text-success flex-shrink-0" />
-      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+    <div className="flex items-center gap-3 py-2.5 px-3.5 rounded-xl bg-success/5 border border-success/12">
+      <div className={cn(ICON_SM, "bg-success/12")}>
+        <Check className="w-3 h-3 text-success" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-content font-medium truncate">{name}</p>
+        {(food || furnishing) && (
+          <p className="text-[11px] text-content-tertiary mt-0.5 truncate">
+            {[
+              ac ? "AC" : "Non-AC",
+              food,
+              furnishing ? String(furnishing).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         {ac ? (
-          <Snowflake className="w-2.5 h-2.5 text-info flex-shrink-0" />
+          <Snowflake className="w-3 h-3 text-info" />
         ) : (
-          <Fan className="w-2.5 h-2.5 text-content-tertiary flex-shrink-0" />
+          <Fan className="w-3 h-3 text-content-tertiary" />
         )}
-        <span className="text-xs text-success/80 truncate">
-          {name}: <span className="font-semibold">₹{rent.toLocaleString("en-IN")}/mo</span>
+        <span className="text-sm font-semibold text-content">
+          ₹{rent.toLocaleString("en-IN")}
         </span>
-        {badges.length > 0 && (
-          <span className="text-xs text-success/50 flex-shrink-0">
-            {badges.join(", ")}
-          </span>
-        )}
       </div>
     </div>
   );

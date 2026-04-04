@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, ArrowRight } from "lucide-react";
 import { cn } from "../../../lib/cn";
+import {
+  CARD, PILL_ACCENT, PILL_SUCCESS, ICON_SM,
+  BTN_PRIMARY, BTN_SECONDARY,
+} from "../../ui/primitives";
 
 interface PackageFormProps {
   name?: string;
@@ -52,6 +56,40 @@ function nextSharingType(current: string): string {
   return order[Math.min(idx + 1, order.length - 1)] || "private";
 }
 
+function ToggleRow({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <p className="text-[11px] text-content-tertiary mb-2">{label}</p>
+      <div className="flex gap-1.5">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => onChange(o.value)}
+            className={cn(
+              "flex-1 px-2 py-2 rounded-lg text-xs font-medium transition-all border cursor-pointer",
+              value === o.value
+                ? "border-accent/30 bg-accent/8 text-accent-lighter"
+                : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-subtle"
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage, ...rest }: PackageFormProps & Record<string, unknown>) {
   // Defensive: handle missing/malformed props from Claude
   const name = rawName || (rest.package_name as string) || (rest.packageName as string) || "";
@@ -82,20 +120,18 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
     const foodLabel = food === "included" ? "food included" : food === "optional" ? "food optional" : "no food";
     const furnishLabel = furnishing.replace(/_/g, " ");
 
-    // Add to session list
     setCreatedPackages((prev) => [
       ...prev,
       { name: packageName.trim(), sharingType, ac, food: foodLabel, furnishing: furnishLabel, rent },
     ]);
 
-    // Send message for this package
     const message = `Package: ${packageName.trim()}, ${sharingLabel} sharing, ${ac ? "AC" : "non-AC"}, ${foodLabel}, ${furnishLabel}, rent ₹${rent}`;
     onSendMessage?.(message);
 
     // Reset form with smart defaults for next package
     setPackageName("");
     setSharingType(nextSharingType(sharingType));
-    setStep(1); // Back to step 1 for next package
+    setStep(1);
     // Keep AC and food — likely same across packages
     setRent("");
   }
@@ -108,23 +144,20 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
   }
 
   return (
-    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-4 py-3.5 my-2">
-      <p className="text-xs text-content-tertiary font-medium uppercase tracking-wider mb-3">
-        {name ? `Edit: ${name}` : "New Package"}
+    <div className={CARD}>
+      <p className="text-xs font-medium text-content-tertiary mb-4">
+        {name ? `Edit: ${name}` : "New package"}
       </p>
 
-      {/* ── Created packages this session ── */}
+      {/* Created packages this session */}
       {createdPackages.length > 0 && (
-        <div className="mb-3 pb-2 border-b border-border">
-          <p className="text-[11px] text-content-tertiary mb-1.5">
+        <div className="mb-4 pb-3 border-b border-border">
+          <p className="text-[11px] text-content-tertiary mb-2">
             Created ({createdPackages.length}):
           </p>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {createdPackages.map((pkg, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-surface border border-success-surface text-[11px] text-success font-medium"
-              >
+              <span key={i} className={PILL_SUCCESS}>
                 <Check className="w-2.5 h-2.5" />
                 {pkg.name}
               </span>
@@ -133,152 +166,100 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
         </div>
       )}
 
-      {/* ── Form (hidden when done) ── */}
+      {/* Form (hidden when done) */}
       {!done && (
         <>
-          {/* ── Step 1: Identity (name + sharing type) ── */}
+          {/* Step 1: Identity (name + sharing type) */}
           {step === 1 && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="text-xs text-content-tertiary mb-1 block">Package Name</label>
+                <p className="text-[11px] text-content-tertiary mb-2">Package name</p>
                 <input
                   type="text"
                   value={packageName}
                   onChange={(e) => setPackageName(e.target.value)}
                   placeholder="e.g. AC Double Sharing"
-                  className="w-full px-3 py-1.5 rounded-[var(--radius-button)] bg-bg-elevated border border-border text-xs text-content placeholder-content-tertiary focus:outline-none focus:border-accent/50"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-bg-elevated border border-border text-sm text-content placeholder-content-tertiary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20"
                 />
               </div>
 
-              <div>
-                <label className="text-xs text-content-tertiary mb-1.5 block">Room Type</label>
-                <div className="flex gap-1">
-                  {SHARING_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setSharingType(opt.value)}
-                      className={cn(
-                        "flex-1 px-2 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition-all",
-                        "border",
-                        sharingType === opt.value
-                          ? "border-accent/40 bg-accent/10 text-accent-lighter"
-                          : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-elevated"
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <ToggleRow
+                label="Room type"
+                options={SHARING_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                value={sharingType}
+                onChange={setSharingType}
+              />
 
               <button
                 onClick={() => setStep(2)}
                 disabled={!packageName.trim()}
-                className={cn(
-                  "w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold transition-all",
-                  "bg-accent/10 text-accent-lighter border border-accent/30",
-                  "hover:bg-accent/15 active:scale-[0.98]",
-                  "disabled:opacity-40 disabled:cursor-not-allowed"
-                )}
+                className={cn(BTN_PRIMARY, "disabled:opacity-40 disabled:cursor-not-allowed")}
               >
-                Next — set pricing &amp; amenities →
+                <span className="inline-flex items-center gap-2">
+                  Next — pricing &amp; amenities
+                  <ArrowRight className="w-4 h-4" />
+                </span>
               </button>
             </div>
           )}
 
-          {/* ── Step 2: Attributes (AC, food, furnishing, rent) ── */}
+          {/* Step 2: Attributes (AC, food, furnishing, rent) */}
           {step === 2 && (
-            <div className="space-y-3">
-              {/* Step indicator */}
+            <div className="space-y-4">
               <div className="flex items-center justify-between mb-1">
                 <button
                   onClick={() => setStep(1)}
-                  className="text-xs text-content-tertiary hover:text-accent-lighter transition-colors"
+                  className="text-xs text-content-tertiary hover:text-accent-lighter transition-colors cursor-pointer"
                 >
                   ← Back
                 </button>
-                <span className="text-[11px] text-content-tertiary">
-                  {packageName} · {SHARING_OPTIONS.find((o) => o.value === sharingType)?.label}
-                </span>
+                <span className={PILL_ACCENT}>{packageName}</span>
               </div>
 
               {/* AC Toggle */}
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-content-secondary">Air Conditioning</label>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-content-tertiary font-medium">{ac ? "AC" : "Non-AC"}</span>
-                  <button
-                    onClick={() => setAc(!ac)}
-                    role="switch"
-                    aria-checked={ac}
-                    className={cn(
-                      "w-10 h-5 rounded-full transition-all duration-200 relative",
-                      ac ? "bg-accent" : "bg-bg-subtle"
-                    )}
-                  >
-                    <div
-                      className="w-4 h-4 rounded-full bg-white absolute top-0.5 transition-all duration-200"
-                      style={{ left: ac ? "22px" : "2px" }}
-                    />
-                  </button>
-                </div>
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-content-secondary">Air Conditioning</span>
+                <button
+                  onClick={() => setAc(!ac)}
+                  role="switch"
+                  aria-checked={ac}
+                  className={cn(
+                    "w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer",
+                    ac ? "bg-accent" : "bg-bg-subtle"
+                  )}
+                >
+                  <div
+                    className="w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all duration-200"
+                    style={{ left: ac ? "22px" : "2px" }}
+                  />
+                </button>
               </div>
 
-              {/* Food */}
-              <div>
-                <label className="text-xs text-content-tertiary mb-1.5 block">Food</label>
-                <div className="flex gap-1">
-                  {FOOD_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setFood(opt.value)}
-                      className={cn(
-                        "flex-1 px-2 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition-all",
-                        "border",
-                        food === opt.value
-                          ? "border-accent/40 bg-accent/10 text-accent-lighter"
-                          : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-elevated"
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <ToggleRow
+                label="Food"
+                options={FOOD_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                value={food}
+                onChange={(v) => setFood(v as "included" | "optional" | "none")}
+              />
 
-              {/* Furnishing */}
-              <div>
-                <label className="text-xs text-content-tertiary mb-1.5 block">Furnishing</label>
-                <div className="flex gap-1">
-                  {FURNISHING_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setFurnishing(opt.value)}
-                      className={cn(
-                        "flex-1 px-2 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition-all",
-                        "border",
-                        furnishing === opt.value
-                          ? "border-accent/40 bg-accent/10 text-accent-lighter"
-                          : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-elevated"
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <ToggleRow
+                label="Furnishing"
+                options={FURNISHING_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                value={furnishing}
+                onChange={(v) => setFurnishing(v as "fully_furnished" | "semi_furnished" | "unfurnished")}
+              />
 
               {/* Rent */}
               <div>
-                <label className="text-xs text-content-tertiary mb-1 block">Starting Rent</label>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-content-tertiary font-medium">₹</span>
+                <p className="text-[11px] text-content-tertiary mb-2">Starting rent</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-content-tertiary font-medium">₹</span>
                   <input
                     type="number"
                     value={rent}
                     onChange={(e) => setRent(e.target.value)}
                     placeholder="8000"
-                    className="flex-1 px-3 py-1.5 rounded-[var(--radius-button)] bg-bg-elevated border border-border text-xs text-content placeholder-content-tertiary focus:outline-none focus:border-accent/50"
+                    className="flex-1 px-3.5 py-2.5 rounded-xl bg-bg-elevated border border-border text-sm text-content focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20"
                   />
                   <span className="text-xs text-content-tertiary">/month</span>
                 </div>
@@ -290,31 +271,25 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
                   onClick={handleSubmit}
                   disabled={!rent.trim()}
                   className={cn(
-                    "flex-1 px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold transition-all",
-                    "bg-accent/10 text-accent-lighter border border-accent/30",
-                    "hover:bg-accent/15 active:scale-[0.98]",
+                    BTN_PRIMARY, "flex-1",
                     "disabled:opacity-40 disabled:cursor-not-allowed"
                   )}
                 >
                   {createdPackages.length > 0 ? (
-                    <span className="flex items-center justify-center gap-1">
-                      <Plus className="w-3.5 h-3.5" />
+                    <span className="inline-flex items-center justify-center gap-2">
+                      <Plus className="w-4 h-4" />
                       Save &amp; add another
                     </span>
                   ) : (
-                    `Save ${packageName.trim() || "package"} →`
+                    <span className="inline-flex items-center justify-center gap-2">
+                      Save {packageName.trim() || "package"}
+                      <Check className="w-4 h-4" />
+                    </span>
                   )}
                 </button>
 
                 {createdPackages.length > 0 && (
-                  <button
-                    onClick={handleDone}
-                    className={cn(
-                      "px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium",
-                      "text-success border border-success-surface",
-                      "hover:bg-success-surface active:scale-95 transition-all"
-                    )}
-                  >
+                  <button onClick={handleDone} className={BTN_SECONDARY}>
                     Done
                   </button>
                 )}
@@ -324,11 +299,16 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
         </>
       )}
 
-      {/* ── Done state ── */}
+      {/* Done state */}
       {done && (
-        <p className="text-xs text-success font-medium">
-          {createdPackages.length} package{createdPackages.length !== 1 ? "s" : ""} created
-        </p>
+        <div className="flex items-center gap-2">
+          <div className={cn(ICON_SM, "bg-success/12")}>
+            <Check className="w-3 h-3 text-success" />
+          </div>
+          <span className="text-sm text-success font-medium">
+            {createdPackages.length} package{createdPackages.length !== 1 ? "s" : ""} created
+          </span>
+        </div>
       )}
     </div>
   );

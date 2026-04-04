@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Minus, Plus, Home, BedDouble, Building, DoorOpen, Copy, ChevronsRight, Check } from "lucide-react";
+import { Minus, Plus, Home, BedDouble, Building, DoorOpen, Copy, ChevronsRight, Check, ArrowRight } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { FloorChipBar } from "../../ui/FloorChipBar";
+import { CARD, BTN_PRIMARY, BTN_SECONDARY, ICON_SM } from "../../ui/primitives";
 
 interface UnitTypeCount {
   category: string;
@@ -66,43 +67,22 @@ function SingleStepper({
   icon?: React.ElementType;
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-1.5">
-        <button
-          onClick={() => onChange(Math.max(min, count - 1))}
-          disabled={count <= min || disabled}
-          className={cn(
-            "w-7 h-7 rounded-[var(--radius-button)] flex items-center justify-center",
-            "border border-border bg-bg-elevated text-content-secondary",
-            "hover:bg-bg-subtle active:scale-95 transition-all",
-            "disabled:opacity-30 disabled:cursor-not-allowed"
-          )}
-        >
-          <Minus className="w-3 h-3" />
-        </button>
-
-        <div className="w-10 text-center">
-          <span className="text-lg font-bold text-content">{count}</span>
-        </div>
-
-        <button
-          onClick={() => onChange(Math.min(max, count + 1))}
-          disabled={count >= max || disabled}
-          className={cn(
-            "w-7 h-7 rounded-[var(--radius-button)] flex items-center justify-center",
-            "border border-border bg-bg-elevated text-content-secondary",
-            "hover:bg-bg-subtle active:scale-95 transition-all",
-            "disabled:opacity-30 disabled:cursor-not-allowed"
-          )}
-        >
-          <Plus className="w-3 h-3" />
-        </button>
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        {Icon && <Icon className="w-3 h-3 text-content-tertiary" />}
-        <span className="text-xs text-content-tertiary">{label}</span>
-      </div>
+    <div className="flex items-center justify-center gap-5 py-3">
+      <button
+        onClick={() => onChange(Math.max(min, count - 1))}
+        disabled={count <= min || disabled}
+        className="w-11 h-11 rounded-full border border-border bg-bg-elevated hover:bg-bg-subtle flex items-center justify-center text-lg text-content-secondary transition-all active:scale-95 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <Minus className="w-4 h-4" />
+      </button>
+      <span className="text-3xl font-bold text-content w-12 text-center">{count}</span>
+      <button
+        onClick={() => onChange(Math.min(max, count + 1))}
+        disabled={count >= max || disabled}
+        className="w-11 h-11 rounded-full border border-border bg-bg-elevated hover:bg-bg-subtle flex items-center justify-center text-lg text-content-secondary transition-all active:scale-95 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <Plus className="w-4 h-4" />
+      </button>
     </div>
   );
 }
@@ -121,23 +101,18 @@ function TypeStepperRow({
 }) {
   const Icon = getCategoryIcon(type.category);
   return (
-    <div className="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-bg-elevated/30">
+    <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-bg-elevated">
       <div className="flex items-center gap-1.5 min-w-[80px]">
-        <Icon className="w-3 h-3 text-content-tertiary" />
+        <Icon className="w-3.5 h-3.5 text-content-tertiary" />
         <span className="text-xs text-content-secondary font-medium">{type.label}</span>
       </div>
       <div className="flex items-center gap-1.5 ml-auto">
         <button
           onClick={() => onChange(Math.max(0, count - 1))}
           disabled={count <= 0 || disabled}
-          className={cn(
-            "w-6 h-6 rounded flex items-center justify-center",
-            "border border-border bg-bg-elevated text-content-secondary",
-            "hover:bg-bg-subtle active:scale-95 transition-all",
-            "disabled:opacity-30 disabled:cursor-not-allowed"
-          )}
+          className="w-7 h-7 rounded-full flex items-center justify-center border border-border bg-bg-elevated text-content-secondary hover:bg-bg-subtle active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
         >
-          <Minus className="w-2.5 h-2.5" />
+          <Minus className="w-3 h-3" />
         </button>
         <div className="w-8 text-center">
           <span className="text-sm font-bold text-content">{count}</span>
@@ -145,14 +120,9 @@ function TypeStepperRow({
         <button
           onClick={() => onChange(Math.min(50, count + 1))}
           disabled={count >= 50 || disabled}
-          className={cn(
-            "w-6 h-6 rounded flex items-center justify-center",
-            "border border-border bg-bg-elevated text-content-secondary",
-            "hover:bg-bg-subtle active:scale-95 transition-all",
-            "disabled:opacity-30 disabled:cursor-not-allowed"
-          )}
+          className="w-7 h-7 rounded-full flex items-center justify-center border border-border bg-bg-elevated text-content-secondary hover:bg-bg-subtle active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
         >
-          <Plus className="w-2.5 h-2.5" />
+          <Plus className="w-3 h-3" />
         </button>
       </div>
     </div>
@@ -160,7 +130,7 @@ function TypeStepperRow({
 }
 
 // ════════════════════════════════════════════════════
-//  BATCH MODE — multi-floor input with FloorChipBar
+//  BATCH MODE -- multi-floor input with FloorChipBar
 // ════════════════════════════════════════════════════
 
 interface FloorState {
@@ -288,10 +258,8 @@ function BatchUnitInput({
   }));
 
   return (
-    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-3.5 py-3 my-2">
-      <p className="text-xs text-content-tertiary font-medium uppercase tracking-wider mb-2">
-        Set rooms per floor
-      </p>
+    <div className={cn(CARD, "my-2")}>
+      <p className="text-xs font-medium text-content-tertiary mb-1">Set rooms per floor</p>
 
       {/* Floor navigation */}
       <div className="mb-3">
@@ -311,7 +279,7 @@ function BatchUnitInput({
       </div>
 
       {selectedFloor?.suggestedRange && !isMulti && (
-        <p className="text-xs text-content-tertiary mb-2">
+        <p className="text-[11px] text-content-tertiary/70 mb-2">
           Suggested: {selectedFloor.suggestedRange[0]}&ndash;{selectedFloor.suggestedRange[1]} rooms
         </p>
       )}
@@ -361,11 +329,7 @@ function BatchUnitInput({
           {selectedIdx > 0 && (
             <button
               onClick={copyFromPrevious}
-              className={cn(
-                "flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-medium",
-                "text-content-secondary border border-border",
-                "hover:bg-bg-elevated active:scale-95 transition-all"
-              )}
+              className={cn(BTN_SECONDARY, "flex items-center gap-1 text-xs")}
             >
               <Copy className="w-3 h-3" />
               Same as above
@@ -374,11 +338,7 @@ function BatchUnitInput({
           {floors.length > 2 && selectedIdx < floors.length - 1 && (
             <button
               onClick={setForAllRemaining}
-              className={cn(
-                "flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-medium",
-                "text-content-secondary border border-border",
-                "hover:bg-bg-elevated active:scale-95 transition-all"
-              )}
+              className={cn(BTN_SECONDARY, "flex items-center gap-1 text-xs")}
             >
               <ChevronsRight className="w-3 h-3" />
               Set for all remaining
@@ -391,20 +351,20 @@ function BatchUnitInput({
       {!state.confirmed && !submitted && !allConfirmed && (
         <button
           onClick={confirmCurrentFloor}
-          className={cn(
-            "mt-3 w-full px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold",
-            "bg-bg-elevated text-content-secondary border border-border",
-            "hover:bg-bg-subtle active:scale-95 transition-all"
-          )}
+          className={cn(BTN_SECONDARY, "mt-3 w-full")}
         >
-          Confirm {selectedFloor?.label} →
+          <span className="inline-flex items-center gap-2">
+            Confirm {selectedFloor?.label} <ArrowRight className="w-4 h-4" />
+          </span>
         </button>
       )}
 
       {state.confirmed && !submitted && (
-        <div className="flex items-center gap-1.5 mt-3 text-xs text-success">
-          <Check className="w-3 h-3" />
-          <span>{selectedFloor?.label} set</span>
+        <div className="flex items-center gap-1.5 mt-3">
+          <div className={cn(ICON_SM, "bg-success/12")}>
+            <Check className="w-3 h-3 text-success" />
+          </div>
+          <span className="text-sm text-success font-medium">{selectedFloor?.label} set</span>
         </div>
       )}
 
@@ -412,27 +372,28 @@ function BatchUnitInput({
       {allConfirmed && !submitted && (
         <button
           onClick={handleFinalSubmit}
-          className={cn(
-            "mt-3 w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
-            "bg-accent/20 text-accent-lighter border border-accent/25",
-            "hover:bg-accent/25 active:scale-95 transition-all"
-          )}
+          className={cn(BTN_PRIMARY, "mt-3")}
         >
-          Set all {floors.length} floors →
+          <span className="inline-flex items-center gap-2">
+            Set all {floors.length} floors <ArrowRight className="w-4 h-4" />
+          </span>
         </button>
       )}
 
       {submitted && (
-        <p className="mt-3 text-xs text-success font-medium">
-          All floors set
-        </p>
+        <div className="flex items-center gap-1.5 mt-3">
+          <div className={cn(ICON_SM, "bg-success/12")}>
+            <Check className="w-3 h-3 text-success" />
+          </div>
+          <span className="text-sm text-success font-medium">All floors set</span>
+        </div>
       )}
     </div>
   );
 }
 
 // ════════════════════════════════════════════════
-//  MAIN EXPORT — routes to single or batch mode
+//  MAIN EXPORT -- routes to single or batch mode
 // ════════════════════════════════════════════════
 
 export function UnitCountInput({
@@ -584,18 +545,17 @@ export function UnitCountInput({
             return c > 0 ? `${c} ${t.label.toLowerCase()}` : null;
           })
           .filter(Boolean);
-        return parts.length > 0 ? `Set ${parts.join(" + ")} →` : "Set units →";
+        return parts.length > 0 ? `Set ${parts.join(" + ")}` : "Set units";
       })()
-    : `Set ${simpleCount} ${unitTypes && unitTypes.length === 1 ? unitTypes[0].label.toLowerCase() : "rooms"} →`;
+    : `Set ${simpleCount} ${unitTypes && unitTypes.length === 1 ? unitTypes[0].label.toLowerCase() : "rooms"}`;
 
   return (
-    <div className="border border-border border-l-2 border-l-accent/30 bg-bg-surface rounded-[var(--radius-card)] px-3.5 py-3 my-2">
-      <p className="text-xs text-content-secondary font-medium mb-1">{floorLabel}</p>
+    <div className={cn(CARD, "my-2")}>
+      <p className="text-xs font-medium text-content-tertiary mb-1">{floorLabel}</p>
 
       {suggestedRange && !isMultiType && (
-        <p className="text-xs text-content-tertiary mb-2.5">
-          Tarini suggests {suggestedRange[0]}&ndash;{suggestedRange[1]} rooms
-          for this floor
+        <p className="text-[11px] text-content-tertiary/70 mb-4">
+          How many rooms on this floor?
         </p>
       )}
 
@@ -620,17 +580,16 @@ export function UnitCountInput({
           />
 
           {quickFillValues.length > 0 && !submitted && (
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs text-content-tertiary">Quick:</span>
+            <div className="flex gap-2 justify-center mt-3 mb-4">
               {quickFillValues.map((v) => (
                 <button
                   key={v}
                   onClick={() => setSimpleCount(v)}
                   className={cn(
-                    "px-2.5 py-1 min-w-[36px] min-h-[32px] flex items-center justify-center rounded text-xs font-medium transition-all",
+                    "px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer",
                     simpleCount === v
-                      ? "bg-accent/20 text-accent-lighter border border-accent/30"
-                      : "bg-bg-elevated/60 text-content-tertiary border border-border/50 hover:text-content-secondary"
+                      ? "bg-accent/10 text-accent-lighter border border-accent/20"
+                      : "bg-bg-elevated text-content-tertiary border border-border hover:bg-bg-subtle"
                   )}
                 >
                   {v}
@@ -642,21 +601,24 @@ export function UnitCountInput({
           <button
             onClick={handleSubmitSimple}
             disabled={submitted}
-            className={cn(
-              "mt-3 w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
-              "bg-accent/20 text-accent-lighter border border-accent/25",
-              "hover:bg-accent/25 active:scale-95 transition-all",
-              "disabled:opacity-40 disabled:cursor-not-allowed"
-            )}
+            className={cn(BTN_PRIMARY, "disabled:opacity-40 disabled:cursor-not-allowed")}
           >
-            {submitted ? "Sent" : submitLabel}
+            {submitted ? (
+              <span className="inline-flex items-center gap-2">
+                <Check className="w-4 h-4" /> Sent
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                {submitLabel} <ArrowRight className="w-4 h-4" />
+              </span>
+            )}
           </button>
         </>
       )}
 
       {isMultiType && unitTypes && (
         <>
-          <p className="text-xs text-content-tertiary mb-2.5">
+          <p className="text-[11px] text-content-tertiary/70 mb-4">
             This floor has mixed unit types. Set the count for each:
           </p>
 
@@ -672,7 +634,7 @@ export function UnitCountInput({
             ))}
           </div>
 
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-4">
             <span className="text-xs text-content-tertiary">Total units</span>
             <span className="text-sm font-bold text-content">{multiTotal}</span>
           </div>
@@ -680,14 +642,17 @@ export function UnitCountInput({
           <button
             onClick={handleSubmitMulti}
             disabled={submitted || multiTotal === 0}
-            className={cn(
-              "w-full px-3 py-2.5 rounded-[var(--radius-button)] text-[13px] font-semibold",
-              "bg-accent/20 text-accent-lighter border border-accent/25",
-              "hover:bg-accent/25 active:scale-95 transition-all",
-              "disabled:opacity-40 disabled:cursor-not-allowed"
-            )}
+            className={cn(BTN_PRIMARY, "disabled:opacity-40 disabled:cursor-not-allowed")}
           >
-            {submitted ? "Sent" : submitLabel}
+            {submitted ? (
+              <span className="inline-flex items-center gap-2">
+                <Check className="w-4 h-4" /> Sent
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                {submitLabel} <ArrowRight className="w-4 h-4" />
+              </span>
+            )}
           </button>
         </>
       )}

@@ -1,0 +1,560 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "tarini-agent",
+    "languages": ["json", "markdown", "python", "sql", "yaml"],
+    "frameworks": ["Anthropic SDK", "FastAPI", "Pydantic", "Supabase", "Uvicorn"],
+    "description": "Tarini is a conversational AI agent that onboards Indian rental property operators on RentOK. No forms — operators describe their property in natural chat (English, Hindi, Hinglish), and Tarini collects, validates, and persists structured listing data. The backend is a Python FastAPI service using the Anthropic SDK with SSE streaming, backed by Supabase Postgres.",
+    "analyzedAt": "2026-04-09T00:01:00.000Z",
+    "gitCommitHash": "acadb801b902a5212261931cf02532a31233b2cd"
+  },
+  "nodes": [
+    {
+      "id": "config:.env.example",
+      "type": "config",
+      "name": ".env.example",
+      "filePath": ".env.example",
+      "summary": "Template listing the three required environment variables: ANTHROPIC_API_KEY, SUPABASE_URL, and SUPABASE_SERVICE_KEY.",
+      "tags": ["configuration", "security", "environment"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:.railwayignore",
+      "type": "config",
+      "name": ".railwayignore",
+      "filePath": ".railwayignore",
+      "summary": "Railway deployment exclusion list, preventing Python bytecode, local .env, session files, and .git from being uploaded.",
+      "tags": ["configuration", "deployment", "infrastructure"],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:Procfile",
+      "type": "service",
+      "name": "Procfile",
+      "filePath": "Procfile",
+      "summary": "Heroku/Railway process file declaring the web dyno command: uvicorn server:app bound to 0.0.0.0 on $PORT.",
+      "tags": ["infrastructure", "deployment", "containerization"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:main.py",
+      "type": "file",
+      "name": "main.py",
+      "filePath": "main.py",
+      "summary": "CLI development entry point for rapid local testing; manages session persistence via a .tarini_session file and drives an interactive chat loop using the Claude Agent SDK.",
+      "tags": ["entry-point", "development", "cli"],
+      "complexity": "moderate",
+      "languageNotes": "Uses claude_agent_sdk (AssistantMessage, ClaudeSDKClient) — a different code path from the production FastAPI server."
+    },
+    {
+      "id": "function:main.py:load_or_create_session",
+      "type": "function",
+      "name": "load_or_create_session",
+      "filePath": "main.py",
+      "lineRange": [29, 43],
+      "summary": "Reads or creates a Supabase session, persisting the session ID to .tarini_session for resumption across CLI runs.",
+      "tags": ["utility", "session", "persistence"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:run_turn",
+      "type": "function",
+      "name": "run_turn",
+      "filePath": "main.py",
+      "lineRange": [51, 78],
+      "summary": "Sends a single chat message via the SDK client, streams the response blocks to stdout, and captures the SDK session ID from ResultMessage.",
+      "tags": ["utility", "streaming", "cli"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "main.py",
+      "lineRange": [81, 129],
+      "summary": "Async main loop for the CLI: loads or creates session, initialises the SDK client, sends the opening prompt, then runs the user input loop until exit.",
+      "tags": ["entry-point", "cli", "event-handler"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:railway.json",
+      "type": "config",
+      "name": "railway.json",
+      "filePath": "railway.json",
+      "summary": "Railway platform deployment configuration specifying build and deploy settings for the backend service.",
+      "tags": ["configuration", "deployment", "infrastructure"],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:render.yaml",
+      "type": "service",
+      "name": "render.yaml",
+      "filePath": "render.yaml",
+      "summary": "Render.com web service definition for tarini-backend: Python runtime, pip install build, uvicorn start command, health check at /health, and three required env vars.",
+      "tags": ["infrastructure", "deployment", "configuration"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:requirements.txt",
+      "type": "config",
+      "name": "requirements.txt",
+      "filePath": "requirements.txt",
+      "summary": "Python dependency manifest pinning anthropic, supabase, fastapi, uvicorn, python-dotenv, and pydantic for reproducible builds.",
+      "tags": ["configuration", "build-system", "dependency"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:runtime.txt",
+      "type": "config",
+      "name": "runtime.txt",
+      "filePath": "runtime.txt",
+      "summary": "Specifies Python 3.12.0 as the runtime version for Heroku/Render deployment.",
+      "tags": ["configuration", "infrastructure", "deployment"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:server.py",
+      "type": "file",
+      "name": "server.py",
+      "filePath": "server.py",
+      "summary": "FastAPI application exposing three REST endpoints (POST /sessions, GET /sessions/{id}, POST /sessions/{id}/chat) with SSE streaming and keepalive support for production use.",
+      "tags": ["entry-point", "api-handler", "service"],
+      "complexity": "complex",
+      "languageNotes": "Uses asyncio.Queue bridge with asyncio.wait for keepalive injection during SSE streaming — avoids asyncio.wait_for to prevent race-on-timeout."
+    },
+    {
+      "id": "function:server.py:_stream_with_keepalives",
+      "type": "function",
+      "name": "_stream_with_keepalives",
+      "filePath": "server.py",
+      "lineRange": [88, 153],
+      "summary": "Async generator that proxies chat events from an asyncio.Queue while sending periodic keepalive 'thinking' SSE frames to prevent connection timeout during long tool executions.",
+      "tags": ["streaming", "api-handler", "utility"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:server.py:chat",
+      "type": "function",
+      "name": "chat",
+      "filePath": "server.py",
+      "lineRange": [180, 196],
+      "summary": "POST /sessions/{id}/chat endpoint: validates session, sanitises the user message, and returns a StreamingResponse using the keepalive SSE generator.",
+      "tags": ["api-handler", "endpoint", "streaming"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tarini/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "tarini/__init__.py",
+      "summary": "Empty Python package marker for the tarini package.",
+      "tags": ["entry-point", "barrel"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tarini/agent.py",
+      "type": "file",
+      "name": "agent.py",
+      "filePath": "tarini/agent.py",
+      "summary": "Core Anthropic streaming agent implementing the tool-use loop: streams Claude responses, dispatches tool calls (get_state, update_state, advance_stage, emit_ui), emits SSE events, and handles history trimming for cost control.",
+      "tags": ["service", "api-handler", "streaming"],
+      "complexity": "complex",
+      "languageNotes": "Uses prompt caching (ephemeral cache_control on system prompt) and a sliding window (_MAX_API_HISTORY=20) to bound API costs."
+    },
+    {
+      "id": "function:tarini/agent.py:stream_chat",
+      "type": "function",
+      "name": "stream_chat",
+      "filePath": "tarini/agent.py",
+      "lineRange": [111, 294],
+      "summary": "Main agent entry point: executes the Anthropic tool-use loop up to MAX_TOOL_ROUNDS, yielding SSE event dicts (text, tool_start, tool_complete, component, state_snapshot, done) and persisting history after each turn.",
+      "tags": ["service", "streaming", "event-handler"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:tarini/agent.py:_trim_history_for_api",
+      "type": "function",
+      "name": "_trim_history_for_api",
+      "filePath": "tarini/agent.py",
+      "lineRange": [51, 69],
+      "summary": "Sliding window that trims conversation history to the last 20 messages for the API call, ensuring the window starts with a plain user message to satisfy Anthropic's API constraints.",
+      "tags": ["utility", "api-handler"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tarini/agent.py:_safe_execute_tool",
+      "type": "function",
+      "name": "_safe_execute_tool",
+      "filePath": "tarini/agent.py",
+      "lineRange": [301, 314],
+      "summary": "Error-safe wrapper around execute_tool that catches all exceptions and returns a JSON error string, ensuring the tool-use loop never raises.",
+      "tags": ["utility", "error-handler"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tarini/db/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "tarini/db/__init__.py",
+      "summary": "Empty Python package marker for the tarini.db sub-package.",
+      "tags": ["entry-point", "barrel"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tarini/db/client.py",
+      "type": "file",
+      "name": "client.py",
+      "filePath": "tarini/db/client.py",
+      "summary": "Supabase async client singleton with in-memory fallback: exposes create_session, get_session, load_messages, save_messages, update_session_state, and advance_stage operations, all supporting both Supabase and local-dev modes.",
+      "tags": ["service", "data-model", "singleton"],
+      "complexity": "complex",
+      "languageNotes": "Automatic fallback to _mem_sessions dict when Supabase credentials are absent, enabling offline development. Atomic RPCs (update_session_state_atomic, advance_stage_atomic) prevent race conditions."
+    },
+    {
+      "id": "function:tarini/db/client.py:init_client",
+      "type": "function",
+      "name": "init_client",
+      "filePath": "tarini/db/client.py",
+      "lineRange": [32, 54],
+      "summary": "Initialises the Supabase async client on startup, testing connectivity with a 5s timeout; falls back to in-memory store if credentials are absent or the DB is unreachable.",
+      "tags": ["service", "singleton", "initialization"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tarini/db/client.py:update_session_state",
+      "type": "function",
+      "name": "update_session_state",
+      "filePath": "tarini/db/client.py",
+      "lineRange": [186, 203],
+      "summary": "Persists a new state JSONB blob via the update_session_state_atomic RPC, incrementing state_version atomically in Postgres to prevent concurrent-write races.",
+      "tags": ["data-model", "service", "validation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:tarini/db/schema.sql:sessions",
+      "type": "table",
+      "name": "sessions",
+      "filePath": "tarini/db/schema.sql",
+      "summary": "Core sessions table storing onboarding stage, flexible JSONB state, versioned message history, and user identity; includes atomic RPC functions for safe concurrent state transitions.",
+      "tags": ["database", "schema-definition", "data-model"],
+      "complexity": "moderate",
+      "languageNotes": "Two atomic PL/pgSQL functions (update_session_state_atomic, advance_stage_atomic) eliminate read-modify-write races at the database layer."
+    },
+    {
+      "id": "file:tarini/prompts/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "tarini/prompts/__init__.py",
+      "summary": "Prompts package entry point: loads system_prompt.md from disk and exposes it as SYSTEM_PROMPT and INITIAL_PROMPT constants for the agent and server.",
+      "tags": ["entry-point", "barrel", "utility"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:tarini/prompts/system_prompt.md",
+      "type": "document",
+      "name": "system_prompt.md",
+      "filePath": "tarini/prompts/system_prompt.md",
+      "summary": "Comprehensive 564-line system prompt defining Tarini's personality, language rules (English/Hindi/Hinglish), all four tools, 5-stage onboarding journey (intro → structure → packages → mapping → verification), conversation rules, and error recovery protocols.",
+      "tags": ["documentation", "configuration", "schema-definition"],
+      "complexity": "complex",
+      "languageNotes": "Functions as both documentation and live configuration — loaded at runtime by tarini/prompts/__init__.py and injected into every Anthropic API call."
+    },
+    {
+      "id": "file:tarini/stage_ui.py",
+      "type": "file",
+      "name": "stage_ui.py",
+      "filePath": "tarini/stage_ui.py",
+      "summary": "Provides stage-transition UI metadata and the SSE event builder for the StageTransitionCard generative component, keeping agent.py focused on the streaming loop.",
+      "tags": ["utility", "event-handler", "serialization", "service"],
+      "complexity": "simple",
+      "languageNotes": "Module-level constants (STAGE_LABELS, STAGE_DESCRIPTIONS, STAGE_ORDER) act as a registry that drives both label resolution and ordered navigation without any external data source."
+    },
+    {
+      "id": "function:tarini/stage_ui.py:get_previous_stage",
+      "type": "function",
+      "name": "get_previous_stage",
+      "filePath": "tarini/stage_ui.py",
+      "lineRange": [23, 27],
+      "summary": "Looks up the preceding onboarding stage in the ordered stage sequence, clamping to the first stage when already at the beginning.",
+      "tags": ["utility", "stage"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tarini/stage_ui.py:build_transition_event",
+      "type": "function",
+      "name": "build_transition_event",
+      "filePath": "tarini/stage_ui.py",
+      "lineRange": [29, 43],
+      "summary": "Constructs a typed SSE component event payload for the StageTransitionCard UI component, encoding the completed and next stage labels and descriptions alongside the tool block ID.",
+      "tags": ["event-handler", "serialization", "component", "api-handler"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tarini/session_manager.py",
+      "type": "file",
+      "name": "session_manager.py",
+      "filePath": "tarini/session_manager.py",
+      "summary": "In-process session manager providing per-session message history caching, asyncio-based query serialisation locks, DB persistence after each turn, and idle session eviction after 30 minutes.",
+      "tags": ["service", "singleton", "middleware"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tarini/session_manager.py:SessionManager",
+      "type": "class",
+      "name": "SessionManager",
+      "filePath": "tarini/session_manager.py",
+      "lineRange": [31, 136],
+      "summary": "Manages per-session state in memory (history, locks, last-used timestamps) with Supabase persistence and background idle eviction; instantiated as a module-level singleton.",
+      "tags": ["service", "singleton", "middleware"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:tarini/tools/__init__.py",
+      "type": "file",
+      "name": "__init__.py",
+      "filePath": "tarini/tools/__init__.py",
+      "summary": "Tools package entry point: declares TOOL_DEFINITIONS (Anthropic tool-use format) for get_state, update_state, advance_stage, and emit_ui, and provides the execute_tool dispatcher.",
+      "tags": ["entry-point", "barrel", "api-handler"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tarini/tools/__init__.py:execute_tool",
+      "type": "function",
+      "name": "execute_tool",
+      "filePath": "tarini/tools/__init__.py",
+      "lineRange": [111, 127],
+      "summary": "Dispatches Anthropic tool calls by name to the appropriate handler (get_state, update_state, advance_stage, emit_ui), returning results as JSON strings.",
+      "tags": ["api-handler", "factory", "event-handler"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tarini/tools/state.py",
+      "type": "file",
+      "name": "state.py",
+      "filePath": "tarini/tools/state.py",
+      "summary": "Implements the three state-mutation tools (get_state, update_state, advance_stage) as async functions returning JSON strings, using deep-merge logic and delegating DB writes to tarini.db.client.",
+      "tags": ["service", "data-model", "api-handler"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tarini/tools/state.py:get_state",
+      "type": "function",
+      "name": "get_state",
+      "filePath": "tarini/tools/state.py",
+      "lineRange": [43, 55],
+      "summary": "Returns current session stage, state blob, and state_version as a JSON string for the agent to inspect.",
+      "tags": ["api-handler", "data-model"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tarini/tools/state.py:update_state",
+      "type": "function",
+      "name": "update_state",
+      "filePath": "tarini/tools/state.py",
+      "lineRange": [58, 83],
+      "summary": "Deep-merges the provided updates dict into the current session state and persists via the atomic Supabase RPC, returning the new state_version.",
+      "tags": ["api-handler", "data-model", "validation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tarini/tools/state.py:advance_stage",
+      "type": "function",
+      "name": "advance_stage",
+      "filePath": "tarini/tools/state.py",
+      "lineRange": [86, 100],
+      "summary": "Validates the requested stage against VALID_STAGES and atomically advances the session stage in the DB.",
+      "tags": ["api-handler", "validation", "data-model"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tarini/tools/ui.py",
+      "type": "file",
+      "name": "ui.py",
+      "filePath": "tarini/tools/ui.py",
+      "summary": "Defines the emit_ui tool: a set of 20 AVAILABLE_COMPONENTS, a validator, and a result serialiser that lets Claude request frontend generative UI components in the chat stream.",
+      "tags": ["api-handler", "component", "validation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:tarini/tools/ui.py:validate_emit_ui",
+      "type": "function",
+      "name": "validate_emit_ui",
+      "filePath": "tarini/tools/ui.py",
+      "lineRange": [38, 49],
+      "summary": "Validates the component name against the AVAILABLE_COMPONENTS allowlist and checks that props is a dict; returns an error string or None.",
+      "tags": ["validation", "api-handler"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {"source": "file:main.py", "target": "function:main.py:load_or_create_session", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:main.py", "target": "function:main.py:run_turn", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:main.py", "target": "function:main.py:main", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:server.py", "target": "function:server.py:_stream_with_keepalives", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:server.py", "target": "function:server.py:chat", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/agent.py", "target": "function:tarini/agent.py:stream_chat", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/agent.py", "target": "function:tarini/agent.py:_trim_history_for_api", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/agent.py", "target": "function:tarini/agent.py:_safe_execute_tool", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/db/client.py", "target": "function:tarini/db/client.py:init_client", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/db/client.py", "target": "function:tarini/db/client.py:update_session_state", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/session_manager.py", "target": "class:tarini/session_manager.py:SessionManager", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/tools/__init__.py", "target": "function:tarini/tools/__init__.py:execute_tool", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/tools/state.py", "target": "function:tarini/tools/state.py:get_state", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/tools/state.py", "target": "function:tarini/tools/state.py:update_state", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/tools/state.py", "target": "function:tarini/tools/state.py:advance_stage", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/tools/ui.py", "target": "function:tarini/tools/ui.py:validate_emit_ui", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/tools/__init__.py", "target": "file:tarini/tools/state.py", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:tarini/tools/__init__.py", "target": "file:tarini/tools/ui.py", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:tarini/agent.py", "target": "function:tarini/tools/__init__.py:execute_tool", "type": "calls", "direction": "forward", "weight": 0.8},
+    {"source": "file:tarini/agent.py", "target": "function:tarini/tools/ui.py:validate_emit_ui", "type": "calls", "direction": "forward", "weight": 0.8},
+    {"source": "file:tarini/session_manager.py", "target": "function:tarini/agent.py:stream_chat", "type": "calls", "direction": "forward", "weight": 0.8},
+    {"source": "file:tarini/tools/state.py", "target": "file:tarini/db/client.py", "type": "depends_on", "direction": "forward", "weight": 0.6},
+    {"source": "file:tarini/session_manager.py", "target": "file:tarini/db/client.py", "type": "depends_on", "direction": "forward", "weight": 0.6},
+    {"source": "file:server.py", "target": "file:tarini/db/client.py", "type": "depends_on", "direction": "forward", "weight": 0.6},
+    {"source": "file:server.py", "target": "file:tarini/session_manager.py", "type": "depends_on", "direction": "forward", "weight": 0.6},
+    {"source": "file:server.py", "target": "file:tarini/prompts/__init__.py", "type": "depends_on", "direction": "forward", "weight": 0.6},
+    {"source": "file:tarini/agent.py", "target": "file:tarini/db/client.py", "type": "depends_on", "direction": "forward", "weight": 0.6},
+    {"source": "file:tarini/agent.py", "target": "file:tarini/prompts/__init__.py", "type": "depends_on", "direction": "forward", "weight": 0.6},
+    {"source": "file:tarini/agent.py", "target": "file:tarini/tools/__init__.py", "type": "depends_on", "direction": "forward", "weight": 0.6},
+    {"source": "file:main.py", "target": "file:tarini/db/client.py", "type": "depends_on", "direction": "forward", "weight": 0.6},
+    {"source": "file:main.py", "target": "file:tarini/prompts/__init__.py", "type": "depends_on", "direction": "forward", "weight": 0.6},
+    {"source": "config:.env.example", "target": "file:tarini/db/client.py", "type": "configures", "direction": "forward", "weight": 0.6},
+    {"source": "config:.env.example", "target": "file:server.py", "type": "configures", "direction": "forward", "weight": 0.6},
+    {"source": "config:requirements.txt", "target": "file:server.py", "type": "configures", "direction": "forward", "weight": 0.6},
+    {"source": "config:runtime.txt", "target": "file:server.py", "type": "configures", "direction": "forward", "weight": 0.6},
+    {"source": "service:render.yaml", "target": "file:server.py", "type": "deploys", "direction": "forward", "weight": 0.7},
+    {"source": "service:Procfile", "target": "file:server.py", "type": "deploys", "direction": "forward", "weight": 0.7},
+    {"source": "config:railway.json", "target": "file:server.py", "type": "configures", "direction": "forward", "weight": 0.6},
+    {"source": "config:.railwayignore", "target": "file:server.py", "type": "configures", "direction": "forward", "weight": 0.6},
+    {"source": "document:tarini/prompts/system_prompt.md", "target": "file:tarini/prompts/__init__.py", "type": "documents", "direction": "forward", "weight": 0.5},
+    {"source": "document:tarini/prompts/system_prompt.md", "target": "file:tarini/agent.py", "type": "documents", "direction": "forward", "weight": 0.5},
+    {"source": "document:tarini/prompts/system_prompt.md", "target": "file:tarini/tools/__init__.py", "type": "documents", "direction": "forward", "weight": 0.5},
+    {"source": "table:tarini/db/schema.sql:sessions", "target": "file:tarini/db/client.py", "type": "defines_schema", "direction": "forward", "weight": 0.8},
+    {"source": "file:tarini/stage_ui.py", "target": "function:tarini/stage_ui.py:get_previous_stage", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/stage_ui.py", "target": "function:tarini/stage_ui.py:get_previous_stage", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:tarini/stage_ui.py", "target": "function:tarini/stage_ui.py:build_transition_event", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:tarini/stage_ui.py", "target": "function:tarini/stage_ui.py:build_transition_event", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:tarini/agent.py", "target": "file:tarini/stage_ui.py", "type": "imports", "direction": "forward", "weight": 0.7}
+  ],
+  "layers": [
+    {
+      "id": "layer:api",
+      "name": "API Layer",
+      "description": "FastAPI application entry point and SSE streaming endpoints that expose Tarini's chat, health, and session management interfaces to clients",
+      "nodeIds": ["file:main.py", "file:server.py"]
+    },
+    {
+      "id": "layer:agent",
+      "name": "Agent Core",
+      "description": "Core Anthropic SDK agent loop and per-session conversation history management with in-memory LRU eviction and Supabase persistence",
+      "nodeIds": ["file:tarini/agent.py", "file:tarini/session_manager.py", "file:tarini/stage_ui.py", "file:tarini/__init__.py"]
+    },
+    {
+      "id": "layer:tools",
+      "name": "Agent Tools",
+      "description": "Tool definitions, dispatcher, and implementations that the agent invokes to read/write onboarding state and emit generative UI components over SSE",
+      "nodeIds": ["file:tarini/tools/__init__.py", "file:tarini/tools/state.py", "file:tarini/tools/ui.py"]
+    },
+    {
+      "id": "layer:prompts",
+      "name": "Prompts",
+      "description": "System prompt loader and the 564-line behavioral specification that defines Tarini's character, conversation stages, and tool-use rules",
+      "nodeIds": ["file:tarini/prompts/__init__.py", "document:tarini/prompts/system_prompt.md"]
+    },
+    {
+      "id": "layer:data",
+      "name": "Data Layer",
+      "description": "Supabase client initialization, database read/write operations for onboarding state, and the sessions table schema definition",
+      "nodeIds": ["file:tarini/db/client.py", "file:tarini/db/__init__.py", "table:tarini/db/schema.sql:sessions"]
+    },
+    {
+      "id": "layer:infrastructure",
+      "name": "Infrastructure & Config",
+      "description": "Deployment manifests for Render and Railway, process declarations, Python runtime and dependency specs, and environment variable templates",
+      "nodeIds": ["service:Procfile", "service:render.yaml", "config:railway.json", "config:.railwayignore", "config:requirements.txt", "config:runtime.txt", "config:.env.example"]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "Application Entry Point",
+      "description": "main.py is where the server process begins — it initializes the FastAPI application and hands off to uvicorn. This one-file bootstrap is intentionally minimal: its job is to wire the process start-up, nothing more. Starting here gives you the outermost boundary of the system before descending into what the server actually does.",
+      "nodeIds": ["file:main.py"],
+      "languageLesson": "Python projects often use a thin main.py that calls uvicorn.run() so the same app object can be imported elsewhere (e.g., for testing) without side effects. The guard `if __name__ == '__main__'` ensures the server only starts when the file is executed directly, not when imported."
+    },
+    {
+      "order": 2,
+      "title": "FastAPI Server & SSE Endpoints",
+      "description": "server.py defines every HTTP route the client talks to: a streaming chat endpoint, a health check, and session management. It is the highest fan-in file in the codebase (depended on by the deployment manifests and the requirements config), which reflects its role as the single surface the outside world touches. All real work is delegated immediately to the agent and session manager.",
+      "nodeIds": ["file:server.py"],
+      "languageLesson": "Server-Sent Events (SSE) are a one-way HTTP streaming protocol where the server pushes `data:` lines to the client over a long-lived connection. FastAPI supports this natively via `StreamingResponse` with `media_type='text/event-stream'`. SSE is simpler than WebSockets when the client only needs to receive, not send, after the initial request."
+    },
+    {
+      "order": 3,
+      "title": "Agent Core Loop & Stage Navigation",
+      "description": "tarini/agent.py contains the heart of the system: the Anthropic SDK streaming loop that drives Tarini's conversation. It receives a user message and session history, calls the Claude API with streaming enabled, and dispatches any tool calls the model emits mid-stream. stage_ui.py is its direct companion — it defines the 5-stage onboarding order (intro → structure → packages → mapping → verification) and builds the StageTransitionCard SSE event emitted when a stage advances.",
+      "nodeIds": ["file:tarini/agent.py", "file:tarini/stage_ui.py"],
+      "languageLesson": "Anthropic's streaming API sends a sequence of typed events: `content_block_start`, `content_block_delta`, and `tool_use` blocks. Handling tool calls in a streaming loop means you must buffer the tool-input JSON across multiple delta events before dispatching the tool, then inject the tool result back into the message list and re-invoke the model."
+    },
+    {
+      "order": 4,
+      "title": "Tarini's Behavioral Specification",
+      "description": "tarini/prompts/system_prompt.md is the 564-line document that defines who Tarini is and how she behaves. It specifies her character, the sequential onboarding stages she guides operators through, which tool to call at each stage, and how to handle Hindi/Hinglish input. Understanding this document is essential before reading the tool or agent code — the agent loop in Step 3 is mechanically executing instructions written here.",
+      "nodeIds": ["document:tarini/prompts/system_prompt.md", "file:tarini/prompts/__init__.py"],
+      "languageLesson": "Storing system prompts in Markdown files rather than inline strings keeps behavioral logic version-controlled and human-readable without cluttering Python code. The prompts/__init__.py loader pattern reads the .md at import time, making the prompt available as a module-level constant throughout the package."
+    },
+    {
+      "order": 5,
+      "title": "Session History Management",
+      "description": "tarini/session_manager.py solves the statefulness problem: HTTP is stateless but a multi-turn conversation is not. It maintains an in-memory LRU cache of conversation histories keyed by session ID, and writes through to Supabase so history survives process restarts. The server.py from Step 2 calls this before every agent invocation to load prior turns.",
+      "nodeIds": ["file:tarini/session_manager.py"],
+      "languageLesson": "An LRU (Least Recently Used) cache evicts the oldest-accessed entries when the cache is full, bounding memory usage for long-running servers with many concurrent sessions. Python's `functools.lru_cache` handles function-level memoization; session managers typically implement LRU manually over a dict + doubly-linked list (or use `collections.OrderedDict`) to control eviction granularity."
+    },
+    {
+      "order": 6,
+      "title": "Tool Definitions & Dispatcher",
+      "description": "tarini/tools/__init__.py is the contract between the agent and its capabilities. It declares the JSON schemas for the four tools Tarini can call — get_state, update_state, advance_stage, and emit_ui — and exports a dispatcher function the agent loop calls when the model emits a tool_use block. This file is what the agent imports; the actual implementations live in state.py and ui.py.",
+      "nodeIds": ["file:tarini/tools/__init__.py"],
+      "languageLesson": "Anthropic tool definitions follow a JSON Schema structure: each tool has a name, description, and input_schema. The description is model-visible and heavily influences when Claude chooses to call the tool. Keeping tool definitions separate from implementations lets you mock or swap implementations without touching the schema the model reasons about."
+    },
+    {
+      "order": 7,
+      "title": "State Tool Implementations",
+      "description": "tarini/tools/state.py implements get_state and update_state — the two tools that read and write the operator's onboarding progress in Supabase. When Tarini confirms a piece of information from the operator (e.g., the property address), the agent calls update_state, which flows through here to persist the structured field. This is the bridge between natural language extraction and structured database writes.",
+      "nodeIds": ["file:tarini/tools/state.py"]
+    },
+    {
+      "order": 8,
+      "title": "Generative UI Tool",
+      "description": "tarini/tools/ui.py implements the emit_ui tool, which emits UI component descriptors to the frontend as part of the SSE stream. Rather than just sending text, Tarini can push structured component payloads — a form preview, a confirmation card, a progress indicator — letting the frontend render contextual UI without the operator ever filling a form.",
+      "nodeIds": ["file:tarini/tools/ui.py"]
+    },
+    {
+      "order": 9,
+      "title": "Database Client & Operations",
+      "description": "tarini/db/client.py initializes the Supabase client using environment credentials and exposes the database operations that both session_manager.py (Step 5) and state.py (Step 7) depend on. It is the second-highest fan-in node in the codebase, reflecting that all persistence — conversation history and onboarding state alike — flows through this single module.",
+      "nodeIds": ["file:tarini/db/client.py", "config:.env.example"],
+      "languageLesson": "Centralizing all database access in a single client module rather than instantiating `supabase.create_client()` in each caller prevents credential duplication and makes it straightforward to swap the client for a test double. The .env.example file documents which environment variables the client requires (SUPABASE_URL, SUPABASE_KEY) without committing real credentials."
+    },
+    {
+      "order": 10,
+      "title": "Sessions Schema",
+      "description": "The sessions table is the persistence foundation for everything above. It stores both the structured onboarding state (property fields collected so far, current stage) and the conversation message history as JSON columns. The db/client.py from Step 9 reads from and writes to this single table — every agent turn that updates state or advances a stage ultimately lands here.",
+      "nodeIds": ["table:tarini/db/schema.sql:sessions"],
+      "languageLesson": "Storing conversation history as a JSONB column alongside structured state in the same row is a pragmatic trade-off: it avoids a separate messages table and a join on every turn, at the cost of losing the ability to query individual messages. This pattern suits a system where entire session history is always loaded as a unit."
+    },
+    {
+      "order": 11,
+      "title": "Dependencies & Runtime",
+      "description": "requirements.txt and runtime.txt pin the exact Python version and package versions the application runs against. requirements.txt has a configures edge to server.py, capturing the idea that the FastAPI, uvicorn, anthropic, and supabase packages declared here are what make the server runnable. These two files are the first things a new developer or a CI environment reads before anything else.",
+      "nodeIds": ["config:requirements.txt", "config:runtime.txt"]
+    },
+    {
+      "order": 12,
+      "title": "Deployment Configuration",
+      "description": "Procfile and render.yaml together define how the application gets deployed to Render.com. The Procfile declares the web process command (the same uvicorn invocation from main.py), while render.yaml configures the service type, environment variables, and build commands for Render's infrastructure. Both point at server.py, closing the loop from code to running production service.",
+      "nodeIds": ["service:Procfile", "service:render.yaml"],
+      "languageLesson": "A Procfile is a process declaration format originating from Heroku that maps process type names (web, worker) to shell commands. Render, Railway, and other PaaS platforms adopted it for compatibility. render.yaml supersedes Procfile on Render when you want infrastructure-as-code with service-level config (autoscaling, env groups, health check paths) checked into the repo."
+    }
+  ]
+}

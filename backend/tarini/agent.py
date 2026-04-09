@@ -10,6 +10,8 @@ It yields SSE-ready dicts including:
   - {"type": "state_snapshot", ...}        — full state update for frontend
   - {"type": "done"}                       — stream end
 """
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
@@ -18,7 +20,9 @@ from typing import AsyncIterator
 
 import anthropic
 
+from tarini.db import client as db
 from tarini.prompts import load_system_prompt
+from tarini.stage_ui import build_transition_event
 from tarini.tools import TOOL_DEFINITIONS, execute_tool
 from tarini.tools.ui import validate_emit_ui
 
@@ -137,7 +141,6 @@ async def stream_chat(
         )
 
         # Stream the API response
-        collected_text = ""
         tool_use_blocks = []
 
         try:
@@ -156,15 +159,25 @@ async def stream_chat(
                     async for event in stream:
                         if event.type == "content_block_delta":
                             if event.delta.type == "text_delta":
-                                text = event.delta.text
-                                collected_text += text
-                                yield {"type": "text", "text": text}
+                                yield {"type": "text", "text": event.delta.text}
 
                     # Get the final message to check for tool use
                     final_message = await stream.get_final_message()
         except TimeoutError:
             logger.error("[stream_chat] Anthropic stream timed out after %ds for session %s", _STREAM_TIMEOUT, session_id)
             yield {"type": "error", "message": "Response timed out. Please try again."}
+            return
+        except anthropic.APIConnectionError as exc:
+            logger.error("[stream_chat] Connection error for session %s: %s", session_id, exc)
+            yield {"type": "error", "message": "Connection to AI service was interrupted. Please try again."}
+            return
+        except anthropic.RateLimitError as exc:
+            logger.error("[stream_chat] Rate limit hit for session %s: %s", session_id, exc)
+            yield {"type": "error", "message": "Too many requests. Please wait a moment and try again."}
+            return
+        except anthropic.APIStatusError as exc:
+            logger.error("[stream_chat] Anthropic API error %d for session %s: %s", exc.status_code, session_id, exc)
+            yield {"type": "error", "message": "AI service returned an error. Please try again."}
             return
 
         # Log token usage for cost tracking
@@ -208,8 +221,7 @@ async def stream_chat(
                         "id": f"comp_{tool_block.id}",
                     }
 
-                # Execute the tool (returns confirmation or error to Claude)
-                result_str = await execute_tool(
+                result_str = await _safe_execute_tool(
                     session_id, tool_block.name, tool_block.input,
                 )
                 tool_results.append({
@@ -228,7 +240,6 @@ async def stream_chat(
                 tool_block.name, session_id,
             )
 
-            # Emit tool_start
             yield {
                 "type": "tool_start",
                 "tool": tool_block.name,
@@ -236,18 +247,15 @@ async def stream_chat(
                 "id": tool_id,
             }
 
-            # Execute the tool
-            result_str = await execute_tool(
+            result_str = await _safe_execute_tool(
                 session_id, tool_block.name, tool_block.input,
             )
 
-            # Parse result for structured events
             try:
                 result_data = json.loads(result_str)
             except (json.JSONDecodeError, TypeError):
                 result_data = {}
 
-            # Emit tool_complete
             yield {
                 "type": "tool_complete",
                 "tool": tool_block.name,
@@ -255,14 +263,11 @@ async def stream_chat(
                 "result": result_data,
             }
 
-            # ── Auto-emit events based on tool results ──
+            # ── Auto-emit state snapshots after state-changing tools ──
 
-            # After update_state: emit state_snapshot so frontend stays in sync
             if tool_block.name == "update_state" and result_data.get("saved"):
                 state = result_data.get("state", {})
                 version = result_data.get("state_version", 0)
-                # We need the current stage — get it from the session
-                from tarini.db import client as db
                 session = await db.get_session(session_id)
                 stage = session.get("stage", "intro") if session else "intro"
 
@@ -273,12 +278,8 @@ async def stream_chat(
                     "stateVersion": version,
                 }
 
-
-            # After advance_stage: emit state_snapshot with new stage
             if tool_block.name == "advance_stage" and result_data.get("advanced"):
                 new_stage = result_data.get("stage", "")
-                # Get full state for the snapshot
-                from tarini.db import client as db
                 session = await db.get_session(session_id)
                 state = session.get("state", {}) if session else {}
                 version = session.get("state_version", 0) if session else 0
@@ -289,38 +290,7 @@ async def stream_chat(
                     "stage": new_stage,
                     "stateVersion": version,
                 }
-
-                # Determine stage descriptions for the transition card
-                stage_labels = {
-                    "intro": "Introduction",
-                    "structure": "Property Structure",
-                    "packages": "Rental Packages",
-                    "mapping": "Room Mapping",
-                    "verification": "Verification",
-                }
-                stage_descriptions = {
-                    "structure": "Define your floors, rooms, and naming convention",
-                    "packages": "Set up your rental packages with pricing",
-                    "mapping": "Assign packages to your rooms",
-                    "verification": "Review and confirm everything",
-                }
-
-                yield {
-                    "type": "component",
-                    "name": "StageTransitionCard",
-                    "props": {
-                        "completedStage": _get_previous_stage(new_stage),
-                        "completedStageLabel": stage_labels.get(
-                            _get_previous_stage(new_stage), ""
-                        ),
-                        "nextStage": new_stage,
-                        "nextStageLabel": stage_labels.get(new_stage, ""),
-                        "nextStageDescription": stage_descriptions.get(
-                            new_stage, ""
-                        ),
-                    },
-                    "id": f"transition_{tool_block.id}",
-                }
+                yield build_transition_event(new_stage, tool_block.id)
 
             tool_results.append({
                 "type": "tool_result",
@@ -340,11 +310,20 @@ async def stream_chat(
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _get_previous_stage(current_stage: str) -> str:
-    """Return the stage before the given stage."""
-    stages = ["intro", "structure", "packages", "mapping", "verification"]
-    idx = stages.index(current_stage) if current_stage in stages else 0
-    return stages[max(0, idx - 1)]
+async def _safe_execute_tool(
+    session_id: str, tool_name: str, tool_input: dict,
+) -> str:
+    """Execute a tool with error handling — never raises, always returns JSON."""
+    try:
+        return await execute_tool(session_id, tool_name, tool_input)
+    except Exception:
+        logger.exception(
+            "[_safe_execute_tool] %s failed for session %s",
+            tool_name, session_id,
+        )
+        return json.dumps({
+            "error": f"Tool '{tool_name}' failed. Please try again.",
+        })
 
 
 def _log_usage(session_id: str, round_num: int, message) -> None:

@@ -1,0 +1,410 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "tarini-agent",
+    "languages": ["Python"],
+    "frameworks": ["FastAPI", "Anthropic SDK", "Supabase"],
+    "description": "Tarini is a conversational AI agent that onboards Indian rental property operators onto RentOK without forms. Operators describe their property in natural chat (English, Hindi, Hinglish) and Tarini collects, validates, and persists structured listing data across a 5-stage journey via SSE streaming.",
+    "analyzedAt": "2026-04-09T00:00:00.000Z",
+    "gitCommitHash": "acadb80"
+  },
+  "nodes": [
+    {
+      "id": "domain:operator-onboarding",
+      "type": "domain",
+      "name": "Operator Onboarding",
+      "summary": "Guides a rental property operator through a structured 5-stage conversational journey to collect all listing data required to publish on RentOK. Manages onboarding state, stage progression, and persistence of property details across sessions.",
+      "tags": ["onboarding", "property", "rentok", "conversation", "india"],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": ["Session", "OnboardingStage", "PropertyState", "Operator"],
+        "businessRules": [
+          "Stages must progress in fixed order: intro → structure → packages → mapping → verification",
+          "Stage advancement is atomic and versioned to prevent concurrent corruption",
+          "All property data lives in a flexible JSONB state blob keyed by session"
+        ],
+        "crossDomainInteractions": [
+          "Delegates conversation turns to the AI Conversation domain",
+          "Persists and retrieves all state via the Session Persistence domain"
+        ]
+      }
+    },
+    {
+      "id": "domain:ai-conversation",
+      "type": "domain",
+      "name": "AI Conversation",
+      "summary": "Drives the natural-language dialogue with the operator using Anthropic Claude. Implements a tool-use loop that streams responses over SSE, dispatches structured tool calls to read and mutate onboarding state, and emits generative UI components to the frontend.",
+      "tags": ["ai", "llm", "anthropic", "sse", "streaming", "tool-use"],
+      "complexity": "complex",
+      "domainMeta": {
+        "entities": ["ChatMessage", "ToolCall", "SSEEvent", "SystemPrompt"],
+        "businessRules": [
+          "Tool-use loop runs for at most MAX_TOOL_ROUNDS per turn to control cost",
+          "Message history is trimmed to limit token spend",
+          "System prompt enforces language flexibility (English/Hindi/Hinglish) and persona rules"
+        ],
+        "crossDomainInteractions": [
+          "Reads and writes onboarding state via the Operator Onboarding domain tools",
+          "Pushes generative UI events to the Generative UI domain",
+          "Reads session history from the Session Persistence domain"
+        ]
+      }
+    },
+    {
+      "id": "domain:session-persistence",
+      "type": "domain",
+      "name": "Session Persistence",
+      "summary": "Manages durable storage of conversation sessions, message history, and onboarding state in Supabase Postgres. Provides an in-memory fallback for local development, handles concurrent query serialisation, and evicts idle sessions after 30 minutes.",
+      "tags": ["database", "supabase", "postgres", "session", "persistence"],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entities": ["Session", "MessageHistory", "StateVersion"],
+        "businessRules": [
+          "State updates use atomic Supabase RPC functions to prevent race conditions",
+          "Sessions idle longer than 30 minutes are evicted from in-process cache",
+          "Concurrent chat queries for the same session are serialised with asyncio locks"
+        ],
+        "crossDomainInteractions": [
+          "Serves session state and history to the AI Conversation domain",
+          "Receives stage and state mutations from the Operator Onboarding domain"
+        ]
+      }
+    },
+    {
+      "id": "domain:generative-ui",
+      "type": "domain",
+      "name": "Generative UI",
+      "summary": "Allows the AI agent to push rich, structured UI components to the frontend over the SSE stream. Claude selects from an allowlist of 20 components (e.g. StageTransitionCard) and the backend serialises them as typed SSE events.",
+      "tags": ["ui", "sse", "components", "frontend", "generative"],
+      "complexity": "simple",
+      "domainMeta": {
+        "entities": ["UIComponent", "SSEComponentEvent", "StageTransitionCard"],
+        "businessRules": [
+          "Only components in the AVAILABLE_COMPONENTS allowlist may be emitted",
+          "StageTransitionCard is emitted on every stage transition with STAGE_LABELS metadata"
+        ],
+        "crossDomainInteractions": [
+          "Receives emit_ui tool calls from the AI Conversation domain",
+          "Stage transition events are built using stage order defined in the Operator Onboarding domain"
+        ]
+      }
+    },
+    {
+      "id": "flow:start-session",
+      "type": "flow",
+      "name": "Start Session",
+      "summary": "Creates a new onboarding session for an operator, initialising the DB record and returning a session ID that anchors all subsequent chat turns.",
+      "tags": ["session", "init", "http"],
+      "complexity": "simple",
+      "domainMeta": {
+        "entryPoint": "POST /sessions",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "flow:chat-turn",
+      "type": "flow",
+      "name": "Process Chat Turn",
+      "summary": "Receives an operator message, runs the Anthropic tool-use loop, streams SSE events (text chunks, tool calls, UI components, state snapshots) back to the client, and persists updated history and state to Supabase.",
+      "tags": ["chat", "sse", "streaming", "tool-use", "anthropic"],
+      "complexity": "complex",
+      "domainMeta": {
+        "entryPoint": "POST /sessions/{id}/chat",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "flow:resume-session",
+      "type": "flow",
+      "name": "Resume Session",
+      "summary": "Fetches an existing session's current stage, state, and message history so the frontend can restore a previous onboarding conversation.",
+      "tags": ["session", "resume", "http"],
+      "complexity": "simple",
+      "domainMeta": {
+        "entryPoint": "GET /sessions/{id}",
+        "entryType": "http"
+      }
+    },
+    {
+      "id": "flow:stage-progression",
+      "type": "flow",
+      "name": "Stage Progression",
+      "summary": "Handles the agent-initiated transition from one onboarding stage to the next, validating the target stage, atomically writing it to the DB, and emitting a StageTransitionCard UI event to the frontend.",
+      "tags": ["stage", "progression", "onboarding", "ui"],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "advance_stage tool call (internal)",
+        "entryType": "event"
+      }
+    },
+    {
+      "id": "flow:property-data-collection",
+      "type": "flow",
+      "name": "Property Data Collection",
+      "summary": "Incrementally reads and deep-merges operator-provided property details (floors, rooms, packages, room-package mappings) into the session state blob via get_state and update_state tool calls during the structure, packages, and mapping stages.",
+      "tags": ["property", "state", "data-collection", "deep-merge"],
+      "complexity": "moderate",
+      "domainMeta": {
+        "entryPoint": "get_state / update_state tool calls (internal)",
+        "entryType": "event"
+      }
+    },
+    {
+      "id": "flow:local-dev-cli",
+      "type": "flow",
+      "name": "Local Dev CLI Session",
+      "summary": "Provides a local interactive chat loop for development, persisting session ID to a .tarini_session file and driving the same agent code path as the HTTP server without standing up FastAPI.",
+      "tags": ["cli", "development", "testing"],
+      "complexity": "simple",
+      "domainMeta": {
+        "entryPoint": "python main.py",
+        "entryType": "cli"
+      }
+    },
+    {
+      "id": "step:start-session:receive-request",
+      "type": "step",
+      "name": "Receive POST /sessions",
+      "summary": "FastAPI endpoint accepts the create-session HTTP request and extracts any operator identity payload.",
+      "tags": ["http", "fastapi"],
+      "complexity": "simple",
+      "filePath": "server.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:start-session:create-db-record",
+      "type": "step",
+      "name": "Create DB Session Record",
+      "summary": "Calls the Supabase client to insert a new sessions row with initial stage='intro' and empty state JSONB.",
+      "tags": ["supabase", "database"],
+      "complexity": "simple",
+      "filePath": "tarini/db/client.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:start-session:return-session-id",
+      "type": "step",
+      "name": "Return Session ID",
+      "summary": "Returns the generated session UUID to the caller so the frontend can anchor subsequent chat requests.",
+      "tags": ["http", "response"],
+      "complexity": "simple",
+      "filePath": "server.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:chat-turn:receive-message",
+      "type": "step",
+      "name": "Receive Operator Message",
+      "summary": "FastAPI endpoint accepts the operator's text message and session ID, acquires the per-session asyncio lock to serialise concurrent requests.",
+      "tags": ["http", "fastapi", "concurrency"],
+      "complexity": "simple",
+      "filePath": "server.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:chat-turn:load-session-history",
+      "type": "step",
+      "name": "Load Session History",
+      "summary": "SessionManager retrieves cached message history for the session or loads it from Supabase if not in-process, appending the new operator message.",
+      "tags": ["session", "history", "cache"],
+      "complexity": "simple",
+      "filePath": "tarini/session_manager.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:chat-turn:run-tool-use-loop",
+      "type": "step",
+      "name": "Run Anthropic Tool-Use Loop",
+      "summary": "stream_chat calls the Anthropic API with the full message history and system prompt, iterating up to MAX_TOOL_ROUNDS; each tool call result is appended and fed back until Claude returns a final text response.",
+      "tags": ["anthropic", "llm", "tool-use", "streaming"],
+      "complexity": "complex",
+      "filePath": "tarini/agent.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:chat-turn:dispatch-tool-calls",
+      "type": "step",
+      "name": "Dispatch Tool Calls",
+      "summary": "execute_tool routes each tool call (get_state, update_state, advance_stage, emit_ui) to its implementing function and yields tool_start / tool_complete SSE events.",
+      "tags": ["tool-dispatch", "sse"],
+      "complexity": "moderate",
+      "filePath": "tarini/tools/__init__.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:chat-turn:stream-sse-events",
+      "type": "step",
+      "name": "Stream SSE Events to Client",
+      "summary": "Yields text delta, tool_start, tool_complete, component, state_snapshot, and done SSE event dicts to the FastAPI streaming response, with keepalive pings.",
+      "tags": ["sse", "streaming", "fastapi"],
+      "complexity": "moderate",
+      "filePath": "server.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:chat-turn:persist-history",
+      "type": "step",
+      "name": "Persist Updated History",
+      "summary": "After the agent turn completes, SessionManager saves the full updated message history back to Supabase and updates the in-process cache.",
+      "tags": ["persistence", "supabase"],
+      "complexity": "simple",
+      "filePath": "tarini/session_manager.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:resume-session:fetch-session",
+      "type": "step",
+      "name": "Fetch Session from DB",
+      "summary": "Retrieves the session row from Supabase including current stage, state blob, and versioned message history.",
+      "tags": ["supabase", "database"],
+      "complexity": "simple",
+      "filePath": "tarini/db/client.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:resume-session:return-state",
+      "type": "step",
+      "name": "Return Session State",
+      "summary": "Returns the current stage, state snapshot, and message history to the frontend so it can render the correct onboarding view.",
+      "tags": ["http", "response"],
+      "complexity": "simple",
+      "filePath": "server.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:stage-progression:validate-target-stage",
+      "type": "step",
+      "name": "Validate Target Stage",
+      "summary": "advance_stage checks the requested stage against VALID_STAGES = [intro, structure, packages, mapping, verification] and rejects unknown values.",
+      "tags": ["validation", "stage"],
+      "complexity": "simple",
+      "filePath": "tarini/tools/state.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:stage-progression:atomic-db-advance",
+      "type": "step",
+      "name": "Atomic DB Stage Advance",
+      "summary": "Calls the Supabase RPC function to atomically update the session stage, preventing concurrent writes from corrupting the stage value.",
+      "tags": ["supabase", "rpc", "atomic"],
+      "complexity": "moderate",
+      "filePath": "tarini/db/client.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:stage-progression:emit-transition-card",
+      "type": "step",
+      "name": "Emit StageTransitionCard UI Event",
+      "summary": "build_transition_event constructs the typed SSE component event payload for StageTransitionCard, including STAGE_LABELS and the new stage name, and yields it into the stream.",
+      "tags": ["sse", "ui", "component"],
+      "complexity": "simple",
+      "filePath": "tarini/stage_ui.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:property-data-collection:read-current-state",
+      "type": "step",
+      "name": "Read Current State",
+      "summary": "get_state returns the current stage, full state blob, and state_version so Claude knows what data has already been collected before asking the next question.",
+      "tags": ["state", "read"],
+      "complexity": "simple",
+      "filePath": "tarini/tools/state.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:property-data-collection:extract-structured-data",
+      "type": "step",
+      "name": "Extract Structured Data from Conversation",
+      "summary": "Claude parses the operator's natural-language message (English/Hindi/Hinglish) and constructs a structured update dict containing property fields for the current stage.",
+      "tags": ["nlp", "extraction", "anthropic"],
+      "complexity": "complex",
+      "filePath": "tarini/prompts/system_prompt.md",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:property-data-collection:deep-merge-state",
+      "type": "step",
+      "name": "Deep-Merge State Update",
+      "summary": "update_state deep-merges the extracted field updates into the existing state blob and persists via atomic Supabase RPC, preserving previously collected fields.",
+      "tags": ["state", "deep-merge", "supabase"],
+      "complexity": "moderate",
+      "filePath": "tarini/tools/state.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:property-data-collection:emit-state-snapshot",
+      "type": "step",
+      "name": "Emit State Snapshot",
+      "summary": "After each update_state call, the agent emits a state_snapshot SSE event so the frontend can render a live preview of collected property data.",
+      "tags": ["sse", "state-snapshot"],
+      "complexity": "simple",
+      "filePath": "tarini/agent.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:local-dev-cli:load-or-create-session",
+      "type": "step",
+      "name": "Load or Create CLI Session",
+      "summary": "Reads .tarini_session file to reuse an existing session ID, or creates a new one and saves it to the file for future runs.",
+      "tags": ["cli", "session", "file-system"],
+      "complexity": "simple",
+      "filePath": "main.py",
+      "lineRange": [0, 0]
+    },
+    {
+      "id": "step:local-dev-cli:interactive-chat-loop",
+      "type": "step",
+      "name": "Interactive Chat Loop",
+      "summary": "Reads operator input from stdin, calls stream_chat, and prints streamed SSE events to stdout, replicating the production HTTP flow locally.",
+      "tags": ["cli", "chat", "loop"],
+      "complexity": "simple",
+      "filePath": "main.py",
+      "lineRange": [0, 0]
+    }
+  ],
+  "edges": [
+    { "source": "domain:operator-onboarding", "target": "flow:start-session", "type": "contains_flow", "direction": "forward", "weight": 1.0 },
+    { "source": "domain:operator-onboarding", "target": "flow:resume-session", "type": "contains_flow", "direction": "forward", "weight": 1.0 },
+    { "source": "domain:operator-onboarding", "target": "flow:stage-progression", "type": "contains_flow", "direction": "forward", "weight": 1.0 },
+    { "source": "domain:operator-onboarding", "target": "flow:property-data-collection", "type": "contains_flow", "direction": "forward", "weight": 1.0 },
+    { "source": "domain:ai-conversation", "target": "flow:chat-turn", "type": "contains_flow", "direction": "forward", "weight": 1.0 },
+    { "source": "domain:ai-conversation", "target": "flow:local-dev-cli", "type": "contains_flow", "direction": "forward", "weight": 1.0 },
+    { "source": "domain:session-persistence", "target": "flow:start-session", "type": "contains_flow", "direction": "forward", "weight": 1.0 },
+    { "source": "domain:session-persistence", "target": "flow:resume-session", "type": "contains_flow", "direction": "forward", "weight": 1.0 },
+    { "source": "domain:generative-ui", "target": "flow:stage-progression", "type": "contains_flow", "direction": "forward", "weight": 1.0 },
+
+    { "source": "flow:start-session", "target": "step:start-session:receive-request", "type": "flow_step", "direction": "forward", "weight": 0.3 },
+    { "source": "flow:start-session", "target": "step:start-session:create-db-record", "type": "flow_step", "direction": "forward", "weight": 0.6 },
+    { "source": "flow:start-session", "target": "step:start-session:return-session-id", "type": "flow_step", "direction": "forward", "weight": 0.9 },
+
+    { "source": "flow:chat-turn", "target": "step:chat-turn:receive-message", "type": "flow_step", "direction": "forward", "weight": 0.1 },
+    { "source": "flow:chat-turn", "target": "step:chat-turn:load-session-history", "type": "flow_step", "direction": "forward", "weight": 0.2 },
+    { "source": "flow:chat-turn", "target": "step:chat-turn:run-tool-use-loop", "type": "flow_step", "direction": "forward", "weight": 0.4 },
+    { "source": "flow:chat-turn", "target": "step:chat-turn:dispatch-tool-calls", "type": "flow_step", "direction": "forward", "weight": 0.6 },
+    { "source": "flow:chat-turn", "target": "step:chat-turn:stream-sse-events", "type": "flow_step", "direction": "forward", "weight": 0.8 },
+    { "source": "flow:chat-turn", "target": "step:chat-turn:persist-history", "type": "flow_step", "direction": "forward", "weight": 0.9 },
+
+    { "source": "flow:resume-session", "target": "step:resume-session:fetch-session", "type": "flow_step", "direction": "forward", "weight": 0.5 },
+    { "source": "flow:resume-session", "target": "step:resume-session:return-state", "type": "flow_step", "direction": "forward", "weight": 1.0 },
+
+    { "source": "flow:stage-progression", "target": "step:stage-progression:validate-target-stage", "type": "flow_step", "direction": "forward", "weight": 0.3 },
+    { "source": "flow:stage-progression", "target": "step:stage-progression:atomic-db-advance", "type": "flow_step", "direction": "forward", "weight": 0.6 },
+    { "source": "flow:stage-progression", "target": "step:stage-progression:emit-transition-card", "type": "flow_step", "direction": "forward", "weight": 0.9 },
+
+    { "source": "flow:property-data-collection", "target": "step:property-data-collection:read-current-state", "type": "flow_step", "direction": "forward", "weight": 0.2 },
+    { "source": "flow:property-data-collection", "target": "step:property-data-collection:extract-structured-data", "type": "flow_step", "direction": "forward", "weight": 0.5 },
+    { "source": "flow:property-data-collection", "target": "step:property-data-collection:deep-merge-state", "type": "flow_step", "direction": "forward", "weight": 0.7 },
+    { "source": "flow:property-data-collection", "target": "step:property-data-collection:emit-state-snapshot", "type": "flow_step", "direction": "forward", "weight": 0.9 },
+
+    { "source": "flow:local-dev-cli", "target": "step:local-dev-cli:load-or-create-session", "type": "flow_step", "direction": "forward", "weight": 0.4 },
+    { "source": "flow:local-dev-cli", "target": "step:local-dev-cli:interactive-chat-loop", "type": "flow_step", "direction": "forward", "weight": 0.8 },
+
+    { "source": "domain:ai-conversation", "target": "domain:operator-onboarding", "type": "cross_domain", "direction": "forward", "description": "Claude invokes get_state, update_state, and advance_stage tools to read and mutate operator onboarding state during each chat turn", "weight": 0.9 },
+    { "source": "domain:ai-conversation", "target": "domain:generative-ui", "type": "cross_domain", "direction": "forward", "description": "Claude calls emit_ui tool to push generative UI component events (e.g. StageTransitionCard) into the SSE stream", "weight": 0.7 },
+    { "source": "domain:ai-conversation", "target": "domain:session-persistence", "type": "cross_domain", "direction": "forward", "description": "Agent reads and writes message history via SessionManager and Supabase client around every chat turn", "weight": 0.8 },
+    { "source": "domain:operator-onboarding", "target": "domain:session-persistence", "type": "cross_domain", "direction": "forward", "description": "Stage advancement and state deep-merges are durably persisted via atomic Supabase RPC calls", "weight": 0.8 },
+    { "source": "domain:generative-ui", "target": "domain:operator-onboarding", "type": "cross_domain", "direction": "forward", "description": "StageTransitionCard events reference STAGE_ORDER and STAGE_LABELS defined by the onboarding journey", "weight": 0.5 }
+  ],
+  "layers": [],
+  "tour": []
+}

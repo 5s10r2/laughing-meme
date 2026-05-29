@@ -85,17 +85,12 @@ function FloorRow({
   );
 }
 
-export function FloorBuilder({ floors: rawFloors, highlightFloor, ...rest }: FloorBuilderProps & Record<string, unknown>) {
+export function FloorBuilder({ floors: rawFloors, highlightFloor }: FloorBuilderProps) {
   const [expanded, setExpanded] = useState(false);
 
-  // Defensive: handle missing/malformed floors from Claude
-  const rawList = Array.isArray(rawFloors)
-    ? rawFloors
-    : Array.isArray((rest as Record<string, unknown>).items)
-      ? ((rest as Record<string, unknown>).items as FloorData[])
-      : [];
+  const rawList = Array.isArray(rawFloors) ? rawFloors : [];
 
-  const floors: FloorData[] = (rawList as unknown[]).map((raw: unknown, i: number) => {
+  const floors: FloorData[] = rawList.map((raw: unknown, i: number) => {
     if (typeof raw === "string") return { index: i, label: raw, active: true };
     const f = raw as Record<string, unknown>;
 

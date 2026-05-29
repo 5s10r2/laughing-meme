@@ -167,25 +167,15 @@ function FloorNameGroup({
 }
 
 export function NamingPreview({
-  patternDescription: rawPatternDescription,
+  patternDescription = "",
   preview: rawPreview,
   onSendMessage,
-  ...rest
-}: NamingPreviewProps & Record<string, unknown>) {
+}: NamingPreviewProps) {
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customPattern, setCustomPattern] = useState("");
   const [selectedFloorIdx, setSelectedFloorIdx] = useState(0);
 
-  // Defensive: handle missing/malformed props from Claude
-  const patternDescription = rawPatternDescription || (rest.pattern_description as string) || (rest.pattern as string) || "";
-
-  const rawList = Array.isArray(rawPreview)
-    ? rawPreview
-    : Array.isArray((rest as Record<string, unknown>).floors)
-      ? ((rest as Record<string, unknown>).floors as FloorNaming[])
-      : Array.isArray((rest as Record<string, unknown>).names)
-        ? ((rest as Record<string, unknown>).names as FloorNaming[])
-        : [];
+  const rawList = Array.isArray(rawPreview) ? rawPreview : [];
 
   const preview: FloorNaming[] = (rawList as unknown[]).map((raw: unknown, i: number) => {
     const f = raw as Record<string, unknown>;

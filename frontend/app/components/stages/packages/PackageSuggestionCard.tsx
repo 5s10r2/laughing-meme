@@ -42,25 +42,8 @@ export function PackageSuggestionCard({
   suggestions: rawSuggestions,
   location,
   onSendMessage,
-  ...rest
-}: PackageSuggestionCardProps & Record<string, unknown>) {
-  // Defensive: handle missing/malformed suggestions from Claude
-  const rawList = Array.isArray(rawSuggestions)
-    ? rawSuggestions
-    : rawSuggestions && typeof rawSuggestions === "object"
-      ? Object.values(rawSuggestions as Record<string, unknown>).map((v) => {
-          if (typeof v === "object" && v !== null) return v as SuggestedPackage;
-          return { name: String(v), ac: false };
-        })
-      : [];
-
-  const parsedSuggestions: SuggestedPackage[] = (
-    rawList.length > 0
-      ? rawList
-      : Array.isArray((rest as Record<string, unknown>).packages)
-        ? ((rest as Record<string, unknown>).packages as unknown[])
-        : []
-  ).map((raw: unknown) => {
+}: PackageSuggestionCardProps) {
+  const parsedSuggestions: SuggestedPackage[] = (Array.isArray(rawSuggestions) ? rawSuggestions : []).map((raw: unknown) => {
     const p = raw as Record<string, unknown>;
     return {
       name: (p.name || p.package_name || p.packageName || "Package") as string,

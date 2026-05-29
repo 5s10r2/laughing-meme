@@ -1,6 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
+import { adaptComponentProps } from "./component-adapters";
 
 // Foundation components
 import { ToolActivityIndicator } from "../components/ui/ToolActivityIndicator";
@@ -39,44 +40,48 @@ import { VerificationSummary } from "../components/stages/verification/Verificat
 import { PendingItemsList } from "../components/stages/verification/PendingItemsList";
 import { CompletionCelebration } from "../components/stages/verification/CompletionCelebration";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const COMPONENT_REGISTRY: Record<string, ComponentType<any>> = {
+type RegistryComponent = ComponentType<Record<string, unknown>>;
+
+const asRegistryComponent = (component: ComponentType<unknown>): RegistryComponent =>
+  component as RegistryComponent;
+
+const COMPONENT_REGISTRY: Record<string, RegistryComponent> = {
   // Foundation
-  ToolActivityIndicator,
-  QuickReplyChips,
-  DataConfirmationCard,
-  StageTransitionCard,
-  ErrorRecoveryCard,
+  ToolActivityIndicator: asRegistryComponent(ToolActivityIndicator as ComponentType<unknown>),
+  QuickReplyChips: asRegistryComponent(QuickReplyChips as ComponentType<unknown>),
+  DataConfirmationCard: asRegistryComponent(DataConfirmationCard as ComponentType<unknown>),
+  StageTransitionCard: asRegistryComponent(StageTransitionCard as ComponentType<unknown>),
+  ErrorRecoveryCard: asRegistryComponent(ErrorRecoveryCard as ComponentType<unknown>),
 
   // Intro
-  WelcomeHero,
-  PropertyTypeSelector,
-  IntroSummaryCard,
+  WelcomeHero: asRegistryComponent(WelcomeHero as ComponentType<unknown>),
+  PropertyTypeSelector: asRegistryComponent(PropertyTypeSelector as ComponentType<unknown>),
+  IntroSummaryCard: asRegistryComponent(IntroSummaryCard as ComponentType<unknown>),
 
   // Structure
-  FloorBuilder,
-  UnitCountInput,
-  NamingPreview,
-  FloorMilestoneReceipt,
-  StructureSummaryCard,
+  FloorBuilder: asRegistryComponent(FloorBuilder as ComponentType<unknown>),
+  UnitCountInput: asRegistryComponent(UnitCountInput as ComponentType<unknown>),
+  NamingPreview: asRegistryComponent(NamingPreview as ComponentType<unknown>),
+  FloorMilestoneReceipt: asRegistryComponent(FloorMilestoneReceipt as ComponentType<unknown>),
+  StructureSummaryCard: asRegistryComponent(StructureSummaryCard as ComponentType<unknown>),
 
   // Packages
-  PackageSuggestionCard,
-  PackageForm,
-  PackageReceipt,
-  PackageList,
+  PackageSuggestionCard: asRegistryComponent(PackageSuggestionCard as ComponentType<unknown>),
+  PackageForm: asRegistryComponent(PackageForm as ComponentType<unknown>),
+  PackageReceipt: asRegistryComponent(PackageReceipt as ComponentType<unknown>),
+  PackageList: asRegistryComponent(PackageList as ComponentType<unknown>),
 
   // Mapping
-  MappingSuggestionCard,
-  FloorMappingRow,
-  MappingMatrix,
-  BulkMappingPreview,
-  UnmappedUnitsWarning,
+  MappingSuggestionCard: asRegistryComponent(MappingSuggestionCard as ComponentType<unknown>),
+  FloorMappingRow: asRegistryComponent(FloorMappingRow as ComponentType<unknown>),
+  MappingMatrix: asRegistryComponent(MappingMatrix as ComponentType<unknown>),
+  BulkMappingPreview: asRegistryComponent(BulkMappingPreview as ComponentType<unknown>),
+  UnmappedUnitsWarning: asRegistryComponent(UnmappedUnitsWarning as ComponentType<unknown>),
 
   // Verification
-  VerificationSummary,
-  PendingItemsList,
-  CompletionCelebration,
+  VerificationSummary: asRegistryComponent(VerificationSummary as ComponentType<unknown>),
+  PendingItemsList: asRegistryComponent(PendingItemsList as ComponentType<unknown>),
+  CompletionCelebration: asRegistryComponent(CompletionCelebration as ComponentType<unknown>),
 };
 
 /**
@@ -93,7 +98,7 @@ export function renderRegisteredComponent(
     console.warn(`[component-registry] Unknown component: "${name}". Skipping render.`);
     return null;
   }
-  return <Component {...props} onSendMessage={sendMessage} />;
+  return <Component {...adaptComponentProps(name, props)} onSendMessage={sendMessage} />;
 }
 
 /**

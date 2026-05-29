@@ -56,16 +56,11 @@ interface PackageListProps {
 /** Threshold for switching from flat list to accordion groups */
 const ACCORDION_THRESHOLD = 5;
 
-export function PackageList({ packages: rawPackages, onSendMessage, ...rest }: PackageListProps & Record<string, unknown>) {
+export function PackageList({ packages: rawPackages, onSendMessage }: PackageListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
-  // Defensive: handle missing/malformed packages from Claude
-  const rawList = Array.isArray(rawPackages)
-    ? rawPackages
-    : Array.isArray((rest as Record<string, unknown>).items)
-      ? ((rest as Record<string, unknown>).items as Package[])
-      : [];
+  const rawList = Array.isArray(rawPackages) ? rawPackages : [];
 
   const packages: Package[] = (rawList as unknown[]).map((raw: unknown, i: number) => {
     const p = raw as Record<string, unknown>;

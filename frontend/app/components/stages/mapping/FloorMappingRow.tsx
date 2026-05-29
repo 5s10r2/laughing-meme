@@ -65,18 +65,16 @@ function normalizePackages(rawPackages: PackageOption[]): PackageOption[] {
 }
 
 export function FloorMappingRow({
-  floorLabel: rawFloorLabel,
+  floorLabel,
   floorIndex,
   units: rawUnits,
   packages: rawPackages,
   onSendMessage,
-  ...rest
-}: FloorMappingRowProps & Record<string, unknown>) {
+}: FloorMappingRowProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Defensive: handle missing/malformed props from Claude
-  const floorLabel = rawFloorLabel || (rest.floor_label as string) || (rest.floor as string) || `Floor ${floorIndex ?? 0}`;
+  const label = floorLabel || `Floor ${floorIndex ?? 0}`;
 
   const units = useMemo(() => normalizeUnits(rawUnits), [rawUnits]);
   const packages = useMemo(() => normalizePackages(rawPackages), [rawPackages]);
@@ -139,7 +137,7 @@ export function FloorMappingRow({
     const selectedUnits = units.filter((u) => selected.has(u.id));
     if (selectedUnits.length === 0) return;
     const names = selectedUnits.map((u) => u.name).join(", ");
-    onSendMessage?.(`Assign ${names} on ${floorLabel} to ${pkg.name}`);
+    onSendMessage?.(`Assign ${names} on ${label} to ${pkg.name}`);
     clearSelection();
   }
 
@@ -264,7 +262,7 @@ export function FloorMappingRow({
     <div className={CARD}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-sm text-content font-semibold">{floorLabel}</p>
+          <p className="text-sm text-content font-semibold">{label}</p>
           <p className="text-[11px] text-content-tertiary mt-0.5">
             {selected.size}/{totalCount} selected
           </p>
@@ -376,7 +374,7 @@ export function FloorMappingRow({
       <BottomSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title={`${floorLabel} -- All Rooms`}
+        title={`${label} -- All Rooms`}
       >
         {renderFullGrid()}
       </BottomSheet>

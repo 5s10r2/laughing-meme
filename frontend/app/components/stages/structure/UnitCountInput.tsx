@@ -20,7 +20,7 @@ interface FloorConfig {
 }
 
 interface UnitCountInputProps {
-  floorLabel: string;
+  floorLabel?: string;
   unitTypes?: UnitTypeCount[];
   currentCount?: number;
   suggestedRange?: [number, number];
@@ -385,31 +385,18 @@ function BatchUnitInput({
 }
 
 function SingleUnitInput({
-  floorLabel: rawFloorLabel,
+  floorLabel = "Floor",
   unitTypes: rawUnitTypes,
   currentCount = 4,
   suggestedRange,
   hint,
   floors: rawFloors,
   onSendMessage,
-  ...rest
-}: UnitCountInputProps & Record<string, unknown>) {
+}: UnitCountInputProps) {
   // ── Single-floor mode (original behavior) ──
-  const floorLabel =
-    rawFloorLabel ||
-    (rest.floor_label as string) ||
-    (rest.floor as string) ||
-    (rest.label as string) ||
-    (rawFloors?.[0]?.label) ||
-    "Floor";
+  const label = floorLabel || rawFloors?.[0]?.label || "Floor";
 
-  const rawTypes =
-    rawUnitTypes ||
-    (rest.unit_types as UnitTypeCount[]) ||
-    (rest.unitTypeBreakdown as UnitTypeCount[]) ||
-    (rest.unit_breakdown as UnitTypeCount[]) ||
-    (rest.breakdown as UnitTypeCount[]) ||
-    rawFloors?.[0]?.unitTypes;
+  const rawTypes = rawUnitTypes || rawFloors?.[0]?.unitTypes;
 
   const unitTypes: UnitTypeCount[] | undefined = Array.isArray(rawTypes)
     ? (rawTypes as unknown[]).map((raw: unknown) => {
@@ -458,11 +445,11 @@ function SingleUnitInput({
   function handleSubmitSimple() {
     if (submitted) return;
     setSubmitted(true);
-    const label =
+    const unitLabel =
       unitTypes && unitTypes.length === 1
         ? unitTypes[0].label.toLowerCase()
         : "rooms";
-    onSendMessage?.(`Set ${simpleCount} ${label} for ${floorLabel}`);
+    onSendMessage?.(`Set ${simpleCount} ${unitLabel} for ${label}`);
   }
 
   function handleSubmitMulti() {
@@ -475,9 +462,9 @@ function SingleUnitInput({
       })
       .filter(Boolean);
     if (parts.length === 0) {
-      onSendMessage?.(`Set 0 units for ${floorLabel}`);
+      onSendMessage?.(`Set 0 units for ${label}`);
     } else {
-      onSendMessage?.(`Set ${floorLabel}: ${parts.join(", ")}`);
+      onSendMessage?.(`Set ${label}: ${parts.join(", ")}`);
     }
   }
 
@@ -506,7 +493,7 @@ function SingleUnitInput({
 
   return (
     <div className={cn(CARD, "my-2")}>
-      <p className="text-xs font-medium text-content-tertiary mb-1">{floorLabel}</p>
+      <p className="text-xs font-medium text-content-tertiary mb-1">{label}</p>
 
       {suggestedRange && !isMultiType && (
         <p className="text-[11px] text-content-tertiary/70 mb-4">
@@ -642,8 +629,8 @@ export function UnitCountInput({
   floors: rawFloors,
   onSendMessage,
   ...props
-}: UnitCountInputProps & Record<string, unknown>) {
-  const batchFloors = parseFloors(rawFloors || props.batch_floors || props.batchFloors);
+}: UnitCountInputProps) {
+  const batchFloors = parseFloors(rawFloors);
 
   if (batchFloors && batchFloors.length > 1) {
     return <BatchUnitInput floors={batchFloors} onSendMessage={onSendMessage} />;

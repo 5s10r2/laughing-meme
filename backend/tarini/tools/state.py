@@ -7,6 +7,7 @@ import json
 from copy import deepcopy
 
 from tarini.db import client as db
+from tarini.state_schema import validate_onboarding_state
 
 
 # ---------------------------------------------------------------------------
@@ -71,13 +72,24 @@ async def update_state(session_id: str, updates: dict) -> str:
 
     current_state = session.get("state") or {}
     new_state = _deep_merge(current_state, updates)
-    updated = await db.update_session_state(session_id, new_state)
+    validated_state, errors = validate_onboarding_state(new_state)
+    if errors:
+        return json.dumps(
+            {
+                "error": "State update does not match the onboarding schema.",
+                "code": "STATE_SCHEMA_INVALID",
+                "details": errors,
+            },
+            ensure_ascii=False,
+        )
+
+    updated = await db.update_session_state(session_id, validated_state)
 
     return json.dumps(
         {
             "saved": True,
             "state_version": updated.get("state_version"),
-            "state": updated.get("state") or new_state,
+            "state": updated.get("state") or validated_state,
         },
         ensure_ascii=False,
     )

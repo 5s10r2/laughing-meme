@@ -56,7 +56,12 @@ async def get_state(session_id: str) -> str:
 
 
 async def update_state(session_id: str, updates: dict) -> str:
-    """Deep-merge updates into session state. Return result as JSON string."""
+    """Deep-merge updates into session state. Return result as JSON string.
+
+    Safety: the read-then-merge-then-write here is safe because:
+    1. All calls go through session_manager.query_lock (one-at-a-time per session).
+    2. The Supabase path uses update_session_state_atomic RPC (version-checked).
+    """
     if not updates:
         return json.dumps({"error": "No updates provided"})
 
@@ -80,7 +85,7 @@ async def update_state(session_id: str, updates: dict) -> str:
 
 async def advance_stage(session_id: str, stage: str) -> str:
     """Advance the session to a new stage. Return result as JSON string."""
-    stage = (stage or "").strip()
+    stage = (stage or "").strip().lower()
     if stage not in VALID_STAGES:
         return json.dumps(
             {

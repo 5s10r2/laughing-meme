@@ -13,6 +13,10 @@ node_modules/
 .vercel/
 *.local
 
+# Tooling output
+.understand-anything/
+graphify-out/
+
 # Misc
 .DS_Store
 *.log

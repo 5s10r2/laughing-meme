@@ -5,6 +5,8 @@ This is a side-channel tool: it doesn't mutate state, it tells the frontend
 to render a component in the chat. The tool result returned to Claude confirms
 the component was emitted, so Claude knows it was shown to the user.
 """
+from __future__ import annotations
+
 import json
 
 

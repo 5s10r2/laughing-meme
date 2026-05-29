@@ -4,9 +4,12 @@ Supabase client singleton + session helpers.
 Falls back to a pure in-memory store when Supabase is unreachable,
 so local development works without network access.
 """
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -57,10 +60,70 @@ async def close_client() -> None:
     _client = None
 
 
+_HEALTH_CACHE: dict | None = None
+_HEALTH_CACHE_AT = 0.0
+_HEALTH_TTL = 30.0  # seconds — platform health probes fire every ~10-30s
+
+
+async def health_check() -> dict:
+    """Cached connectivity check. Returns {"ok": True/False, "mode": ...}.
+
+    Result is cached for _HEALTH_TTL so frequent platform probes don't run a
+    live DB query (and incur a 3s timeout tail) on every hit.
+    """
+    global _HEALTH_CACHE, _HEALTH_CACHE_AT
+    if _USE_MEMORY:
+        return {"ok": True, "mode": "in-memory"}
+
+    now = time.monotonic()
+    if _HEALTH_CACHE is not None and (now - _HEALTH_CACHE_AT) < _HEALTH_TTL:
+        return _HEALTH_CACHE
+
+    try:
+        c = _get_client()
+        await asyncio.wait_for(
+            c.table("sessions").select("id").limit(1).execute(),
+            timeout=3.0,
+        )
+        result = {"ok": True, "mode": "supabase"}
+    except Exception as e:
+        logger.warning("Health check failed: %s", e)
+        result = {"ok": False, "mode": "supabase", "error": str(e)}
+
+    _HEALTH_CACHE = result
+    _HEALTH_CACHE_AT = now
+    return result
+
+
 def _get_client():
     if _client is None:
         raise RuntimeError("Supabase client not initialised")
     return _client
+
+
+# ---------------------------------------------------------------------------
+# Retry helper — only for idempotent operations (reads, full-overwrite writes, atomic RPCs)
+# ---------------------------------------------------------------------------
+
+_RETRY_ATTEMPTS = 2
+_RETRY_DELAY = 0.3  # seconds
+
+
+async def _with_retry(label: str, coro_fn, *args):
+    """Retry an async call up to _RETRY_ATTEMPTS times on transient failure."""
+    last_exc = None
+    for attempt in range(_RETRY_ATTEMPTS + 1):
+        try:
+            return await coro_fn(*args)
+        except Exception as e:
+            last_exc = e
+            if attempt < _RETRY_ATTEMPTS:
+                logger.warning(
+                    "Retrying %s (attempt %d/%d): %s",
+                    label, attempt + 1, _RETRY_ATTEMPTS + 1, e,
+                )
+                await asyncio.sleep(_RETRY_DELAY * (attempt + 1))
+    raise last_exc  # type: ignore[misc]
 
 
 # ---------------------------------------------------------------------------
@@ -97,9 +160,12 @@ async def get_session(session_id: str) -> dict | None:
     if _USE_MEMORY:
         return _mem_sessions.get(session_id)
 
-    c = _get_client()
-    result = await c.table("sessions").select("*").eq("id", session_id).execute()
-    return result.data[0] if result.data else None
+    async def _fetch():
+        c = _get_client()
+        result = await c.table("sessions").select("*").eq("id", session_id).execute()
+        return result.data[0] if result.data else None
+
+    return await _with_retry("get_session", _fetch)
 
 
 async def load_messages(session_id: str) -> list:
@@ -107,16 +173,19 @@ async def load_messages(session_id: str) -> list:
         s = _mem_sessions.get(session_id)
         return (s.get("messages") or []) if s else []
 
-    c = _get_client()
-    result = await (
-        c.table("sessions")
-        .select("messages")
-        .eq("id", session_id)
-        .execute()
-    )
-    if not result.data:
-        return []
-    return result.data[0].get("messages") or []
+    async def _fetch():
+        c = _get_client()
+        result = await (
+            c.table("sessions")
+            .select("messages")
+            .eq("id", session_id)
+            .execute()
+        )
+        if not result.data:
+            return []
+        return result.data[0].get("messages") or []
+
+    return await _with_retry("load_messages", _fetch)
 
 
 async def save_messages(session_id: str, messages: list) -> None:
@@ -125,13 +194,17 @@ async def save_messages(session_id: str, messages: list) -> None:
             _mem_sessions[session_id]["messages"] = messages
         return
 
-    c = _get_client()
-    await (
-        c.table("sessions")
-        .update({"messages": messages})
-        .eq("id", session_id)
-        .execute()
-    )
+    async def _save():
+        c = _get_client()
+        await (
+            c.table("sessions")
+            .update({"messages": messages})
+            .eq("id", session_id)
+            .execute()
+        )
+
+    # Full-column overwrite is idempotent, so retrying transient failures is safe.
+    await _with_retry("save_messages", _save)
 
 
 async def update_session_state(session_id: str, new_state: dict) -> dict:

@@ -11,6 +11,8 @@ Guarantees:
   • History is persisted to Supabase after every turn.
   • Idle sessions are evicted after _IDLE_TTL_SECONDS (default 30 min).
 """
+from __future__ import annotations
+
 import asyncio
 import logging
 import time

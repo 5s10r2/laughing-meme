@@ -16,6 +16,7 @@ SSE event format:
 import asyncio
 import json
 import logging
+import re
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -68,6 +69,14 @@ app.add_middleware(
 # Request models
 # ---------------------------------------------------------------------------
 
+# Strip null bytes and other control chars (keep newlines, tabs)
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def _sanitize(text: str) -> str:
+    return _CONTROL_CHARS.sub("", text).strip()
+
+
 class ChatRequest(BaseModel):
     message: str = Field("", max_length=8000)
 
@@ -99,7 +108,11 @@ async def _stream_with_keepalives(
         except Exception:
             logger.exception("[_run_chat] ERROR for session %s", session_id)
             session_manager.remove_session(session_id)
-            await queue.put({"type": "error", "message": "An error occurred. Please try again."})
+            await queue.put({
+                "type": "error",
+                "message": "Something went wrong — your session has been reset. Please start a new conversation.",
+                "code": "CHAT_STREAM_ERROR",
+            })
         finally:
             await queue.put(None)  # sentinel
 
@@ -170,7 +183,7 @@ async def chat(session_id: str, body: ChatRequest):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    user_message = (body.message or "").strip() or INITIAL_PROMPT
+    user_message = _sanitize(body.message or "") or INITIAL_PROMPT
 
     return StreamingResponse(
         _stream_with_keepalives(session_id, user_message),
@@ -185,4 +198,6 @@ async def chat(session_id: str, body: ChatRequest):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    db_health = await db.health_check()
+    status = "ok" if db_health["ok"] else "degraded"
+    return {"status": status, "database": db_health}

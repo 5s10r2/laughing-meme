@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Package as PackageIcon, Snowflake, Fan, ChevronDown, Check, ArrowRight,
+  Snowflake, Fan, ChevronDown, Check,
 } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { humanizeSharingType } from "../../../lib/property-utils";
@@ -12,6 +12,41 @@ import {
   CARD, ICON_SM, BTN_PRIMARY, BTN_SECONDARY,
   EditButton,
 } from "../../ui/primitives";
+
+/** Labelled segmented toggle used in the inline package editor. */
+function ToggleRow({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <label className="text-xs text-content-tertiary w-20 flex-shrink-0">{label}</label>
+      <div className="flex gap-1.5 flex-1">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => onChange(o.value)}
+            className={cn(
+              "flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all border cursor-pointer capitalize",
+              value === o.value
+                ? "border-accent/30 bg-accent/8 text-accent-lighter"
+                : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-subtle"
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface PackageListProps {
   packages: Package[];
@@ -244,40 +279,6 @@ function InlinePackageEdit({
     const sharingLabel = humanizeSharingType(sharingType);
     const msg = `Update ${pkg.name}: ${sharingLabel}, rent ₹${rentNum.toLocaleString("en-IN")}, ${ac ? "AC" : "non-AC"}, food ${food}, ${furnishing}`;
     onSave(msg);
-  }
-
-  function ToggleRow({
-    label,
-    options,
-    value,
-    onChange,
-  }: {
-    label: string;
-    options: { value: string; label: string }[];
-    value: string;
-    onChange: (v: string) => void;
-  }) {
-    return (
-      <div className="flex items-center gap-3">
-        <label className="text-xs text-content-tertiary w-20 flex-shrink-0">{label}</label>
-        <div className="flex gap-1.5 flex-1">
-          {options.map((o) => (
-            <button
-              key={o.value}
-              onClick={() => onChange(o.value)}
-              className={cn(
-                "flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all border cursor-pointer capitalize",
-                value === o.value
-                  ? "border-accent/30 bg-accent/8 text-accent-lighter"
-                  : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-subtle"
-              )}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
   }
 
   return (

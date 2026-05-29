@@ -228,6 +228,7 @@ export default function ShowcasePage() {
             property_name="Sunrise PG"
             property_type="pg"
             property_location="Koramangala, Bangalore"
+            gender_preference="male"
             onSendMessage={mockSend}
           />
         </ShowcaseItem>
@@ -480,6 +481,9 @@ export default function ShowcasePage() {
             ac={true}
             food="Food Included"
             furnishing="fully_furnished"
+            security_deposit={12000}
+            lock_in_period={3}
+            notice_period={30}
           />
         </ShowcaseItem>
 
@@ -774,6 +778,7 @@ export default function ShowcasePage() {
               propertyType: "PG / Paying Guest",
               location: "Koramangala, Bangalore",
               ownerName: "Sanchay",
+              genderPreference: "male",
             }}
             floors={[
               { label: "Ground Floor", unitCount: 5, nameRange: "001-005" },
@@ -781,8 +786,8 @@ export default function ShowcasePage() {
               { label: "2nd Floor", unitCount: 4, nameRange: "201-204" },
             ]}
             packages={[
-              { name: "AC Private Room", rent: 12000, sharingType: "Private" },
-              { name: "AC Double Sharing", rent: 7500, sharingType: "Double Sharing" },
+              { name: "AC Private Room", rent: 12000, sharingType: "Private", securityDeposit: 12000, lockIn: 3, notice: 30 },
+              { name: "AC Double Sharing", rent: 7500, sharingType: "Double Sharing", securityDeposit: 7500, lockIn: 2, notice: 30 },
             ]}
             mappings={[
               { floorLabel: "Ground Floor", packageName: "AC Private Room", count: 5 },

@@ -76,6 +76,7 @@ Saves confirmed property information. **Only call this after the user has explic
   "property_name": "Sunrise PG",
   "property_type": "pg | hostel | flat | studio | rk | coliving | mixed",
   "property_location": "Koramangala, Bangalore",
+  "gender_preference": "male | female | coed",
 
   "floors": [
     { "index": 0, "label": "Ground Floor", "active": true },
@@ -150,7 +151,7 @@ Render a rich UI component in the chat instead of describing things in text. Use
 
 `IntroSummaryCard` — shows intro fields for confirmation before advancing to structure:
 ```json
-{"fields": [{"label": "Owner", "value": "Sanchay"}, {"label": "Property", "value": "Sunrise PG"}, {"label": "Type", "value": "PG / Paying Guest"}, {"label": "Location", "value": "Koramangala, Bangalore"}]}
+{"fields": [{"label": "Owner", "value": "Sanchay"}, {"label": "Property", "value": "Sunrise PG"}, {"label": "Type", "value": "PG / Paying Guest"}, {"label": "Gender", "value": "Men"}, {"label": "Location", "value": "Koramangala, Bangalore"}]}
 ```
 
 `StructureSummaryCard` — shows floors with room counts before advancing to packages:
@@ -175,7 +176,7 @@ Render a rich UI component in the chat instead of describing things in text. Use
 
 `VerificationSummary` — shows all data for final confirmation:
 ```json
-{"property": {"propertyName": "Sunrise PG", "propertyType": "PG", "location": "Koramangala", "ownerName": "Sanchay"}, "floors": [{"label": "Ground Floor", "unitCount": 5, "nameRange": "001-005"}], "packages": [{"name": "AC Double", "rent": 8500, "ac": true, "attributes": ["Fully Furnished", "Food Optional"]}], "mappings": [{"floorLabel": "Ground Floor", "packageName": "AC Double", "count": 5}]}
+{"property": {"propertyName": "Sunrise PG", "propertyType": "PG", "location": "Koramangala", "ownerName": "Sanchay", "genderPreference": "male"}, "floors": [{"label": "Ground Floor", "unitCount": 5, "nameRange": "001-005"}], "packages": [{"name": "AC Double", "rent": 8500, "ac": true, "attributes": ["Fully Furnished", "Food Optional"], "securityDeposit": 8500, "lockIn": 3, "notice": 30}], "mappings": [{"floorLabel": "Ground Floor", "packageName": "AC Double", "count": 5}]}
 ```
 
 `BulkMappingPreview` — shows mapping confirmation before applying:
@@ -218,10 +219,14 @@ Important: Wrap all stats inside a `stats` object. Use `totalFloors` (NOT `floor
 - `property_name` (what the operator calls their property)
 - `user_name` (the operator's name — use it naturally throughout the conversation)
 
+**Conditional field — `gender_preference` (`male` / `female` / `coed`):**
+Required for shared-living types — **pg, hostel, coliving**. For flat / studio / rk, it does not apply, so skip it. Ask it as a quick, low-friction question right after you know the property type: "Got it — is your PG for men, women, or co-ed?" Offer `male`, `female`, `coed` as quick-reply options. Frame the why: "Tenants filter by this first — a woman looking for a female PG won't even see a male one." Save it as `gender_preference`.
+
 **Natural collection sequence:**
 1. First question (single): "Tell me a bit about your property — what type is it and roughly where is it located?"
-2. Property name: "What do you call your property?" (skip if already mentioned)
-3. Operator name: "And who am I speaking with?" (warm, human, not bureaucratic)
+2. Gender (only for pg / hostel / coliving): "Is it for men, women, or co-ed?" — offer quick replies.
+3. Property name: "What do you call your property?" (skip if already mentioned)
+4. Operator name: "And who am I speaking with?" (warm, human, not bureaucratic)
 
 **Intro Stage Gate — before calling `advance_stage('structure')`:**
 Once all 4 fields are collected and saved, show an `IntroSummaryCard` with all 4 fields and ask the user to confirm. **Do NOT call `advance_stage` in the same turn as showing the summary.** Wait for the user's explicit confirmation (e.g. "yes", "looks good", "correct") in a separate turn. If the user corrects something, fix it, re-show the summary, and wait again. Only after the user explicitly confirms should you call `advance_stage('structure')`.

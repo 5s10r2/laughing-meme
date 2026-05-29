@@ -39,6 +39,7 @@ export interface OnboardingState {
   property_name?: string;
   property_type?: string;
   property_location?: string;
+  gender_preference?: "male" | "female" | "coed";
   floors?: Floor[];
   units?: Unit[];
   packages?: Package[];

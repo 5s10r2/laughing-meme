@@ -25,7 +25,14 @@ interface PropertySection {
   propertyType?: string;
   location?: string;
   ownerName?: string;
+  genderPreference?: string;
 }
+
+const GENDER_LABELS: Record<string, string> = {
+  male: "Men",
+  female: "Women",
+  coed: "Co-ed",
+};
 
 interface FloorSummary {
   label: string;
@@ -97,6 +104,15 @@ export function VerificationSummary({
           ownerName: (rest.owner_name || rest.ownerName || rest.user_name || rest.userName) as string,
         }
       : undefined);
+
+  // Gender may arrive on the property object (snake or camel) or at the top level.
+  const genderRaw = (
+    property?.genderPreference
+    || (property as Record<string, unknown> | undefined)?.gender_preference
+    || rest.gender_preference
+    || rest.gender
+  ) as string | undefined;
+  const genderLabel = genderRaw ? (GENDER_LABELS[genderRaw] || genderRaw) : undefined;
 
   // Floors section
   const rawFloorList = rawFloors
@@ -320,6 +336,15 @@ export function VerificationSummary({
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-content font-medium">{property.propertyType}</span>
                   <EditButton onClick={() => onSendMessage?.(`I want to change the property type, currently '${property.propertyType}'`)} />
+                </div>
+              </div>
+            )}
+            {genderLabel && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-content-tertiary">Gender</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-content font-medium">{genderLabel}</span>
+                  <EditButton onClick={() => onSendMessage?.(`I want to change the gender preference, currently '${genderLabel}'`)} />
                 </div>
               </div>
             )}

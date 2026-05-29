@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Building2, User, Tag, ArrowRight } from "lucide-react";
+import { MapPin, Building2, User, Tag, Users, ArrowRight } from "lucide-react";
 import {
   CARD, CARD_DIVIDER, ICON_CIRCLE, BTN_PRIMARY, EditButton,
 } from "../../ui/primitives";
@@ -11,6 +11,7 @@ interface IntroSummaryCardProps {
   property_name?: string;
   property_type?: string;
   property_location?: string;
+  gender_preference?: string;
   onSendMessage?: (text: string) => void;
 }
 
@@ -24,21 +25,37 @@ const TYPE_LABELS: Record<string, string> = {
   mixed: "Mixed",
 };
 
+const GENDER_LABELS: Record<string, string> = {
+  male: "Men",
+  female: "Women",
+  coed: "Co-ed",
+};
+
 export function IntroSummaryCard({
   user_name,
   property_name,
   property_type,
   property_location,
+  gender_preference,
   onSendMessage,
   ...rest
 }: IntroSummaryCardProps & Record<string, unknown>) {
   const rawFields = rest.fields as Array<{ label: string; value: string }> | undefined;
+  const gender = gender_preference || (rest.gender as string) || "";
 
   const ICON_MAP: Record<string, typeof User> = {
     owner: User, operator: User, name: User,
     property: Tag, "property name": Tag,
     type: Building2, "property type": Building2,
     location: MapPin, "property location": MapPin,
+    gender: Users, "gender preference": Users,
+  };
+
+  const labelValue = (label: string, value: string): string => {
+    const l = label.toLowerCase();
+    if (l.includes("type")) return TYPE_LABELS[value] || value;
+    if (l.includes("gender")) return GENDER_LABELS[value] || value;
+    return value;
   };
 
   const fields = rawFields
@@ -47,12 +64,13 @@ export function IntroSummaryCard({
         .map((f) => ({
           icon: ICON_MAP[f.label.toLowerCase()] || Tag,
           label: f.label,
-          value: f.label.toLowerCase().includes("type") ? (TYPE_LABELS[f.value] || f.value) : f.value,
+          value: labelValue(f.label, f.value),
         }))
     : [
         { icon: User, label: "Operator", value: user_name },
         { icon: Tag, label: "Property", value: property_name },
         { icon: Building2, label: "Type", value: property_type ? (TYPE_LABELS[property_type] || property_type) : undefined },
+        { icon: Users, label: "Gender", value: gender ? (GENDER_LABELS[gender] || gender) : undefined },
         { icon: MapPin, label: "Location", value: property_location },
       ].filter((f) => f.value);
 

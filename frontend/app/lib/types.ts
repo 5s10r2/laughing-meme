@@ -27,6 +27,9 @@ export interface Package {
   food_included?: boolean;
   food_optional?: boolean;
   starting_rent?: number;
+  security_deposit?: number;
+  lock_in_period?: number;
+  notice_period?: number;
   active: boolean;
   disabled?: boolean;
 }

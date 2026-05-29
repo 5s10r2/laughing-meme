@@ -10,12 +10,25 @@ interface PackageReceiptProps {
   ac: boolean;
   food?: string;
   furnishing?: string;
+  security_deposit?: number;
+  lock_in_period?: number;
+  notice_period?: number;
 }
 
 export function PackageReceipt({ name: rawName, rent: rawRent, ac, food, furnishing, ...rest }: PackageReceiptProps & Record<string, unknown>) {
   // Defensive: handle missing/malformed props from Claude
   const name = rawName || (rest.package_name as string) || (rest.packageName as string) || "Package";
   const rent = rawRent || (rest.starting_rent as number) || (rest.price as number) || 0;
+  const deposit = (rest.security_deposit ?? rest.deposit) as number | undefined;
+  const lockIn = (rest.lock_in_period ?? rest.lockIn) as number | undefined;
+  const notice = (rest.notice_period ?? rest.notice) as number | undefined;
+  const terms = [
+    deposit ? `₹${Number(deposit).toLocaleString("en-IN")} deposit` : null,
+    lockIn ? `${lockIn}mo lock-in` : null,
+    notice ? `${notice}d notice` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="flex items-center gap-3 py-2.5 px-3.5 rounded-xl bg-success/5 border border-success/12">
@@ -34,6 +47,9 @@ export function PackageReceipt({ name: rawName, rent: rawRent, ac, food, furnish
               .filter(Boolean)
               .join(" · ")}
           </p>
+        )}
+        {terms && (
+          <p className="text-[11px] text-content-tertiary mt-0.5 truncate">{terms}</p>
         )}
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">

@@ -106,6 +106,9 @@ Saves confirmed property information. **Only call this after the user has explic
       "food_included": false,
       "food_optional": true,
       "starting_rent": 9000,
+      "security_deposit": 9000,
+      "lock_in_period": 3,
+      "notice_period": 30,
       "active": true,
       "disabled": false
     }
@@ -116,6 +119,8 @@ Saves confirmed property information. **Only call this after the user has explic
   }
 }
 ```
+
+**Tenancy terms (per package):** `security_deposit` is a rupee amount (commonly 1–2 months of rent — you can suggest "same as one month's rent" as a default). `lock_in_period` is the minimum stay in **months**. `notice_period` is how much notice a tenant must give before leaving, in **days** (30 is typical). These can differ across packages, so capture them per package. They're optional — if the operator doesn't mention them, ask once but don't block on them. Frame the why: "Deposit and notice period are what tenants check before booking — having them set means fewer back-and-forth questions later."
 
 After calling `update_state`, always acknowledge what was saved and state the next step. **Never describe a successful save unless the tool returned `"saved": true`.**
 

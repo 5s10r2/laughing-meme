@@ -40,6 +40,9 @@ interface PackageSummary {
   ac?: boolean;
   sharingType?: string;
   attributes?: string[];
+  securityDeposit?: number;
+  lockIn?: number;
+  notice?: number;
 }
 
 interface FloorAssignment {
@@ -142,6 +145,9 @@ export function VerificationSummary({
           ac: p.ac as boolean | undefined,
           sharingType: (p.sharingType || p.sharing_type) as string | undefined,
           attributes: (p.attributes || p.tags) as string[] | undefined,
+          securityDeposit: (p.securityDeposit ?? p.security_deposit ?? p.deposit) as number | undefined,
+          lockIn: (p.lockIn ?? p.lock_in_period ?? p.lock_in) as number | undefined,
+          notice: (p.notice ?? p.notice_period) as number | undefined,
         };
       })
     : undefined;
@@ -353,11 +359,23 @@ export function VerificationSummary({
           <div className="pl-12 pb-3 space-y-2.5">
             {packages.map((pkg, i) => {
               const rentStr = pkg.rent ? `₹${pkg.rent.toLocaleString("en-IN")}` : "";
+              const terms = [
+                pkg.securityDeposit ? `₹${pkg.securityDeposit.toLocaleString("en-IN")} dep` : null,
+                pkg.lockIn ? `${pkg.lockIn}mo lock-in` : null,
+                pkg.notice ? `${pkg.notice}d notice` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
               return (
-                <div key={i} className="flex items-center justify-between">
+                <div key={i} className="flex items-start justify-between">
                   <span className="text-xs text-content-tertiary">{pkg.name}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-content font-medium">{rentStr || "---"}</span>
+                    <div className="text-right">
+                      <span className="block text-sm text-content font-medium">{rentStr || "---"}</span>
+                      {terms && (
+                        <span className="text-[11px] text-content-tertiary">{terms}</span>
+                      )}
+                    </div>
                     <EditButton onClick={() => onSendMessage?.(`I want to change the ${pkg.name} package`)} />
                   </div>
                 </div>

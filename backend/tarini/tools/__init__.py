@@ -80,7 +80,7 @@ TOOL_DEFINITIONS = [
             "- VERIFICATION: VerificationSummary, PendingItemsList, CompletionCelebration\n\n"
             "Guidelines:\n"
             "- Use PropertyTypeSelector when asking about property type in intro stage\n"
-            "- Use PackageForm when collecting package details (AC, food, furnishing, rent)\n"
+            "- Use PackageForm when collecting package details (AC, food, furnishing, rent, deposit, lock-in, notice)\n"
             "- Use PackageSuggestionCard when suggesting packages based on property type\n"
             "- Use FloorBuilder after floors are saved, to show the building visually\n"
             "- Use MappingSuggestionCard when suggesting floor-to-package assignments\n"

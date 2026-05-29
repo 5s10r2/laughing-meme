@@ -44,6 +44,9 @@ export function PackageList({ packages: rawPackages, onSendMessage, ...rest }: P
       food_included: p.food_included as boolean | undefined,
       food_optional: p.food_optional as boolean | undefined,
       starting_rent: (p.starting_rent || p.rent || p.price || 0) as number,
+      security_deposit: (p.security_deposit ?? p.securityDeposit ?? p.deposit) as number | undefined,
+      lock_in_period: (p.lock_in_period ?? p.lockIn) as number | undefined,
+      notice_period: (p.notice_period ?? p.notice) as number | undefined,
       active: p.active !== undefined ? Boolean(p.active) : true,
       disabled: Boolean(p.disabled),
     };

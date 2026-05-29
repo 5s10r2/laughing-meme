@@ -17,6 +17,9 @@ interface PackageFormProps {
     rent?: number;
     sharingType?: string;
     category?: string;
+    securityDeposit?: number;
+    lockInMonths?: number;
+    noticeDays?: number;
   };
   onSendMessage?: (text: string) => void;
 }
@@ -105,6 +108,9 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
     prefill?.furnishing ?? (rest.furnishing as "fully_furnished" | "semi_furnished" | "unfurnished") ?? "semi_furnished"
   );
   const [rent, setRent] = useState(prefill?.rent?.toString() || (rest.rent as number)?.toString() || (rest.starting_rent as number)?.toString() || "");
+  const [deposit, setDeposit] = useState(prefill?.securityDeposit?.toString() || (rest.security_deposit as number)?.toString() || "");
+  const [lockIn, setLockIn] = useState(prefill?.lockInMonths?.toString() || (rest.lock_in_period as number)?.toString() || "");
+  const [notice, setNotice] = useState(prefill?.noticeDays?.toString() || (rest.notice_period as number)?.toString() || "");
 
   // Progressive disclosure: step 1 = identity, step 2 = attributes
   const [step, setStep] = useState<1 | 2>(1);
@@ -125,15 +131,23 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
       { name: packageName.trim(), sharingType, ac, food: foodLabel, furnishing: furnishLabel, rent },
     ]);
 
-    const message = `Package: ${packageName.trim()}, ${sharingLabel} sharing, ${ac ? "AC" : "non-AC"}, ${foodLabel}, ${furnishLabel}, rent ₹${rent}`;
+    const terms = [
+      deposit.trim() ? `deposit ₹${deposit.trim()}` : null,
+      lockIn.trim() ? `lock-in ${lockIn.trim()} months` : null,
+      notice.trim() ? `notice ${notice.trim()} days` : null,
+    ].filter(Boolean);
+    const termsStr = terms.length ? `, ${terms.join(", ")}` : "";
+
+    const message = `Package: ${packageName.trim()}, ${sharingLabel} sharing, ${ac ? "AC" : "non-AC"}, ${foodLabel}, ${furnishLabel}, rent ₹${rent}${termsStr}`;
     onSendMessage?.(message);
 
     // Reset form with smart defaults for next package
     setPackageName("");
     setSharingType(nextSharingType(sharingType));
     setStep(1);
-    // Keep AC and food — likely same across packages
+    // Keep AC, food, lock-in, and notice — likely same across packages
     setRent("");
+    setDeposit("");
   }
 
   function handleDone() {
@@ -262,6 +276,43 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
                     className="flex-1 px-3.5 py-2.5 rounded-xl bg-bg-elevated border border-border text-sm text-content focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20"
                   />
                   <span className="text-xs text-content-tertiary">/month</span>
+                </div>
+              </div>
+
+              {/* Tenancy terms (optional) */}
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <p className="text-[11px] text-content-tertiary mb-2">Deposit ₹</p>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={deposit}
+                    onChange={(e) => setDeposit(e.target.value)}
+                    placeholder={rent || "8000"}
+                    className="w-full px-3 py-2.5 rounded-xl bg-bg-elevated border border-border text-sm text-content placeholder-content-tertiary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20"
+                  />
+                </div>
+                <div>
+                  <p className="text-[11px] text-content-tertiary mb-2">Lock-in (mo)</p>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={lockIn}
+                    onChange={(e) => setLockIn(e.target.value)}
+                    placeholder="3"
+                    className="w-full px-3 py-2.5 rounded-xl bg-bg-elevated border border-border text-sm text-content placeholder-content-tertiary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20"
+                  />
+                </div>
+                <div>
+                  <p className="text-[11px] text-content-tertiary mb-2">Notice (days)</p>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={notice}
+                    onChange={(e) => setNotice(e.target.value)}
+                    placeholder="30"
+                    className="w-full px-3 py-2.5 rounded-xl bg-bg-elevated border border-border text-sm text-content placeholder-content-tertiary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20"
+                  />
                 </div>
               </div>
 

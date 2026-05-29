@@ -8,7 +8,7 @@ import {
 import { cn } from "../../../lib/cn";
 import { humanizeSharingType, humanizeCategorySingular } from "../../../lib/property-utils";
 import {
-  CARD, CARD_DIVIDER, PILL_ACCENT, PILL_NEUTRAL,
+  CARD,
   ICON_CIRCLE, ICON_SM, BTN_PRIMARY, BTN_SECONDARY,
   AttrChip,
 } from "../../ui/primitives";
@@ -262,7 +262,6 @@ function CardStack({
               pkg={currentPkg}
               rentNum={rentNum}
               isAccepted={currentDecision === "accepted"}
-              compact
               badge={currentDecision}
               onAccept={!currentDecision ? accept : undefined}
               onSkip={!currentDecision ? skip : undefined}
@@ -344,7 +343,6 @@ function SuggestionCard({
   pkg,
   rentNum,
   isAccepted,
-  compact,
   badge,
   onAccept,
   onSkip,
@@ -352,7 +350,6 @@ function SuggestionCard({
   pkg: SuggestedPackage;
   rentNum: number | null;
   isAccepted: boolean;
-  compact?: boolean;
   badge?: "accepted" | "skipped";
   onAccept?: () => void;
   onSkip?: () => void;

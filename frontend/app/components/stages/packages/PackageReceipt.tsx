@@ -2,7 +2,7 @@
 
 import { Check, Snowflake, Fan } from "lucide-react";
 import { cn } from "../../../lib/cn";
-import { ICON_SM, AttrChip } from "../../ui/primitives";
+import { ICON_SM } from "../../ui/primitives";
 
 interface PackageReceiptProps {
   name: string;

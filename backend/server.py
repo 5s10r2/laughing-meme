@@ -79,6 +79,7 @@ def _sanitize(text: str) -> str:
 
 class ChatRequest(BaseModel):
     message: str = Field("", max_length=8000)
+    initial: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -183,7 +184,9 @@ async def chat(session_id: str, body: ChatRequest):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    user_message = _sanitize(body.message or "") or INITIAL_PROMPT
+    user_message = INITIAL_PROMPT if body.initial else _sanitize(body.message or "")
+    if not user_message:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
 
     return StreamingResponse(
         _stream_with_keepalives(session_id, user_message),

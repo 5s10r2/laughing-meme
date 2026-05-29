@@ -30,13 +30,27 @@ _mem_sessions: dict[str, dict] = {}
 _client = None
 
 
+def _memory_fallback_allowed() -> bool:
+    return os.environ.get("ALLOW_IN_MEMORY_DB", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+
+
 async def init_client() -> None:
     global _client, _USE_MEMORY
+    _USE_MEMORY = False
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_KEY")
 
     if not url or not key:
-        logger.warning("SUPABASE_URL / SUPABASE_SERVICE_KEY not set — using in-memory store")
+        if not _memory_fallback_allowed():
+            raise RuntimeError(
+                "SUPABASE_URL and SUPABASE_SERVICE_KEY are required. "
+                "Set ALLOW_IN_MEMORY_DB=true only for local development."
+            )
+        logger.warning("Supabase config not set — using explicit in-memory store")
         _USE_MEMORY = True
         return
 
@@ -50,8 +64,10 @@ async def init_client() -> None:
         )
         logger.info("Supabase connected OK")
     except Exception as e:
-        logger.warning("Supabase unreachable (%s) — falling back to in-memory store", e)
         _client = None
+        if not _memory_fallback_allowed():
+            raise RuntimeError("Supabase unreachable and in-memory fallback is disabled") from e
+        logger.warning("Supabase unreachable (%s) — using explicit in-memory store", e)
         _USE_MEMORY = True
 
 

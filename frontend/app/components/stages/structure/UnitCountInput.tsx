@@ -45,26 +45,29 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   dorm: BedDouble,
 };
 
-function getCategoryIcon(category: string): React.ElementType {
-  return CATEGORY_ICONS[category.toLowerCase()] || Home;
+function CategoryIcon({
+  category,
+  className,
+}: {
+  category: string;
+  className?: string;
+}) {
+  const Icon = CATEGORY_ICONS[category.toLowerCase()] || Home;
+  return <Icon className={className} />;
 }
 
 function SingleStepper({
-  label,
   count,
   min,
   max,
   disabled,
   onChange,
-  icon: Icon,
 }: {
-  label: string;
   count: number;
   min: number;
   max: number;
   disabled: boolean;
   onChange: (n: number) => void;
-  icon?: React.ElementType;
 }) {
   return (
     <div className="flex items-center justify-center gap-5 py-3">
@@ -99,11 +102,10 @@ function TypeStepperRow({
   disabled: boolean;
   onChange: (n: number) => void;
 }) {
-  const Icon = getCategoryIcon(type.category);
   return (
     <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-bg-elevated">
       <div className="flex items-center gap-1.5 min-w-[80px]">
-        <Icon className="w-3.5 h-3.5 text-content-tertiary" />
+        <CategoryIcon category={type.category} className="w-3.5 h-3.5 text-content-tertiary" />
         <span className="text-xs text-content-secondary font-medium">{type.label}</span>
       </div>
       <div className="flex items-center gap-1.5 ml-auto">
@@ -287,21 +289,11 @@ function BatchUnitInput({
       {/* ── Stepper for selected floor ── */}
       {!isMulti && (
         <SingleStepper
-          label={
-            selectedFloor?.unitTypes?.length === 1
-              ? selectedFloor.unitTypes[0].label.toLowerCase()
-              : "rooms"
-          }
           count={state.simpleCount}
           min={min}
           max={max}
           disabled={state.confirmed || submitted}
           onChange={(n) => updateState(selectedIdx, { simpleCount: n })}
-          icon={
-            selectedFloor?.unitTypes?.length === 1
-              ? getCategoryIcon(selectedFloor.unitTypes[0].category)
-              : undefined
-          }
         />
       )}
 
@@ -392,11 +384,7 @@ function BatchUnitInput({
   );
 }
 
-// ════════════════════════════════════════════════
-//  MAIN EXPORT -- routes to single or batch mode
-// ════════════════════════════════════════════════
-
-export function UnitCountInput({
+function SingleUnitInput({
   floorLabel: rawFloorLabel,
   unitTypes: rawUnitTypes,
   currentCount = 4,
@@ -406,46 +394,13 @@ export function UnitCountInput({
   onSendMessage,
   ...rest
 }: UnitCountInputProps & Record<string, unknown>) {
-
-  // ── Parse batch floors if provided ──
-  const batchFloors: FloorConfig[] | undefined = (() => {
-    const raw = rawFloors || rest.batch_floors || rest.batchFloors;
-    if (!Array.isArray(raw) || raw.length === 0) return undefined;
-    return (raw as unknown[]).map((r: unknown, i: number) => {
-      const f = r as Record<string, unknown>;
-      const rawTypes = f.unitTypes || f.unit_types || f.breakdown;
-      const unitTypes: UnitTypeCount[] | undefined = Array.isArray(rawTypes)
-        ? (rawTypes as unknown[]).map((t: unknown) => {
-            const tt = t as Record<string, unknown>;
-            return {
-              category: (tt.category || tt.type || "room") as string,
-              label: (tt.label || tt.name || "Rooms") as string,
-              count: Number(tt.count ?? 0),
-            };
-          })
-        : undefined;
-      const sr = f.suggestedRange || f.suggested_range;
-      return {
-        index: Number(f.index ?? i),
-        label: (f.label || f.name || f.floor || `Floor ${i}`) as string,
-        unitTypes,
-        suggestedRange: Array.isArray(sr) ? [Number(sr[0]), Number(sr[1])] as [number, number] : undefined,
-      };
-    });
-  })();
-
-  // ── Batch mode ──
-  if (batchFloors && batchFloors.length > 1) {
-    return <BatchUnitInput floors={batchFloors} onSendMessage={onSendMessage} />;
-  }
-
   // ── Single-floor mode (original behavior) ──
   const floorLabel =
     rawFloorLabel ||
     (rest.floor_label as string) ||
     (rest.floor as string) ||
     (rest.label as string) ||
-    (batchFloors?.[0]?.label) ||
+    (rawFloors?.[0]?.label) ||
     "Floor";
 
   const rawTypes =
@@ -454,7 +409,7 @@ export function UnitCountInput({
     (rest.unitTypeBreakdown as UnitTypeCount[]) ||
     (rest.unit_breakdown as UnitTypeCount[]) ||
     (rest.breakdown as UnitTypeCount[]) ||
-    batchFloors?.[0]?.unitTypes;
+    rawFloors?.[0]?.unitTypes;
 
   const unitTypes: UnitTypeCount[] | undefined = Array.isArray(rawTypes)
     ? (rawTypes as unknown[]).map((raw: unknown) => {
@@ -486,8 +441,8 @@ export function UnitCountInput({
 
   const [submitted, setSubmitted] = useState(false);
 
-  const min = suggestedRange?.[0] ?? batchFloors?.[0]?.suggestedRange?.[0] ?? 1;
-  const max = suggestedRange?.[1] ?? batchFloors?.[0]?.suggestedRange?.[1] ?? 50;
+  const min = suggestedRange?.[0] ?? rawFloors?.[0]?.suggestedRange?.[0] ?? 1;
+  const max = suggestedRange?.[1] ?? rawFloors?.[0]?.suggestedRange?.[1] ?? 50;
 
   const quickFillValues =
     suggestedRange && !isMultiType
@@ -562,21 +517,11 @@ export function UnitCountInput({
       {!isMultiType && (
         <>
           <SingleStepper
-            label={
-              unitTypes && unitTypes.length === 1
-                ? unitTypes[0].label.toLowerCase()
-                : "rooms"
-            }
             count={simpleCount}
             min={min}
             max={max}
             disabled={submitted}
             onChange={setSimpleCount}
-            icon={
-              unitTypes && unitTypes.length === 1
-                ? getCategoryIcon(unitTypes[0].category)
-                : undefined
-            }
           />
 
           {quickFillValues.length > 0 && !submitted && (
@@ -659,5 +604,56 @@ export function UnitCountInput({
 
       {hint && <p className="text-xs text-content-tertiary mt-2">{hint}</p>}
     </div>
+  );
+}
+
+function parseFloors(rawFloors: unknown): FloorConfig[] | undefined {
+  if (!Array.isArray(rawFloors) || rawFloors.length === 0) return undefined;
+  return rawFloors.map((r: unknown, i: number) => {
+    const f = r as Record<string, unknown>;
+    const rawTypes = f.unitTypes || f.unit_types || f.breakdown;
+    const unitTypes: UnitTypeCount[] | undefined = Array.isArray(rawTypes)
+      ? (rawTypes as unknown[]).map((t: unknown) => {
+          const tt = t as Record<string, unknown>;
+          return {
+            category: (tt.category || tt.type || "room") as string,
+            label: (tt.label || tt.name || "Rooms") as string,
+            count: Number(tt.count ?? 0),
+          };
+        })
+      : undefined;
+    const sr = f.suggestedRange || f.suggested_range;
+    return {
+      index: Number(f.index ?? i),
+      label: (f.label || f.name || f.floor || `Floor ${i}`) as string,
+      unitTypes,
+      suggestedRange: Array.isArray(sr)
+        ? ([Number(sr[0]), Number(sr[1])] as [number, number])
+        : undefined,
+    };
+  });
+}
+
+// ════════════════════════════════════════════════
+//  MAIN EXPORT -- routes to single or batch mode
+// ════════════════════════════════════════════════
+
+export function UnitCountInput({
+  floors: rawFloors,
+  onSendMessage,
+  ...props
+}: UnitCountInputProps & Record<string, unknown>) {
+  const batchFloors = parseFloors(rawFloors || props.batch_floors || props.batchFloors);
+
+  if (batchFloors && batchFloors.length > 1) {
+    return <BatchUnitInput floors={batchFloors} onSendMessage={onSendMessage} />;
+  }
+
+  return (
+    <SingleUnitInput
+      {...props}
+      floors={batchFloors}
+      onSendMessage={onSendMessage}
+    />
   );
 }

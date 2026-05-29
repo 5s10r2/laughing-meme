@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, ArrowRight, Check, ChevronDown } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import {
-  CARD, ICON_CIRCLE, BTN_PRIMARY, BTN_SECONDARY,
+  ICON_CIRCLE, BTN_PRIMARY, BTN_SECONDARY,
 } from "../../ui/primitives";
 import { motion, AnimatePresence } from "framer-motion";
 

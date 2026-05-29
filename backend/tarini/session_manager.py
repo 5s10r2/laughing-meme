@@ -78,20 +78,11 @@ class SessionManager:
 
         async for event in stream_chat(session_id, user_message, history):
             # Persist BEFORE yielding "done" — the SSE generator cancels our
-            # task immediately after receiving "done", so post-yield code
+            # task immediately after receiving terminal events, so post-yield code
             # would never execute.
-            if event.get("type") == "done":
+            if event.get("type") in ("done", "error"):
                 self._last_used[session_id] = time.monotonic()
-                try:
-                    await db.save_messages(session_id, history)
-                    logger.info(
-                        "Persisted %d messages for session %s",
-                        len(history), session_id,
-                    )
-                except Exception:
-                    logger.exception(
-                        "Failed to persist messages for session %s", session_id,
-                    )
+                await self._persist_history(session_id, history)
             yield event
 
     def remove_session(self, session_id: str) -> None:
@@ -100,6 +91,18 @@ class SessionManager:
         self._query_locks.pop(session_id, None)
         self._last_used.pop(session_id, None)
         logger.info("Removed session %s", session_id)
+
+    async def _persist_history(self, session_id: str, history: list[dict]) -> None:
+        try:
+            await db.save_messages(session_id, history)
+            logger.info(
+                "Persisted %d messages for session %s",
+                len(history), session_id,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to persist messages for session %s", session_id,
+            )
 
     async def cleanup(self) -> None:
         """Cancel eviction task and clear all sessions — called on shutdown."""

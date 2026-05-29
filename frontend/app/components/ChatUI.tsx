@@ -78,7 +78,7 @@ export default function ChatUI() {
 
   useEffect(() => {
     if (!sessionId) return;
-    sendMessage("");
+    sendMessage("", { initial: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
@@ -211,7 +211,7 @@ export default function ChatUI() {
 
   // ── Send message ──────────────────────────────────────────────────────────
 
-  async function sendMessage(text: string) {
+  async function sendMessage(text: string, options?: { initial?: boolean }) {
     if (!sessionId || isStreaming) return;
 
     const controller = new AbortController();
@@ -243,9 +243,17 @@ export default function ChatUI() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId, message: text }),
+        body: JSON.stringify({
+          session_id: sessionId,
+          message: text,
+          initial: options?.initial === true,
+        }),
         signal: controller.signal,
       });
+
+      if (!res.ok || !res.body) {
+        throw new Error("Chat request failed");
+      }
 
       for await (const event of parseSSEStream(res, controller.signal)) {
         processEvent(event, streamId);

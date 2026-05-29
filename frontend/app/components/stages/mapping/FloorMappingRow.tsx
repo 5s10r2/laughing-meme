@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ArrowRight } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { humanizeCategory, getPackageColor } from "../../../lib/property-utils";
@@ -35,6 +35,35 @@ interface FloorMappingRowProps {
 
 const COLLAPSE_THRESHOLD = 20;
 
+function normalizeUnits(rawUnits: UnitChip[]): UnitChip[] {
+  if (!Array.isArray(rawUnits)) return [];
+  return (rawUnits as unknown[]).map((raw: unknown, i: number) => {
+    if (typeof raw === "string") return { id: String(i), name: raw };
+    const u = raw as Record<string, unknown>;
+    return {
+      id: (u.id || String(i)) as string,
+      name: (u.name || u.unit || String(u)) as string,
+      category: (u.category || u.type || u.unit_type) as string | undefined,
+      sharingType: (u.sharingType || u.sharing_type) as string | undefined,
+      packageId: (u.packageId || u.package_id) as string | undefined,
+      packageName: (u.packageName || u.package_name) as string | undefined,
+    };
+  });
+}
+
+function normalizePackages(rawPackages: PackageOption[]): PackageOption[] {
+  if (!Array.isArray(rawPackages)) return [];
+  return (rawPackages as unknown[]).map((raw: unknown, i: number) => {
+    if (typeof raw === "string") return { id: String(i), name: raw };
+    const p = raw as Record<string, unknown>;
+    return {
+      id: (p.id || String(i)) as string,
+      name: (p.name || p.package || String(p)) as string,
+      color: p.color as string | undefined,
+    };
+  });
+}
+
 export function FloorMappingRow({
   floorLabel: rawFloorLabel,
   floorIndex,
@@ -44,62 +73,38 @@ export function FloorMappingRow({
   ...rest
 }: FloorMappingRowProps & Record<string, unknown>) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [expanded, setExpanded] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   // Defensive: handle missing/malformed props from Claude
   const floorLabel = rawFloorLabel || (rest.floor_label as string) || (rest.floor as string) || `Floor ${floorIndex ?? 0}`;
 
-  const units: UnitChip[] = Array.isArray(rawUnits)
-    ? (rawUnits as unknown[]).map((raw: unknown, i: number) => {
-        if (typeof raw === "string") return { id: String(i), name: raw };
-        const u = raw as Record<string, unknown>;
-        return {
-          id: (u.id || String(i)) as string,
-          name: (u.name || u.unit || String(u)) as string,
-          category: (u.category || u.type || u.unit_type) as string | undefined,
-          sharingType: (u.sharingType || u.sharing_type) as string | undefined,
-          packageId: (u.packageId || u.package_id) as string | undefined,
-          packageName: (u.packageName || u.package_name) as string | undefined,
-        };
-      })
-    : [];
-
-  const packages: PackageOption[] = Array.isArray(rawPackages)
-    ? (rawPackages as unknown[]).map((raw: unknown, i: number) => {
-        if (typeof raw === "string") return { id: String(i), name: raw };
-        const p = raw as Record<string, unknown>;
-        return {
-          id: (p.id || String(i)) as string,
-          name: (p.name || p.package || String(p)) as string,
-          color: p.color as string | undefined,
-        };
-      })
-    : [];
+  const units = useMemo(() => normalizeUnits(rawUnits), [rawUnits]);
+  const packages = useMemo(() => normalizePackages(rawPackages), [rawPackages]);
 
   const mappedCount = units.filter((u) => u.packageId).length;
   const totalCount = units.length;
   const hasUnmapped = mappedCount < totalCount;
 
   // Group units by category
-  const hasCategories = units.some((u) => u.category);
-  const categoryGroups: { category: string; label: string; units: UnitChip[] }[] = [];
-
-  if (hasCategories) {
+  const categoryGroups = useMemo(() => {
     const groupMap = new Map<string, UnitChip[]>();
     for (const u of units) {
       const cat = u.category || "other";
       if (!groupMap.has(cat)) groupMap.set(cat, []);
       groupMap.get(cat)!.push(u);
     }
+    const groups: { category: string; label: string; units: UnitChip[] }[] = [];
     for (const [cat, catUnits] of groupMap) {
-      categoryGroups.push({
+      groups.push({
         category: cat,
         label: humanizeCategory(cat),
         units: catUnits,
       });
     }
-  }
+    return groups;
+  }, [units]);
+
+  const hasCategories = units.some((u) => u.category);
 
   const shouldCollapse = totalCount > COLLAPSE_THRESHOLD;
 
@@ -280,7 +285,7 @@ export function FloorMappingRow({
       )}
 
       {/* ── Collapsed summary for 20+ units ── */}
-      {shouldCollapse && !expanded && (
+      {shouldCollapse && (
         <div className="mb-4">
           <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-bg-elevated text-xs text-content-secondary">
             <span>

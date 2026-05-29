@@ -20,6 +20,7 @@ export async function* parseSSEStream(
 
   try {
     while (true) {
+      if (signal.aborted) return;
       const { value, done } = await reader.read();
       if (done) break;
 

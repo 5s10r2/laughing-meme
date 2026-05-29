@@ -33,7 +33,6 @@ const REVIEW_THRESHOLD = 3;
 export function MappingSuggestionCard({
   suggestions: rawSuggestions,
   onSendMessage,
-  ...rest
 }: MappingSuggestionCardProps & Record<string, unknown>) {
   // Defensive: handle missing/malformed suggestions from Claude
   const suggestions: MappingSuggestion[] = Array.isArray(rawSuggestions)
@@ -86,7 +85,6 @@ export function MappingSuggestionCard({
     return (
       <FlatSuggestionView
         suggestions={suggestions}
-        totalRooms={totalRooms}
         getAssignments={getAssignments}
         onSendMessage={onSendMessage}
       />
@@ -110,12 +108,10 @@ export function MappingSuggestionCard({
 
 function FlatSuggestionView({
   suggestions,
-  totalRooms,
   getAssignments,
   onSendMessage,
 }: {
   suggestions: MappingSuggestion[];
-  totalRooms: number;
   getAssignments: (s: MappingSuggestion) => FloorAssignment[];
   onSendMessage?: (text: string) => void;
 }) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Layers, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { motion } from "framer-motion";
 import { CARD, ICON_SM } from "../../ui/primitives";

@@ -98,14 +98,6 @@ _TOOL_DESCRIPTIONS = {
 }
 
 
-def _tool_description(tool_name: str, tool_input: dict) -> str:
-    """Generate a user-friendly description for a tool execution."""
-    desc = _TOOL_DESCRIPTIONS.get(tool_name)
-    if desc:
-        return desc
-
-    # Fallback for unknown tools
-    return f"Running {tool_name}..."
 
 
 async def stream_chat(
@@ -233,7 +225,7 @@ async def stream_chat(
 
             # ── Normal tools: emit tool_start → execute → emit tool_complete ──
 
-            description = _tool_description(tool_block.name, tool_block.input)
+            description = _TOOL_DESCRIPTIONS.get(tool_block.name) or f"Running {tool_block.name}..."
 
             logger.info(
                 "[stream_chat] executing tool %s for session %s",
@@ -265,32 +257,17 @@ async def stream_chat(
 
             # ── Auto-emit state snapshots after state-changing tools ──
 
-            if tool_block.name == "update_state" and result_data.get("saved"):
-                state = result_data.get("state", {})
-                version = result_data.get("state_version", 0)
-                session = await db.get_session(session_id)
-                stage = session.get("stage", "intro") if session else "intro"
-
+            # Emit state_snapshot after any state-changing tool.
+            _snapshot_triggers = {"update_state": "saved", "advance_stage": "advanced"}
+            if tool_block.name in _snapshot_triggers and result_data.get(_snapshot_triggers[tool_block.name]):
                 yield {
                     "type": "state_snapshot",
-                    "state": state,
-                    "stage": stage,
-                    "stateVersion": version,
+                    "state": result_data.get("state", {}),
+                    "stage": result_data.get("stage", ""),
+                    "stateVersion": result_data.get("state_version", 0),
                 }
-
-            if tool_block.name == "advance_stage" and result_data.get("advanced"):
-                new_stage = result_data.get("stage", "")
-                session = await db.get_session(session_id)
-                state = session.get("state", {}) if session else {}
-                version = session.get("state_version", 0) if session else 0
-
-                yield {
-                    "type": "state_snapshot",
-                    "state": state,
-                    "stage": new_stage,
-                    "stateVersion": version,
-                }
-                yield build_transition_event(new_stage, tool_block.id)
+                if tool_block.name == "advance_stage":
+                    yield build_transition_event(result_data.get("stage", ""), tool_block.id)
 
             tool_results.append({
                 "type": "tool_result",

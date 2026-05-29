@@ -97,80 +97,48 @@ export default function ChatUI() {
    */
   const processEvent = useCallback(
     (event: SSEEvent, streamId: string) => {
+      // Helper: apply fn only to the streaming message with the given id.
+      const updateStream = (fn: (m: Message) => Message) =>
+        setMessages((prev) => prev.map((m) => (m.id === streamId ? fn(m) : m)));
+
       switch (event.type) {
         case "text":
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== streamId) return m;
-              const parts = [...m.parts];
-              const last = parts[parts.length - 1];
-              // Coalesce consecutive text chunks into one text part
-              if (last && last.type === "text") {
-                parts[parts.length - 1] = {
-                  ...last,
-                  text: (last.text || "") + event.text,
-                };
-              } else {
-                parts.push({ type: "text", text: event.text });
-              }
-              return { ...m, parts };
-            })
-          );
+          updateStream((m) => {
+            const parts = [...m.parts];
+            const last = parts[parts.length - 1];
+            // Coalesce consecutive text chunks into one text part
+            if (last && last.type === "text") {
+              parts[parts.length - 1] = { ...last, text: (last.text || "") + event.text };
+            } else {
+              parts.push({ type: "text", text: event.text });
+            }
+            return { ...m, parts };
+          });
           break;
 
         case "component":
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== streamId) return m;
-              const part: MessagePart = {
-                type: "component",
-                componentName: event.name,
-                props: event.props,
-                componentId: event.id,
-              };
-              return { ...m, parts: [...m.parts, part] };
-            })
-          );
+          updateStream((m) => ({
+            ...m,
+            parts: [...m.parts, { type: "component", componentName: event.name, props: event.props, componentId: event.id } satisfies MessagePart],
+          }));
           break;
 
         case "tool_start":
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== streamId) return m;
-              const part: MessagePart = {
-                type: "tool_activity",
-                tool: event.tool,
-                toolStatus: "running",
-                toolDescription: event.description,
-                toolId: event.id,
-              };
-              return { ...m, parts: [...m.parts, part] };
-            })
-          );
+          updateStream((m) => ({
+            ...m,
+            parts: [...m.parts, { type: "tool_activity", tool: event.tool, toolStatus: "running", toolDescription: event.description, toolId: event.id } satisfies MessagePart],
+          }));
           break;
 
         case "tool_complete":
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== streamId) return m;
-              const parts = m.parts.map((p) => {
-                if (
-                  p.type === "tool_activity" &&
-                  p.toolId === event.id
-                ) {
-                  return {
-                    ...p,
-                    toolStatus: "complete" as const,
-                    toolResult: event.result,
-                  };
-                }
-                return p;
-              });
-              return { ...m, parts };
-            })
-          );
-
-          // If advance_stage completed, update stage in context
+          updateStream((m) => ({
+            ...m,
+            parts: m.parts.map((p) =>
+              p.type === "tool_activity" && p.toolId === event.id
+                ? { ...p, toolStatus: "complete" as const, toolResult: event.result }
+                : p
+            ),
+          }));
           if (event.tool === "advance_stage" && event.result?.stage) {
             updateStage(event.result.stage as Stage);
           }
@@ -189,16 +157,11 @@ export default function ChatUI() {
           break;
 
         case "error":
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== streamId) return m;
-              const part: MessagePart = {
-                type: "text",
-                text: event.message || "Something went wrong.",
-              };
-              return { ...m, parts: [...m.parts, part], streaming: false };
-            })
-          );
+          updateStream((m) => ({
+            ...m,
+            parts: [...m.parts, { type: "text", text: event.message || "Something went wrong." } satisfies MessagePart],
+            streaming: false,
+          }));
           break;
 
         case "done":
@@ -211,7 +174,7 @@ export default function ChatUI() {
 
   // ── Send message ──────────────────────────────────────────────────────────
 
-  async function sendMessage(text: string, options?: { initial?: boolean }) {
+  const sendMessage = useCallback(async function sendMessage(text: string, options?: { initial?: boolean }) {
     if (!sessionId || isStreaming) return;
 
     const controller = new AbortController();
@@ -288,7 +251,7 @@ export default function ChatUI() {
       );
       setIsStreaming(false);
     }
-  }
+  }, [sessionId, isStreaming, processEvent]);
 
   // ── New session ───────────────────────────────────────────────────────────
 

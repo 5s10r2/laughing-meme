@@ -127,19 +127,17 @@ _RETRY_DELAY = 0.3  # seconds
 
 async def _with_retry(label: str, coro_fn, *args):
     """Retry an async call up to _RETRY_ATTEMPTS times on transient failure."""
-    last_exc = None
     for attempt in range(_RETRY_ATTEMPTS + 1):
         try:
             return await coro_fn(*args)
         except Exception as e:
-            last_exc = e
-            if attempt < _RETRY_ATTEMPTS:
-                logger.warning(
-                    "Retrying %s (attempt %d/%d): %s",
-                    label, attempt + 1, _RETRY_ATTEMPTS + 1, e,
-                )
-                await asyncio.sleep(_RETRY_DELAY * (attempt + 1))
-    raise last_exc  # type: ignore[misc]
+            if attempt == _RETRY_ATTEMPTS:
+                raise
+            logger.warning(
+                "Retrying %s (attempt %d/%d): %s",
+                label, attempt + 1, _RETRY_ATTEMPTS + 1, e,
+            )
+            await asyncio.sleep(_RETRY_DELAY * (attempt + 1))
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +167,10 @@ async def create_session(user_id: str | None = None) -> dict:
     if user_id:
         row["user_id"] = user_id
     result = await c.table("sessions").insert(row).execute()
+    if not result.data:
+        raise RuntimeError(
+            "Session INSERT returned no rows — check Supabase RLS policies and insert triggers"
+        )
     return result.data[0]
 
 
@@ -223,6 +225,14 @@ async def save_messages(session_id: str, messages: list) -> None:
     await _with_retry("save_messages", _save)
 
 
+async def _call_rpc(rpc_name: str, params: dict, session_id: str) -> dict:
+    """Call a Supabase RPC, raising ValueError if no rows returned."""
+    result = await _get_client().rpc(rpc_name, params).execute()
+    if not result.data:
+        raise ValueError(f"Session {session_id} not found")
+    return result.data[0]
+
+
 async def update_session_state(session_id: str, new_state: dict) -> dict:
     if _USE_MEMORY:
         s = _mem_sessions.get(session_id)
@@ -233,14 +243,11 @@ async def update_session_state(session_id: str, new_state: dict) -> dict:
         s["updated_at"] = datetime.now(timezone.utc).isoformat()
         return {"state": s["state"], "state_version": s["state_version"]}
 
-    c = _get_client()
-    result = await c.rpc(
+    return await _call_rpc(
         "update_session_state_atomic",
         {"p_session_id": session_id, "p_new_state": new_state},
-    ).execute()
-    if not result.data:
-        raise ValueError(f"Session {session_id} not found")
-    return result.data[0]
+        session_id,
+    )
 
 
 async def advance_stage(session_id: str, stage: str) -> dict:
@@ -252,11 +259,8 @@ async def advance_stage(session_id: str, stage: str) -> dict:
         s["updated_at"] = datetime.now(timezone.utc).isoformat()
         return s
 
-    c = _get_client()
-    result = await c.rpc(
+    return await _call_rpc(
         "advance_stage_atomic",
         {"p_session_id": session_id, "p_new_stage": stage},
-    ).execute()
-    if not result.data:
-        raise ValueError(f"Session {session_id} not found")
-    return result.data[0]
+        session_id,
+    )

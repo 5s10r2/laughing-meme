@@ -159,8 +159,13 @@ function BatchUnitInput({
       if (f.unitTypes) {
         for (const t of f.unitTypes) typeCounts[t.category] = t.count;
       }
+      // Default to a value inside the floor's suggested range, never a hardcoded
+      // constant that could sit below the minimum (which strands the stepper).
+      const fMin = f.suggestedRange?.[0] ?? 1;
+      const fMax = f.suggestedRange?.[1] ?? 50;
+      const raw = !isMulti && f.unitTypes?.length === 1 ? f.unitTypes[0].count || fMin : fMin;
       return {
-        simpleCount: !isMulti && f.unitTypes?.length === 1 ? f.unitTypes[0].count || 4 : 4,
+        simpleCount: Math.min(Math.max(raw, fMin), fMax),
         typeCounts,
         confirmed: false,
       };
@@ -199,30 +204,30 @@ function BatchUnitInput({
 
   function setForAllRemaining() {
     const current = floorStates[selectedIdx];
-    setFloorStates((prev) => {
-      const next = [...prev];
-      for (let i = selectedIdx; i < next.length; i++) {
-        if (!next[i].confirmed) {
-          next[i] = {
-            ...next[i],
-            simpleCount: current.simpleCount,
-            typeCounts: { ...current.typeCounts },
-            confirmed: true,
-          };
-        }
-      }
-      return next;
-    });
+    setFloorStates((prev) =>
+      prev.map((f, i) =>
+        i === selectedIdx || f.confirmed
+          ? { ...f, confirmed: true }
+          : {
+              ...f,
+              simpleCount: current.simpleCount,
+              typeCounts: { ...current.typeCounts },
+              confirmed: true,
+            }
+      )
+    );
   }
 
   function confirmCurrentFloor() {
     updateState(selectedIdx, { confirmed: true });
-    // Auto-advance to next unconfirmed floor
-    const nextUnconfirmed = floorStates.findIndex(
-      (s, i) => i > selectedIdx && !s.confirmed
-    );
-    if (nextUnconfirmed !== -1) {
-      setSelectedIdx(nextUnconfirmed);
+    // Auto-advance to the next unconfirmed floor, wrapping around so confirming
+    // an earlier floor (reached via chip nav) still moves forward.
+    for (let i = 1; i <= floors.length; i++) {
+      const idx = (selectedIdx + i) % floors.length;
+      if (idx !== selectedIdx && !floorStates[idx].confirmed) {
+        setSelectedIdx(idx);
+        return;
+      }
     }
   }
 
@@ -306,8 +311,13 @@ function BatchUnitInput({
               count={state.typeCounts[t.category] || 0}
               disabled={state.confirmed || submitted}
               onChange={(n) =>
-                updateState(selectedIdx, {
-                  typeCounts: { ...state.typeCounts, [t.category]: n },
+                setFloorStates((prev) => {
+                  const next = [...prev];
+                  next[selectedIdx] = {
+                    ...next[selectedIdx],
+                    typeCounts: { ...next[selectedIdx].typeCounts, [t.category]: n },
+                  };
+                  return next;
                 })
               }
             />
@@ -411,13 +421,14 @@ function SingleUnitInput({
 
   const isMultiType = unitTypes && unitTypes.length > 1;
 
-  const [simpleCount, setSimpleCount] = useState(
-    !isMultiType
-      ? unitTypes && unitTypes.length === 1
-        ? unitTypes[0].count || currentCount
-        : currentCount
-      : 0
-  );
+  const [simpleCount, setSimpleCount] = useState(() => {
+    if (isMultiType) return 0;
+    const sMin = suggestedRange?.[0] ?? rawFloors?.[0]?.suggestedRange?.[0] ?? 1;
+    const sMax = suggestedRange?.[1] ?? rawFloors?.[0]?.suggestedRange?.[1] ?? 50;
+    const raw =
+      unitTypes && unitTypes.length === 1 ? unitTypes[0].count || currentCount : currentCount;
+    return Math.min(Math.max(raw, sMin), sMax);
+  });
 
   const [typeCounts, setTypeCounts] = useState<Record<string, number>>(() => {
     if (!isMultiType || !unitTypes) return {};

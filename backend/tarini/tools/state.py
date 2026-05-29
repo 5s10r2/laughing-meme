@@ -88,6 +88,7 @@ async def update_state(session_id: str, updates: dict) -> str:
     return json.dumps(
         {
             "saved": True,
+            "stage": session.get("stage", "intro"),
             "state_version": updated.get("state_version"),
             "state": updated.get("state") or validated_state,
         },
@@ -109,4 +110,9 @@ async def advance_stage(session_id: str, stage: str) -> str:
         )
 
     updated = await db.advance_stage(session_id, stage)
-    return json.dumps({"stage": updated.get("stage"), "advanced": True})
+    return json.dumps({
+        "stage": updated.get("stage"),
+        "advanced": True,
+        "state": updated.get("state") or {},
+        "state_version": updated.get("state_version", 0),
+    })

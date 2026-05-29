@@ -162,19 +162,23 @@ function CardStack({
   const acceptedPackages = suggestions.filter((_, i) => decisions[i] === "accepted");
 
   function accept() {
-    setDecisions((prev) => ({ ...prev, [currentIdx]: "accepted" }));
-    advanceToNext();
+    const next = { ...decisions, [currentIdx]: "accepted" as const };
+    setDecisions(next);
+    advanceToNext(next);
   }
 
   function skip() {
-    setDecisions((prev) => ({ ...prev, [currentIdx]: "skipped" }));
-    advanceToNext();
+    const next = { ...decisions, [currentIdx]: "skipped" as const };
+    setDecisions(next);
+    advanceToNext(next);
   }
 
-  function advanceToNext() {
+  function advanceToNext(updatedDecisions: typeof decisions) {
+    // Accept the updated decisions map explicitly — reading the closure's `decisions`
+    // would see the pre-setState snapshot and loop back to the same card.
     for (let i = 1; i <= total; i++) {
       const nextIdx = (currentIdx + i) % total;
-      if (!decisions[nextIdx]) {
+      if (!updatedDecisions[nextIdx]) {
         setCurrentIdx(nextIdx);
         return;
       }

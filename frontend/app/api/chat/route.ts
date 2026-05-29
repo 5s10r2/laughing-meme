@@ -5,6 +5,13 @@ export const runtime = "edge";
 import { NextRequest } from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+const API_KEY = process.env.TARINI_API_KEY;
+
+function backendHeaders(): Record<string, string> {
+  const h: Record<string, string> = { "Content-Type": "application/json" };
+  if (API_KEY) h["Authorization"] = `Bearer ${API_KEY}`;
+  return h;
+}
 
 function sseError(message: string, status = 200) {
   return new Response(
@@ -42,7 +49,7 @@ export async function POST(request: NextRequest) {
   try {
     res = await fetch(`${BACKEND_URL}/sessions/${encodeURIComponent(session_id)}/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: backendHeaders(),
       body: JSON.stringify({
         message: typeof message === "string" ? message : "",
         initial,
@@ -52,6 +59,9 @@ export async function POST(request: NextRequest) {
     return sseError("Backend unavailable.");
   }
 
+  if (res.status === 401 || res.status === 403) {
+    return sseError("Authentication failed — the server API key is misconfigured.");
+  }
   if (!res.ok || !res.body) {
     return sseError("Backend unavailable.");
   }

@@ -6,7 +6,13 @@ def load_system_prompt() -> str:
     return _SYSTEM_PROMPT
 
 
-_SYSTEM_PROMPT = (Path(__file__).parent / "system_prompt.md").read_text(encoding="utf-8")
+try:
+    _SYSTEM_PROMPT = (Path(__file__).parent / "system_prompt.md").read_text(encoding="utf-8")
+except FileNotFoundError as e:
+    raise RuntimeError(
+        "system_prompt.md not found — ensure it is included in your deployment. "
+        f"Expected path: {Path(__file__).parent / 'system_prompt.md'}"
+    ) from e
 
 
 # Single source of truth for the silent opening prompt that triggers the greeting.

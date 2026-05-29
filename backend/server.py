@@ -16,13 +16,15 @@ SSE event format:
 import asyncio
 import json
 import logging
+import os
 import re
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 load_dotenv(override=True)
@@ -56,13 +58,43 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Tarini API", version="2.0.0", lifespan=lifespan)
 
+# Explicit origin list — never use ["*"] with allow_credentials=True (violates CORS spec).
+# In production all browser traffic flows through the Next.js proxy routes
+# (server-to-server, no Origin header, so CORS never applies). This middleware
+# only matters for direct browser access during local dev / debugging.
+# Auth is a Bearer token, not a cookie, so allow_credentials stays False
+# (credentials=True with a wildcard would be invalid, and we have no cookies to send).
+_CORS_ORIGINS = [
+    o.strip()
+    for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_CORS_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+_API_KEY = os.environ.get("TARINI_API_KEY", "").strip()
+_bearer = HTTPBearer(auto_error=False)
+
+
+async def require_auth(
+    credentials: HTTPAuthorizationCredentials | None = Security(_bearer),
+) -> None:
+    """Validate Bearer token when TARINI_API_KEY is set. No-op in dev (key unset)."""
+    if not _API_KEY:
+        return  # dev mode — no key configured
+    if not credentials or credentials.credentials != _API_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 # ---------------------------------------------------------------------------
@@ -85,6 +117,12 @@ class ChatRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # SSE keepalive helper
 # ---------------------------------------------------------------------------
+
+async def _cancel_task(t: asyncio.Task) -> None:
+    """Cancel a task and await it, swallowing the resulting exceptions."""
+    t.cancel()
+    await asyncio.gather(t, return_exceptions=True)
+
 
 async def _stream_with_keepalives(
     session_id: str,
@@ -141,16 +179,8 @@ async def _stream_with_keepalives(
             get_task = asyncio.ensure_future(queue.get())
     finally:
         if not get_task.done():
-            get_task.cancel()
-            try:
-                await get_task
-            except (asyncio.CancelledError, Exception):
-                pass
-        task.cancel()
-        try:
-            await task
-        except (asyncio.CancelledError, Exception):
-            pass
+            await _cancel_task(get_task)
+        await _cancel_task(task)
 
 
 # ---------------------------------------------------------------------------
@@ -158,13 +188,13 @@ async def _stream_with_keepalives(
 # ---------------------------------------------------------------------------
 
 @app.post("/sessions", status_code=201)
-async def create_session():
+async def create_session(_: None = Depends(require_auth)):
     session = await db.create_session()
     return {"session_id": session["id"]}
 
 
 @app.get("/sessions/{session_id}")
-async def get_session(session_id: str):
+async def get_session(session_id: str, _: None = Depends(require_auth)):
     session = await db.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -179,7 +209,7 @@ async def get_session(session_id: str):
 
 
 @app.post("/sessions/{session_id}/chat")
-async def chat(session_id: str, body: ChatRequest):
+async def chat(session_id: str, body: ChatRequest, _: None = Depends(require_auth)):
     session = await db.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")

@@ -185,7 +185,7 @@ export function VerificationSummary({
         const item = raw as Record<string, unknown>;
         return {
           description: (item.description || item.message || item.text || "Unknown issue") as string,
-          severity: ((item.severity || item.level || "warning") as "error" | "warning"),
+          severity: (item.severity || item.level) === "error" ? "error" : "warning",
         };
       })
     : undefined;
@@ -196,8 +196,13 @@ export function VerificationSummary({
     (sum, m) => sum + getAssignments(m).reduce((a, b) => a + (b.count || 0), 0),
     0
   ) || 0;
-  const allMapped = mappings && totalMappedRooms > 0;
+  // "All mapped" means every room is assigned to a package — not merely that
+  // at least one room is mapped.
+  const allMapped = !!mappings && totalRooms > 0 && totalMappedRooms >= totalRooms;
   const hasPending = pending && pending.length > 0;
+  // Block confirmation if a mapping section is present but not every room is mapped.
+  const mappingIncomplete = !!mappings && mappings.length > 0 && !allMapped;
+  const canConfirm = !hasPending && !mappingIncomplete;
 
   // ── Section icon map ──
   const sectionIcons: Record<SectionId, React.ElementType> = {
@@ -251,7 +256,9 @@ export function VerificationSummary({
     sections.push({
       id: "mapping",
       title: "Mapping",
-      summary: allMapped ? `${totalMappedRooms} room${totalMappedRooms !== 1 ? "s" : ""} mapped` : "Incomplete",
+      summary: allMapped
+        ? `${totalMappedRooms} room${totalMappedRooms !== 1 ? "s" : ""} mapped`
+        : `${totalMappedRooms} of ${totalRooms} rooms mapped`,
       hasContent: true,
     });
   }
@@ -353,7 +360,7 @@ export function VerificationSummary({
         return (
           <div className="pl-12 pb-3 space-y-2.5">
             {packages.map((pkg, i) => {
-              const rentStr = pkg.rent ? `₹${pkg.rent.toLocaleString("en-IN")}` : "";
+              const rentStr = pkg.rent != null ? `₹${pkg.rent.toLocaleString("en-IN")}` : "";
               const terms = [
                 pkg.securityDeposit ? `₹${pkg.securityDeposit.toLocaleString("en-IN")} dep` : null,
                 pkg.lockIn ? `${pkg.lockIn}mo lock-in` : null,
@@ -394,7 +401,11 @@ export function VerificationSummary({
                     <span className="text-xs text-content-tertiary">{m.floorLabel}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-content font-medium">
-                        {a ? `${a.count} room${a.count !== 1 ? "s" : ""} → ${a.packageName}` : "---"}
+                        {!a
+                          ? "---"
+                          : a.count > 0
+                            ? `${a.count} room${a.count !== 1 ? "s" : ""} → ${a.packageName}`
+                            : `→ ${a.packageName}`}
                       </span>
                       <EditButton onClick={() => onSendMessage?.(`I want to change the mapping for ${m.floorLabel}`)} />
                     </div>
@@ -523,13 +534,18 @@ export function VerificationSummary({
             Resolve {pending!.length} pending item{pending!.length !== 1 ? "s" : ""} first
           </p>
         )}
+        {!hasPending && mappingIncomplete && (
+          <p className="text-xs text-warning mb-2">
+            {totalMappedRooms} of {totalRooms} rooms mapped — assign the rest first
+          </p>
+        )}
         <button
           onClick={() => onSendMessage?.("Everything looks correct, confirm")}
           className={cn(
             BTN_PRIMARY,
-            hasPending && "opacity-50 cursor-not-allowed"
+            !canConfirm && "opacity-50 cursor-not-allowed"
           )}
-          disabled={!!hasPending}
+          disabled={!canConfirm}
         >
           <span className="inline-flex items-center gap-2">
             Confirm & finish <Check className="w-4 h-4" />

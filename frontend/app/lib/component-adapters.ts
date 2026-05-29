@@ -202,19 +202,20 @@ const ADAPTERS: Record<string, Adapter> = {
 
   PackageForm: (props) => {
     const prefill = asRecord(props.prefill ?? props.defaults);
+    const merged = { ...props, ...prefill };
     return {
       ...props,
       name: pickString(props, ["name", "package_name", "packageName"]),
       prefill: {
-        ac: pickBoolean({ ...props, ...prefill }, ["ac"]),
-        food: pickString({ ...props, ...prefill }, ["food"], "none"),
-        furnishing: pickString({ ...props, ...prefill }, ["furnishing"], "semi_furnished"),
-        rent: pickOptionalNumber({ ...props, ...prefill }, ["rent", "starting_rent"]),
-        sharingType: pickString({ ...props, ...prefill }, ["sharingType", "sharing_type"], "private"),
-        category: pickString({ ...props, ...prefill }, ["category"]),
-        securityDeposit: pickOptionalNumber({ ...props, ...prefill }, ["securityDeposit", "security_deposit"]),
-        lockInMonths: pickOptionalNumber({ ...props, ...prefill }, ["lockInMonths", "lock_in_period", "lockIn"]),
-        noticeDays: pickOptionalNumber({ ...props, ...prefill }, ["noticeDays", "notice_period", "notice"]),
+        ac: pickBoolean(merged, ["ac"]),
+        food: pickString(merged, ["food"], "none"),
+        furnishing: pickString(merged, ["furnishing"], "semi_furnished"),
+        rent: pickOptionalNumber(merged, ["rent", "starting_rent"]),
+        sharingType: pickString(merged, ["sharingType", "sharing_type"], "private"),
+        category: pickString(merged, ["category"]),
+        securityDeposit: pickOptionalNumber(merged, ["securityDeposit", "security_deposit"]),
+        lockInMonths: pickOptionalNumber(merged, ["lockInMonths", "lock_in_period", "lockIn"]),
+        noticeDays: pickOptionalNumber(merged, ["noticeDays", "notice_period", "notice"]),
       },
     };
   },

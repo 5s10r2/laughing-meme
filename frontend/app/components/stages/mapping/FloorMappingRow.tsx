@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { ArrowRight } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import { humanizeCategory, getPackageColor } from "../../../lib/property-utils";
 import { BottomSheet } from "../../ui/BottomSheet";
@@ -168,6 +167,42 @@ export function FloorMappingRow({
     );
   }
 
+  // Shared package picker shown when units are selected (inline + BottomSheet).
+  function renderPackagePicker(className: string) {
+    return (
+      <AnimatePresence>
+        {selected.size > 0 && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className={className}
+          >
+            <p className="text-[11px] text-content-tertiary mb-1.5">
+              Assign {selected.size} room{selected.size !== 1 ? "s" : ""} to:
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {packages.map((pkg) => (
+                <button
+                  key={pkg.id}
+                  onClick={() => assignSelected(pkg)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer",
+                    "hover:scale-[1.02] active:scale-95",
+                    getPackageColor(pkg.id, packages)
+                  )}
+                >
+                  {pkg.name}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
+
   // Full room grid (used in BottomSheet)
   function renderFullGrid() {
     return (
@@ -224,36 +259,7 @@ export function FloorMappingRow({
         )}
 
         {/* Bottom toolbar when units selected */}
-        <AnimatePresence>
-          {selected.size > 0 && (
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 20, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="mt-3 pt-2 border-t border-border/50"
-            >
-              <p className="text-[11px] text-content-tertiary mb-1.5">
-                Assign {selected.size} room{selected.size !== 1 ? "s" : ""} to:
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {packages.map((pkg) => (
-                  <button
-                    key={pkg.id}
-                    onClick={() => assignSelected(pkg)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer",
-                      "hover:scale-[1.02] active:scale-95",
-                      getPackageColor(pkg.id, packages)
-                    )}
-                  >
-                    {pkg.name}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {renderPackagePicker("mt-3 pt-2 border-t border-border/50")}
       </>
     );
   }
@@ -349,24 +355,8 @@ export function FloorMappingRow({
             renderUnitChips(units)
           )}
 
-          {/* Floating toolbar when units selected */}
-          <AnimatePresence>
-            {selected.size > 0 && (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 20, opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="mt-4"
-              >
-                <button className={BTN_PRIMARY}>
-                  <span className="inline-flex items-center gap-2">
-                    Assign {selected.size} rooms to package <ArrowRight className="w-4 h-4" />
-                  </span>
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Floating package picker when units selected */}
+          {renderPackagePicker("mt-4 pt-3 border-t border-border/50")}
         </>
       )}
 

@@ -149,8 +149,8 @@ export function PackageForm({ name = "", prefill = {}, onSendMessage }: PackageF
 
   function handleDone() {
     setDone(true);
-    if (createdPackages.length > 1) {
-      onSendMessage?.(`Done adding packages — created ${createdPackages.length} packages total`);
+    if (createdPackages.length >= 1) {
+      onSendMessage?.(`Done adding packages — created ${createdPackages.length} package${createdPackages.length !== 1 ? "s" : ""} total`);
     }
   }
 

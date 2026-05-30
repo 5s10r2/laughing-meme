@@ -1,23 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { notFound } from "next/navigation";
 import {
   MassingModel,
   type MassingBlock,
   type MassingState,
-} from "../components/stages/structure/MassingModel";
+} from "../components/blueprint/MassingModel";
 
 const STATES: MassingState[] = ["idle", "generating", "updating", "settled", "error"];
 
 /**
- * Spike route — validate the SVG-in-React massing model live: the scaling
- * strategy (literal vs portrait) and the state machine (idle/generating/
- * updating/settled/error). Not part of the product.
+ * Dev-only harness — drive every massing state, the floor count, and per-floor
+ * deltas live. Not part of the shipped product (404s in production).
  */
 export default function MassingSpikePage() {
+  if (process.env.NODE_ENV === "production") notFound();
+
   const [floors, setFloors] = useState(8);
   const [state, setState] = useState<MassingState>("settled");
-  const [variant, setVariant] = useState<"portrait" | "literal">("portrait");
 
   const blocks: MassingBlock[] = [{ label: "Block A", floors, accentTop: true }];
   const rooms = floors * 14;
@@ -42,7 +43,6 @@ export default function MassingSpikePage() {
         </p>
       </header>
 
-      {/* State selector */}
       <div className="flex flex-wrap gap-2 justify-center">
         {STATES.map((s) => (
           <button
@@ -59,7 +59,6 @@ export default function MassingSpikePage() {
         ))}
       </div>
 
-      {/* Controls */}
       <div className="flex flex-wrap gap-4 items-center justify-center text-sm bg-bg-surface border border-border rounded-2xl p-4 max-w-lg">
         <label className="flex items-center gap-2">
           Floors
@@ -69,14 +68,6 @@ export default function MassingSpikePage() {
             className="w-36"
           />
           <span className="font-mono w-6 text-right">{floors}</span>
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={variant === "literal"}
-            onChange={(e) => setVariant(e.target.checked ? "literal" : "portrait")}
-          />
-          literal variant
         </label>
         <button
           onClick={() => { setState("settled"); requestAnimationFrame(() => setState("generating")); }}
@@ -98,10 +89,8 @@ export default function MassingSpikePage() {
         </button>
       </div>
 
-      {/* The component under test, in a phone-width frame */}
       <div className="w-[390px] max-w-full bg-bg-surface border border-border rounded-3xl p-4">
         <MassingModel
-          variant={variant}
           state={state}
           blocks={blocks}
           propertyName="Sunrise Residency"
@@ -112,7 +101,7 @@ export default function MassingSpikePage() {
       </div>
 
       <p className="text-xs font-mono text-content-tertiary">
-        current: <span className="text-accent-lighter">{state}</span> · {variant} · {floors}F
+        current: <span className="text-accent-lighter">{state}</span> · {floors}F
       </p>
     </div>
   );

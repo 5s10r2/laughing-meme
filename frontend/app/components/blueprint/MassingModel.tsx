@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 /**
@@ -10,15 +10,18 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
  * polygons (no canvas, no three.js — flat iso never needs a camera).
  *
  * Motion is governed by an explicit state machine (idle/generating/updating/
- * settled/error); see the state notes below. Per-floor motion is owned by
- * framer-motion: each floor is a keyed <motion.g> inside <AnimatePresence>.
- * Floors carry STABLE ground-relative ids, so adding a floor mounts only the
- * new one (it fades/rises in) while every existing floor SPRINGS to its new
- * stack position. Because springs preserve velocity, an edit that arrives
- * mid-animation retargets smoothly instead of restarting (Emil: "springs
- * maintain velocity when interrupted; CSS animations restart from zero").
+ * settled/error); each state owns its motion. Per-floor motion is framer-motion
+ * springs inside <AnimatePresence>: floors carry STABLE ground-relative ids, so
+ * adding a floor mounts only the new one (it rises/fades in) while every other
+ * floor SPRINGS to its new stack position. Springs preserve velocity, so an
+ * edit arriving mid-animation retargets smoothly. Exit-animation on floor
+ * removal holds within a stable build; entering `generating` remounts the set
+ * to replay the full staggered entrance.
  *
- * Renderer is procedural SVG by deliberate decision (see project memory).
+ * Props arrive loosely-typed from an LLM via emit_ui, so `blocks` is coerced
+ * defensively (finite, clamped floor counts) before any geometry runs.
+ *
+ * Renderer is procedural SVG by deliberate decision (see LIVING_BLUEPRINT.md).
  */
 
 export interface MassingBlock {
@@ -29,14 +32,11 @@ export interface MassingBlock {
 
 export type MassingState = "idle" | "generating" | "updating" | "settled" | "error";
 
-type Variant = "literal" | "portrait";
-
 interface MassingModelProps {
-  blocks?: MassingBlock[];
+  blocks?: unknown;
   propertyName?: string;
   meta?: string;
   stats?: { label: string; value: number | string }[];
-  variant?: Variant;
   state?: MassingState;
   onSendMessage?: (text: string) => void;
 }
@@ -46,18 +46,51 @@ const pt = (p: Pt) => `${p[0]},${p[1]}`;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 // Geometry constants
-const HW = 62;
-const HH = 30;
-const MAX_TH = 17;
-const LEGIBILITY_TH = 10;
-const TICK_MIN_TH = 13;
+const HW = 62; // half-width of the iso diamond
+const HH = 30; // half-height of the iso diamond
+const MAX_TH = 17; // fattest a floor gets (few floors)
+const LEGIBILITY_TH = 10; // thinnest before the canvas grows instead
+const MIN_TH = 6; // hard floor when even a grown canvas must be capped
+const TICK_MIN_TH = 13; // per-floor window ticks only when floors are this thick
 const BASE_Y = 30;
-const LITERAL_BUDGET = 136;
-const BOTTOM_PAD = 50;
+const STACK_BUDGET = 136; // baseline stack height (8 × 17)
+const BOTTOM_PAD = 50; // room for contact shadow + label
+const MAX_VIEWH = 560; // cap so a tall building never makes an absurd bubble
+const MAX_FLOORS = 40; // sane upper bound for a PG/hostel block
 
-/** One floor's faces, drawn around LOCAL origin (x=0, top=0). The <motion.g>
- *  wrapper translates it to its stack position, so position is animatable
- *  independent of shape. */
+/** Coerce loosely-typed LLM `blocks` into validated MassingBlock[]. */
+function coerceBlocks(raw: unknown): MassingBlock[] {
+  const arr = Array.isArray(raw) ? raw : [];
+  const blocks = arr.map((b, i): MassingBlock => {
+    const fallbackLabel = `Block ${String.fromCharCode(65 + i)}`;
+    if (b && typeof b === "object") {
+      const o = b as Record<string, unknown>;
+      const rawFloors = Number(o.floors ?? o.floor_count ?? o.count);
+      const floors = Number.isFinite(rawFloors)
+        ? clamp(Math.round(rawFloors), 1, MAX_FLOORS)
+        : 1;
+      const label =
+        typeof o.label === "string" && o.label.trim()
+          ? o.label
+          : typeof o.name === "string" && o.name.trim()
+            ? (o.name as string)
+            : fallbackLabel;
+      const accentTop = typeof o.accentTop === "boolean" ? o.accentTop : i === 0;
+      return { label, floors, accentTop };
+    }
+    return { label: fallbackLabel, floors: 1, accentTop: i === 0 };
+  });
+  return blocks.length ? blocks : [{ label: "Block A", floors: 1, accentTop: true }];
+}
+
+interface FloorDescriptor {
+  id: number; // stable, ground-relative (ground = 0)
+  top: number; // vertical offset of this floor's top
+  isTop: boolean;
+  accent: boolean;
+}
+
+/** One floor's faces, drawn around LOCAL origin (x=0, top=0). */
 function FloorFaces({
   th,
   accent,
@@ -116,30 +149,33 @@ function FloorFaces({
   );
 }
 
-const DEFAULT_BLOCKS: MassingBlock[] = [{ label: "Block A", floors: 8, accentTop: true }];
-
 const LIVE_LABEL: Record<MassingState, string> = {
   idle: "READY",
   generating: "BUILDING",
   updating: "UPDATING",
   settled: "READY",
-  error: "TAP TO RETRY",
+  error: "RETRY",
 };
 
 export function MassingModel({
-  blocks = DEFAULT_BLOCKS,
+  blocks: rawBlocks,
   propertyName = "Your property",
   meta,
   stats,
-  variant = "portrait",
   state = "settled",
   onSendMessage,
-}: MassingModelProps & Record<string, unknown>) {
+}: MassingModelProps) {
   const reduce = useReducedMotion();
 
+  const blocks = useMemo(() => coerceBlocks(rawBlocks), [rawBlocks]);
+  const primary = blocks[0];
+  const floors = primary.floors;
+  const accentTop = primary.accentTop ?? true;
+  const cx = 160;
+
   // Replaying the full staggered entrance is desired only when (re)entering
-  // `generating`. Bumping genEpoch remounts the floors so the entrance plays;
-  // during `updating` the epoch is stable so floors persist and only deltas move.
+  // `generating`; bumping genEpoch remounts the floors so the entrance plays.
+  // During `updating` the epoch is stable so floors persist and only deltas move.
   const [genEpoch, setGenEpoch] = useState(0);
   const prevState = useRef<MassingState>(state);
   useEffect(() => {
@@ -153,47 +189,52 @@ export function MassingModel({
   const isError = state === "error";
   const staggering = state === "generating" && !reduce;
 
-  const primary = blocks[0] ?? { label: "Block", floors: 1, accentTop: true };
-  const floors = primary.floors;
-  const accentTop = primary.accentTop ?? true;
-  const cx = 160;
+  // Geometry: portrait scaling — clamp thickness to a legibility floor, grow the
+  // canvas to fit, and cap total height so a tall building never overflows.
+  const { th, showTicks, viewH, descriptors, shadowCy, glowCy } = useMemo(() => {
+    let thickness = clamp(STACK_BUDGET / floors, LEGIBILITY_TH, MAX_TH);
+    let height = BASE_Y + (floors - 1) * thickness + 2 * HH + thickness + BOTTOM_PAD;
+    if (height > MAX_VIEWH) {
+      thickness = Math.max(MIN_TH, (MAX_VIEWH - BASE_Y - 2 * HH - BOTTOM_PAD) / floors);
+      height = BASE_Y + (floors - 1) * thickness + 2 * HH + thickness + BOTTOM_PAD;
+    }
+    const ticks = thickness >= TICK_MIN_TH;
+    const desc: FloorDescriptor[] = [];
+    for (let k = floors - 1; k >= 0; k--) {
+      desc.push({
+        id: floors - 1 - k, // ground-relative, stable across edits
+        top: BASE_Y + k * thickness,
+        isTop: k === 0,
+        accent: k === 0 && accentTop,
+      });
+    }
+    const stackBottomY = BASE_Y + (floors - 1) * thickness + 2 * HH + thickness;
+    return {
+      th: thickness,
+      showTicks: ticks,
+      viewH: Math.round(height),
+      descriptors: desc,
+      shadowCy: Math.min(height - 14, stackBottomY + 6),
+      glowCy: BASE_Y + ((floors - 1) * thickness) / 2 + HH,
+    };
+  }, [floors, accentTop]);
 
-  let th: number;
-  let showTicks: boolean;
-  let viewH: number;
-  if (variant === "literal") {
-    th = LITERAL_BUDGET / floors;
-    showTicks = true;
-    viewH = 320;
-  } else {
-    th = clamp(LITERAL_BUDGET / floors, LEGIBILITY_TH, MAX_TH);
-    showTicks = th >= TICK_MIN_TH;
-    viewH = Math.max(320, BASE_Y + (floors - 1) * th + 2 * HH + th + BOTTOM_PAD);
-  }
-  // Floor descriptors with STABLE ground-relative ids (ground = 0).
-  // k is the on-screen index (0 = top). top = vertical offset for that floor.
-  const descriptors = [];
-  for (let k = floors - 1; k >= 0; k--) {
-    const id = floors - 1 - k; // ground-relative, stable across edits
-    const top = BASE_Y + k * th;
-    const isTop = k === 0;
-    descriptors.push({ id, top, isTop, accent: isTop && accentTop });
-  }
+  // Stagger spans a fixed window regardless of floor count, so the top floors of
+  // a tall building still enter in sequence (no flat simultaneous batch).
+  const staggerStep = floors > 1 ? Math.min(0.04, 0.45 / (floors - 1)) : 0;
 
-  const stackBottomY = BASE_Y + (floors - 1) * th + 2 * HH + th;
-  const shadowCy = Math.min(viewH - 14, stackBottomY + 6);
-  const glowCy = BASE_Y + ((floors - 1) * th) / 2 + HH;
-
-  const derivedStats =
-    stats ??
-    [
-      { label: "Blocks", value: blocks.length },
-      { label: "Floors", value: blocks.reduce((s, b) => s + b.floors, 0) },
-    ];
+  const derivedStats = useMemo(
+    () =>
+      stats ?? [
+        { label: "Blocks", value: blocks.length },
+        { label: "Floors", value: blocks.reduce((s, b) => s + b.floors, 0) },
+      ],
+    [stats, blocks]
+  );
 
   const springY = reduce
-    ? { duration: 0 }
-    : { type: "spring" as const, duration: 0.45, bounce: 0.12 };
+    ? ({ duration: 0 } as const)
+    : ({ type: "spring", duration: 0.45, bounce: 0.12 } as const);
 
   return (
     <div
@@ -209,15 +250,21 @@ export function MassingModel({
           <div className="lp-ti">{propertyName}</div>
           {meta && <div className="lp-meta">{meta}</div>}
         </div>
-        <div
-          className={`lp-live${isError ? " is-error" : ""}`}
-          role={isError ? "button" : undefined}
-          tabIndex={isError ? 0 : undefined}
-          onClick={isError ? () => onSendMessage?.("Try drawing my property again") : undefined}
-        >
-          <i />
-          {LIVE_LABEL[state]}
-        </div>
+        {isError ? (
+          <button
+            type="button"
+            className="lp-live is-error"
+            onClick={() => onSendMessage?.("Try drawing my property again")}
+          >
+            <i />
+            {LIVE_LABEL.error}
+          </button>
+        ) : (
+          <div className="lp-live">
+            <i />
+            {LIVE_LABEL[state]}
+          </div>
+        )}
       </div>
 
       {state === "idle" ? (
@@ -226,10 +273,10 @@ export function MassingModel({
         <>
           <svg
             className="lp-massing"
-            viewBox={`0 0 320 ${Math.round(viewH)}`}
+            viewBox={`0 0 320 ${viewH}`}
             fill="none"
             role="img"
-            aria-label={`Isometric model of ${propertyName}: ${primary.label} ${floors} floors`}
+            aria-label={`Isometric model of ${propertyName}: ${primary.label}, ${floors} floor${floors !== 1 ? "s" : ""}`}
           >
             <defs>
               <linearGradient id="lpTop" x1="0" y1="0" x2="0" y2="1">
@@ -260,22 +307,21 @@ export function MassingModel({
             <ellipse className="lp-glow" cx={cx} cy={glowCy} rx="95" ry="70" fill="url(#lpGl)" />
             <ellipse cx={cx} cy={shadowCy} rx="74" ry="17" fill="#000" opacity="0.3" filter="url(#lpSoft)" />
 
-            {/* cx is constant for a single block, so translate once statically and
-                let each floor animate only its vertical position + opacity. */}
+            {/* cx is constant for a single block: translate once, animate only y + opacity */}
             <g transform={`translate(${cx} 0)`}>
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 {descriptors.map((f) => (
                   <motion.g
                     key={`${genEpoch}-${f.id}`}
                     data-fid={f.id}
                     initial={reduce ? false : { opacity: 0, y: f.top + 10 }}
                     animate={{ opacity: 1, y: f.top }}
-                    exit={{ opacity: 0, transition: { duration: 0.22 } }}
+                    exit={{ opacity: 0, transition: { duration: 0.18 } }}
                     transition={{
                       y: springY,
                       opacity: {
                         duration: reduce ? 0 : 0.3,
-                        delay: staggering ? Math.min(f.id * 0.035, 0.5) : 0,
+                        delay: staggering ? f.id * staggerStep : 0,
                       },
                     }}
                   >

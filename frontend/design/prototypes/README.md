@@ -15,4 +15,4 @@ Open any file directly in a browser, or serve the folder:
 
 Implementation status and the design contract in prose: see
 [`../../LIVING_BLUEPRINT.md`](../../LIVING_BLUEPRINT.md).
-The shipped component lives at `app/components/stages/structure/MassingModel.tsx`.
+The shipped component lives at `app/components/blueprint/MassingModel.tsx`.

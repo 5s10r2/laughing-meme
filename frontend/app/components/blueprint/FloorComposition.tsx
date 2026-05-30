@@ -6,11 +6,14 @@ import { cn } from "../../lib/cn";
  * FloorComposition — the keystone primitive of the Living Blueprint working view.
  *
  * A proportional, colour-segmented bar over a floor's units, an optional legend,
- * and optional capped room cells ("+N" overflow). It is DIMENSION-AGNOSTIC: it
- * just takes coloured segments, so the same component re-skins by stage — the
- * caller passes segments coloured by room type (structure stage) or by package
- * (mapping stage). Consumed by FloorLedger, the floor drill-down, and the
- * mapping components.
+ * and optional capped room cells ("+N" overflow). DIMENSION-AGNOSTIC: it takes
+ * coloured segments, so the same component re-skins by stage — segments coloured
+ * by room type (structure) or by package (mapping). Consumed by FloorLedger, the
+ * floor drill-down, and the mapping components.
+ *
+ * Accessibility: the bar carries a text summary via aria-label (colour is never
+ * the sole channel); the legend is the visible text source of truth; the cells
+ * are decorative and hidden from assistive tech.
  */
 
 export interface CompositionSegment {
@@ -43,6 +46,8 @@ export function FloorComposition({
   const total = nonEmpty.reduce((sum, s) => sum + s.count, 0);
   if (total === 0) return null;
 
+  const summary = nonEmpty.map((s) => `${s.count} ${s.label}`).join(", ");
+
   // flatten to a per-room colour list for the cells
   const flat: string[] = [];
   for (const s of nonEmpty) for (let i = 0; i < s.count; i++) flat.push(s.color);
@@ -51,18 +56,17 @@ export function FloorComposition({
 
   return (
     <div className={className}>
-      {/* proportional bar */}
-      <div className="flex h-1.5 rounded-full overflow-hidden">
+      {/* proportional bar — colour + an accessible text summary */}
+      <div className="flex h-1.5 rounded-full overflow-hidden" role="img" aria-label={summary}>
         {nonEmpty.map((s) => (
           <div
             key={s.key}
             style={{ width: `${(s.count / total) * 100}%`, background: s.color }}
-            title={`${s.count} ${s.label}`}
           />
         ))}
       </div>
 
-      {/* legend */}
+      {/* legend — the visible text source of truth */}
       {showLegend && (
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
           {nonEmpty.map((s) => (
@@ -70,19 +74,19 @@ export function FloorComposition({
               key={s.key}
               className="inline-flex items-center gap-1.5 text-[11px] text-content-secondary"
             >
-              <span className="w-2 h-2 rounded-[3px]" style={{ background: s.color }} />
+              <span className="w-2 h-2 rounded-[3px]" style={{ background: s.color }} aria-hidden="true" />
               {s.count} {s.label}
             </span>
           ))}
         </div>
       )}
 
-      {/* room cells */}
+      {/* room cells — decorative; the bar/legend already convey the mix */}
       {showCells && (
-        <div className="flex flex-wrap gap-1.5 mt-2.5">
+        <div className="flex flex-wrap gap-1.5 mt-2.5" aria-hidden="true">
           {shown.map((color, i) => (
             <span
-              key={i}
+              key={`${color}-${i}`}
               className="w-7 h-7 rounded-lg"
               style={{ background: color }}
             />
@@ -102,11 +106,3 @@ export function FloorComposition({
     </div>
   );
 }
-
-/** Canonical room-type → colour map (consumes the .lp-theme categorical tokens). */
-export const TYPE_COLORS: Record<string, string> = {
-  single: "var(--t-single)",
-  double: "var(--t-double)",
-  deluxe: "var(--t-deluxe)",
-  triple: "var(--t-triple)",
-};

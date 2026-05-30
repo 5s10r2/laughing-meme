@@ -362,6 +362,19 @@ body {
 .lp-studio .lp-live.is-error {
   color: #FBBF24; /* warning amber, not error red */
   cursor: pointer;
+  /* button reset (the error chip is a real <button> for keyboard operability) */
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.lp-studio .lp-live.is-error:focus-visible {
+  outline: 2px solid #FBBF24;
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 .lp-studio .lp-live.is-error i {
   background: #FBBF24;

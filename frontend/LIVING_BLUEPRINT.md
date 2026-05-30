@@ -1,8 +1,15 @@
 # Living Blueprint — Component System & Heterogeneity Model
 
 The generative-UI component system for the Tarini "Living Blueprint" redesign.
-This document is the design contract; the code under `app/components/stages/` is
-the implementation.
+This document is the design contract. New Living Blueprint components live under
+`app/components/blueprint/` (e.g. `MassingModel.tsx`, `FloorComposition.tsx`,
+`tokens.ts`); the legacy dark-theme components remain under `app/components/stages/`
+until they are redesigned onto the Living Blueprint primitives.
+
+**Built so far:** the `.lp-theme` token layer, `MassingModel`, and the
+`FloorComposition` keystone primitive. Everything else below is specced, not yet
+implemented. The `/blueprint` storybook (dev-only) is where new components are
+validated before the live chat shell is flipped to warm paper.
 
 ## Objective
 
@@ -53,7 +60,10 @@ motion:
 Per-floor motion is framer-motion `AnimatePresence` + springs. Floors carry
 **stable ground-relative ids**, so adding a floor mounts only the new one while
 the rest spring to their new positions — velocity-preserving and interruptible.
-`prefers-reduced-motion` collapses all movement.
+A removed floor exit-animates **within a stable build**; re-entering `generating`
+remounts the set (via an epoch bump) to replay the full staggered entrance.
+`prefers-reduced-motion` collapses all movement. Inputs are coerced defensively
+(finite, clamped floor counts) since props arrive loosely-typed from the LLM.
 
 ## Heterogeneity is a data fact, not a UI special case
 

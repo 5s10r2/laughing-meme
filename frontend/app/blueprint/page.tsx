@@ -1,6 +1,8 @@
 "use client";
 
-import { FloorComposition, TYPE_COLORS, type CompositionSegment } from "../components/blueprint/FloorComposition";
+import { notFound } from "next/navigation";
+import { FloorComposition, type CompositionSegment } from "../components/blueprint/FloorComposition";
+import { TYPE_COLORS } from "../components/blueprint/tokens";
 import { CARD } from "../components/ui/primitives";
 
 /**
@@ -58,6 +60,9 @@ function FloorRow({
 }
 
 export default function BlueprintStorybookPage() {
+  // dev-only surface — not part of the shipped product
+  if (process.env.NODE_ENV === "production") notFound();
+
   return (
     <div className="lp-theme min-h-screen px-6 py-10 flex flex-col items-center gap-7">
       <header className="text-center max-w-xl">

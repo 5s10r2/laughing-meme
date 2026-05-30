@@ -4,6 +4,7 @@ import { MassingModel } from "../components/blueprint/MassingModel";
 import { FloorComposition, type CompositionSegment } from "../components/blueprint/FloorComposition";
 import { FloorLedger, type LedgerFloor, type FloorUnit } from "../components/blueprint/FloorLedger";
 import { MappingRow, type MappingUnit, type MappingPackage } from "../components/blueprint/MappingRow";
+import { UnmappedWarning, type UnmappedFloor } from "../components/blueprint/UnmappedWarning";
 import { TYPE_COLORS } from "../components/blueprint/tokens";
 import { CARD } from "../components/ui/primitives";
 
@@ -75,6 +76,12 @@ const MAP_UNITS: MappingUnit[] = [
   { id: "206", name: "206", category: "double", packageId: "nonac-double" },
   { id: "207", name: "207", category: "double" },
   { id: "208", name: "208", category: "double" },
+];
+
+// property-level unmapped roll-up sample
+const UNMAPPED_FLOORS: UnmappedFloor[] = [
+  { floorLabel: "Floor 2", units: [{ id: "204", name: "204" }, { id: "207", name: "207" }, { id: "208", name: "208" }] },
+  { floorLabel: "Ground", units: [{ id: "013", name: "013" }, { id: "014", name: "014" }] },
 ];
 
 function Specimen({ caption, children }: { caption: string; children: React.ReactNode }) {
@@ -217,6 +224,16 @@ export default function BlueprintStorybookPage() {
             floorLabel="Floor 2"
             units={MAP_UNITS}
             packages={MAP_PACKAGES}
+            onSendMessage={(t) => alert(`would send: ${t}`)}
+          />
+        </div>
+
+        <div>
+          <p className="text-[11px] font-mono uppercase tracking-wider text-content-tertiary mb-3">
+            Unmapped warning (§5.4 / §8) — property-level safety net; self-hides when all assigned
+          </p>
+          <UnmappedWarning
+            floors={UNMAPPED_FLOORS}
             onSendMessage={(t) => alert(`would send: ${t}`)}
           />
         </div>

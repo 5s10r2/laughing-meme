@@ -29,8 +29,8 @@ from pydantic import BaseModel, Field
 
 load_dotenv(override=True)
 
+from tarini.agent import opening_prompt
 from tarini.db import client as db
-from tarini.prompts import INITIAL_PROMPT
 from tarini.session_manager import session_manager
 
 logging.basicConfig(level=logging.INFO)
@@ -214,7 +214,7 @@ async def chat(session_id: str, body: ChatRequest, _: None = Depends(require_aut
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    user_message = INITIAL_PROMPT if body.initial else _sanitize(body.message or "")
+    user_message = opening_prompt() if body.initial else _sanitize(body.message or "")
     if not user_message:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 

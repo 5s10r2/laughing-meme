@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { ArrowRight } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
 import { cn } from "../../../lib/cn";
 import { humanizeCategory, getPackageColor } from "../../../lib/property-utils";
 import { BottomSheet } from "../../ui/BottomSheet";
@@ -35,71 +34,74 @@ interface FloorMappingRowProps {
 
 const COLLAPSE_THRESHOLD = 20;
 
+function normalizeUnits(rawUnits: UnitChip[]): UnitChip[] {
+  if (!Array.isArray(rawUnits)) return [];
+  return (rawUnits as unknown[]).map((raw: unknown, i: number) => {
+    if (typeof raw === "string") return { id: String(i), name: raw };
+    const u = raw as Record<string, unknown>;
+    return {
+      id: (u.id || String(i)) as string,
+      name: (u.name || u.unit || String(u)) as string,
+      category: (u.category || u.type || u.unit_type) as string | undefined,
+      sharingType: (u.sharingType || u.sharing_type) as string | undefined,
+      packageId: (u.packageId || u.package_id) as string | undefined,
+      packageName: (u.packageName || u.package_name) as string | undefined,
+    };
+  });
+}
+
+function normalizePackages(rawPackages: PackageOption[]): PackageOption[] {
+  if (!Array.isArray(rawPackages)) return [];
+  return (rawPackages as unknown[]).map((raw: unknown, i: number) => {
+    if (typeof raw === "string") return { id: String(i), name: raw };
+    const p = raw as Record<string, unknown>;
+    return {
+      id: (p.id || String(i)) as string,
+      name: (p.name || p.package || String(p)) as string,
+      color: p.color as string | undefined,
+    };
+  });
+}
+
 export function FloorMappingRow({
-  floorLabel: rawFloorLabel,
+  floorLabel,
   floorIndex,
   units: rawUnits,
   packages: rawPackages,
   onSendMessage,
-  ...rest
-}: FloorMappingRowProps & Record<string, unknown>) {
+}: FloorMappingRowProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [expanded, setExpanded] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Defensive: handle missing/malformed props from Claude
-  const floorLabel = rawFloorLabel || (rest.floor_label as string) || (rest.floor as string) || `Floor ${floorIndex ?? 0}`;
+  const label = floorLabel || `Floor ${floorIndex ?? 0}`;
 
-  const units: UnitChip[] = Array.isArray(rawUnits)
-    ? (rawUnits as unknown[]).map((raw: unknown, i: number) => {
-        if (typeof raw === "string") return { id: String(i), name: raw };
-        const u = raw as Record<string, unknown>;
-        return {
-          id: (u.id || String(i)) as string,
-          name: (u.name || u.unit || String(u)) as string,
-          category: (u.category || u.type || u.unit_type) as string | undefined,
-          sharingType: (u.sharingType || u.sharing_type) as string | undefined,
-          packageId: (u.packageId || u.package_id) as string | undefined,
-          packageName: (u.packageName || u.package_name) as string | undefined,
-        };
-      })
-    : [];
-
-  const packages: PackageOption[] = Array.isArray(rawPackages)
-    ? (rawPackages as unknown[]).map((raw: unknown, i: number) => {
-        if (typeof raw === "string") return { id: String(i), name: raw };
-        const p = raw as Record<string, unknown>;
-        return {
-          id: (p.id || String(i)) as string,
-          name: (p.name || p.package || String(p)) as string,
-          color: p.color as string | undefined,
-        };
-      })
-    : [];
+  const units = useMemo(() => normalizeUnits(rawUnits), [rawUnits]);
+  const packages = useMemo(() => normalizePackages(rawPackages), [rawPackages]);
 
   const mappedCount = units.filter((u) => u.packageId).length;
   const totalCount = units.length;
   const hasUnmapped = mappedCount < totalCount;
 
   // Group units by category
-  const hasCategories = units.some((u) => u.category);
-  const categoryGroups: { category: string; label: string; units: UnitChip[] }[] = [];
-
-  if (hasCategories) {
+  const categoryGroups = useMemo(() => {
     const groupMap = new Map<string, UnitChip[]>();
     for (const u of units) {
       const cat = u.category || "other";
       if (!groupMap.has(cat)) groupMap.set(cat, []);
       groupMap.get(cat)!.push(u);
     }
+    const groups: { category: string; label: string; units: UnitChip[] }[] = [];
     for (const [cat, catUnits] of groupMap) {
-      categoryGroups.push({
+      groups.push({
         category: cat,
         label: humanizeCategory(cat),
         units: catUnits,
       });
     }
-  }
+    return groups;
+  }, [units]);
+
+  const hasCategories = units.some((u) => u.category);
 
   const shouldCollapse = totalCount > COLLAPSE_THRESHOLD;
 
@@ -134,7 +136,7 @@ export function FloorMappingRow({
     const selectedUnits = units.filter((u) => selected.has(u.id));
     if (selectedUnits.length === 0) return;
     const names = selectedUnits.map((u) => u.name).join(", ");
-    onSendMessage?.(`Assign ${names} on ${floorLabel} to ${pkg.name}`);
+    onSendMessage?.(`Assign ${names} on ${label} to ${pkg.name}`);
     clearSelection();
   }
 
@@ -162,6 +164,42 @@ export function FloorMappingRow({
           );
         })}
       </div>
+    );
+  }
+
+  // Shared package picker shown when units are selected (inline + BottomSheet).
+  function renderPackagePicker(className: string) {
+    return (
+      <AnimatePresence>
+        {selected.size > 0 && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className={className}
+          >
+            <p className="text-[11px] text-content-tertiary mb-1.5">
+              Assign {selected.size} room{selected.size !== 1 ? "s" : ""} to:
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {packages.map((pkg) => (
+                <button
+                  key={pkg.id}
+                  onClick={() => assignSelected(pkg)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer",
+                    "hover:scale-[1.02] active:scale-95",
+                    getPackageColor(pkg.id, packages)
+                  )}
+                >
+                  {pkg.name}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     );
   }
 
@@ -221,36 +259,7 @@ export function FloorMappingRow({
         )}
 
         {/* Bottom toolbar when units selected */}
-        <AnimatePresence>
-          {selected.size > 0 && (
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 20, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="mt-3 pt-2 border-t border-border/50"
-            >
-              <p className="text-[11px] text-content-tertiary mb-1.5">
-                Assign {selected.size} room{selected.size !== 1 ? "s" : ""} to:
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {packages.map((pkg) => (
-                  <button
-                    key={pkg.id}
-                    onClick={() => assignSelected(pkg)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer",
-                      "hover:scale-[1.02] active:scale-95",
-                      getPackageColor(pkg.id, packages)
-                    )}
-                  >
-                    {pkg.name}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {renderPackagePicker("mt-3 pt-2 border-t border-border/50")}
       </>
     );
   }
@@ -259,7 +268,7 @@ export function FloorMappingRow({
     <div className={CARD}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-sm text-content font-semibold">{floorLabel}</p>
+          <p className="text-sm text-content font-semibold">{label}</p>
           <p className="text-[11px] text-content-tertiary mt-0.5">
             {selected.size}/{totalCount} selected
           </p>
@@ -280,7 +289,7 @@ export function FloorMappingRow({
       )}
 
       {/* ── Collapsed summary for 20+ units ── */}
-      {shouldCollapse && !expanded && (
+      {shouldCollapse && (
         <div className="mb-4">
           <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-bg-elevated text-xs text-content-secondary">
             <span>
@@ -346,24 +355,8 @@ export function FloorMappingRow({
             renderUnitChips(units)
           )}
 
-          {/* Floating toolbar when units selected */}
-          <AnimatePresence>
-            {selected.size > 0 && (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 20, opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="mt-4"
-              >
-                <button className={BTN_PRIMARY}>
-                  <span className="inline-flex items-center gap-2">
-                    Assign {selected.size} rooms to package <ArrowRight className="w-4 h-4" />
-                  </span>
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Floating package picker when units selected */}
+          {renderPackagePicker("mt-4 pt-3 border-t border-border/50")}
         </>
       )}
 
@@ -371,7 +364,7 @@ export function FloorMappingRow({
       <BottomSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title={`${floorLabel} -- All Rooms`}
+        title={`${label} -- All Rooms`}
       >
         {renderFullGrid()}
       </BottomSheet>

@@ -93,24 +93,21 @@ function ToggleRow({
   );
 }
 
-export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage, ...rest }: PackageFormProps & Record<string, unknown>) {
-  // Defensive: handle missing/malformed props from Claude
-  const name = rawName || (rest.package_name as string) || (rest.packageName as string) || "";
-  const prefill = rawPrefill || (rest.defaults as typeof rawPrefill) || {};
+export function PackageForm({ name = "", prefill = {}, onSendMessage }: PackageFormProps) {
 
-  const [packageName, setPackageName] = useState(name || "");
+  const [packageName, setPackageName] = useState(name);
   const [sharingType, setSharingType] = useState<string>(
-    prefill?.sharingType || (rest.sharing_type as string) || (rest.sharingType as string) || "private"
+    prefill.sharingType || "private"
   );
-  const [ac, setAc] = useState(prefill?.ac ?? (rest.ac as boolean) ?? false);
-  const [food, setFood] = useState<"included" | "optional" | "none">(prefill?.food ?? (rest.food as "included" | "optional" | "none") ?? "none");
+  const [ac, setAc] = useState(prefill.ac ?? false);
+  const [food, setFood] = useState<"included" | "optional" | "none">(prefill.food ?? "none");
   const [furnishing, setFurnishing] = useState<"fully_furnished" | "semi_furnished" | "unfurnished">(
-    prefill?.furnishing ?? (rest.furnishing as "fully_furnished" | "semi_furnished" | "unfurnished") ?? "semi_furnished"
+    prefill.furnishing ?? "semi_furnished"
   );
-  const [rent, setRent] = useState(prefill?.rent?.toString() || (rest.rent as number)?.toString() || (rest.starting_rent as number)?.toString() || "");
-  const [deposit, setDeposit] = useState(prefill?.securityDeposit?.toString() || (rest.security_deposit as number)?.toString() || "");
-  const [lockIn, setLockIn] = useState(prefill?.lockInMonths?.toString() || (rest.lock_in_period as number)?.toString() || "");
-  const [notice, setNotice] = useState(prefill?.noticeDays?.toString() || (rest.notice_period as number)?.toString() || "");
+  const [rent, setRent] = useState(prefill.rent?.toString() || "");
+  const [deposit, setDeposit] = useState(prefill.securityDeposit?.toString() || "");
+  const [lockIn, setLockIn] = useState(prefill.lockInMonths?.toString() || "");
+  const [notice, setNotice] = useState(prefill.noticeDays?.toString() || "");
 
   // Progressive disclosure: step 1 = identity, step 2 = attributes
   const [step, setStep] = useState<1 | 2>(1);
@@ -152,8 +149,8 @@ export function PackageForm({ name: rawName, prefill: rawPrefill, onSendMessage,
 
   function handleDone() {
     setDone(true);
-    if (createdPackages.length > 1) {
-      onSendMessage?.(`Done adding packages — created ${createdPackages.length} packages total`);
+    if (createdPackages.length >= 1) {
+      onSendMessage?.(`Done adding packages — created ${createdPackages.length} package${createdPackages.length !== 1 ? "s" : ""} total`);
     }
   }
 

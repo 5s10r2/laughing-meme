@@ -38,6 +38,9 @@ class SessionManager:
         self._last_used: dict[str, float] = {}
         # Background eviction task
         self._eviction_task: asyncio.Task | None = None
+        # In-flight persistence tasks — tracked so they survive request cancellation
+        # and are awaited on shutdown before the DB client closes.
+        self._pending_persists: set[asyncio.Task] = set()
 
     # ------------------------------------------------------------------
     # Public API
@@ -76,23 +79,23 @@ class SessionManager:
         history = self._histories[session_id]
         self._last_used[session_id] = time.monotonic()
 
-        async for event in stream_chat(session_id, user_message, history):
-            # Persist BEFORE yielding "done" — the SSE generator cancels our
-            # task immediately after receiving "done", so post-yield code
-            # would never execute.
-            if event.get("type") == "done":
-                self._last_used[session_id] = time.monotonic()
-                try:
-                    await db.save_messages(session_id, history)
-                    logger.info(
-                        "Persisted %d messages for session %s",
-                        len(history), session_id,
-                    )
-                except Exception:
-                    logger.exception(
-                        "Failed to persist messages for session %s", session_id,
-                    )
-            yield event
+        try:
+            async for event in stream_chat(session_id, user_message, history):
+                if event.get("type") in ("done", "error"):
+                    self._last_used[session_id] = time.monotonic()
+                yield event
+        finally:
+            # Persist regardless of normal completion or mid-stream client disconnect.
+            # When the client disconnects, this generator's task is cancelled and a
+            # CancelledError propagates through here — so we CANNOT `await` the write
+            # directly (the await would re-raise the CancelledError and abandon it).
+            # Instead spawn an independent, tracked task: it survives this task's
+            # cancellation and is awaited in cleanup() before the DB client closes.
+            persist_task = asyncio.ensure_future(
+                self._persist_history(session_id, list(history))
+            )
+            self._pending_persists.add(persist_task)
+            persist_task.add_done_callback(self._pending_persists.discard)
 
     def remove_session(self, session_id: str) -> None:
         """Remove all state for a session."""
@@ -100,6 +103,18 @@ class SessionManager:
         self._query_locks.pop(session_id, None)
         self._last_used.pop(session_id, None)
         logger.info("Removed session %s", session_id)
+
+    async def _persist_history(self, session_id: str, history: list[dict]) -> None:
+        try:
+            await db.save_messages(session_id, history)
+            logger.info(
+                "Persisted %d messages for session %s",
+                len(history), session_id,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to persist messages for session %s", session_id,
+            )
 
     async def cleanup(self) -> None:
         """Cancel eviction task and clear all sessions — called on shutdown."""
@@ -110,6 +125,11 @@ class SessionManager:
             except asyncio.CancelledError:
                 pass
             self._eviction_task = None
+
+        # Wait for any in-flight persistence to finish before the DB client closes,
+        # so a turn captured at disconnect time is never lost during shutdown.
+        if self._pending_persists:
+            await asyncio.gather(*self._pending_persists, return_exceptions=True)
 
         self._histories.clear()
         self._query_locks.clear()

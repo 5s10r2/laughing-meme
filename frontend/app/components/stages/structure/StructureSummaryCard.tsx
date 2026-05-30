@@ -97,11 +97,9 @@ function groupConsecutiveFloors(
 
 export function StructureSummaryCard({
   propertyName,
-  totalFloors: rawTotalFloors,
   totalUnits: rawTotalUnits,
   floors: rawFloors,
   onSendMessage,
-  ...rest
 }: StructureSummaryCardProps & Record<string, unknown>) {
   const [expanded, setExpanded] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -138,7 +136,6 @@ export function StructureSummaryCard({
       })
     : [];
 
-  const totalFloors = rawTotalFloors || floors.length || 0;
   const totalUnits = rawTotalUnits || floors.reduce((sum, f) => sum + (f.unitCount || 0), 0) || 0;
 
   // Group consecutive identical floors for compact display

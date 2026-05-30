@@ -33,7 +33,6 @@ const REVIEW_THRESHOLD = 3;
 export function MappingSuggestionCard({
   suggestions: rawSuggestions,
   onSendMessage,
-  ...rest
 }: MappingSuggestionCardProps & Record<string, unknown>) {
   // Defensive: handle missing/malformed suggestions from Claude
   const suggestions: MappingSuggestion[] = Array.isArray(rawSuggestions)
@@ -86,7 +85,6 @@ export function MappingSuggestionCard({
     return (
       <FlatSuggestionView
         suggestions={suggestions}
-        totalRooms={totalRooms}
         getAssignments={getAssignments}
         onSendMessage={onSendMessage}
       />
@@ -110,12 +108,10 @@ export function MappingSuggestionCard({
 
 function FlatSuggestionView({
   suggestions,
-  totalRooms,
   getAssignments,
   onSendMessage,
 }: {
   suggestions: MappingSuggestion[];
-  totalRooms: number;
   getAssignments: (s: MappingSuggestion) => FloorAssignment[];
   onSendMessage?: (text: string) => void;
 }) {
@@ -189,15 +185,24 @@ function FloorByFloorReview({
   const total = suggestions.length;
   const allReviewed = Object.keys(decisions).length === total;
   const acceptedCount = Object.values(decisions).filter((d) => d === "accepted").length;
+  const modifiedCount = Object.values(decisions).filter((d) => d === "modified").length;
   const current = suggestions[selectedIdx];
   const currentDecision = decisions[selectedIdx];
 
+  // Rooms in the floors actually being applied (accepted only) — modified floors
+  // are handled by a separate agent round-trip, so they are intentionally excluded.
+  const acceptedRooms = suggestions
+    .filter((_, i) => decisions[i] === "accepted")
+    .reduce((sum, s) => sum + getAssignments(s).reduce((a, b) => a + (b.unitCount || 0), 0), 0);
+
   function acceptFloor() {
-    setDecisions((prev) => ({ ...prev, [selectedIdx]: "accepted" }));
-    // Auto-advance to next unreviewed
+    // Compute next decisions synchronously so the advance loop sees the updated
+    // state — setDecisions is async and the closure would see the stale value.
+    const next = { ...decisions, [selectedIdx]: "accepted" as const };
+    setDecisions(next);
     for (let i = 1; i <= total; i++) {
       const nextIdx = (selectedIdx + i) % total;
-      if (!decisions[nextIdx]) {
+      if (!next[nextIdx]) {
         setSelectedIdx(nextIdx);
         return;
       }
@@ -307,16 +312,20 @@ function FloorByFloorReview({
         <div className="pt-4 border-t border-border">
           <p className="text-xs text-content-secondary mb-3">
             {acceptedCount} of {total} floors accepted
+            {modifiedCount > 0 && ` · ${modifiedCount} being updated separately`}
           </p>
-          <button
-            onClick={handleFinalSubmit}
-            className={BTN_PRIMARY}
-          >
-            <span className="inline-flex items-center gap-2">
-              Apply mapping for {totalRooms} room{totalRooms !== 1 ? "s" : ""}
-              <ArrowRight className="w-4 h-4" />
-            </span>
-          </button>
+          {acceptedCount > 0 ? (
+            <button onClick={handleFinalSubmit} className={BTN_PRIMARY}>
+              <span className="inline-flex items-center gap-2">
+                Apply mapping for {acceptedRooms} room{acceptedRooms !== 1 ? "s" : ""}
+                <ArrowRight className="w-4 h-4" />
+              </span>
+            </button>
+          ) : (
+            <p className="text-xs text-content-tertiary">
+              Waiting for updated suggestions on the floors you asked to change…
+            </p>
+          )}
         </div>
       )}
 

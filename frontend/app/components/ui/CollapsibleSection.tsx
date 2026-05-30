@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "../../lib/cn";
-import { CARD } from "./primitives";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface CollapsibleSectionProps {

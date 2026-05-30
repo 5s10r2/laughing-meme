@@ -2,7 +2,7 @@
 
 import { Check, Snowflake, Fan } from "lucide-react";
 import { cn } from "../../../lib/cn";
-import { ICON_SM, AttrChip } from "../../ui/primitives";
+import { ICON_SM } from "../../ui/primitives";
 
 interface PackageReceiptProps {
   name: string;
@@ -15,13 +15,18 @@ interface PackageReceiptProps {
   notice_period?: number;
 }
 
-export function PackageReceipt({ name: rawName, rent: rawRent, ac, food, furnishing, ...rest }: PackageReceiptProps & Record<string, unknown>) {
-  // Defensive: handle missing/malformed props from Claude
-  const name = rawName || (rest.package_name as string) || (rest.packageName as string) || "Package";
-  const rent = rawRent || (rest.starting_rent as number) || (rest.price as number) || 0;
-  const deposit = (rest.security_deposit ?? rest.deposit) as number | undefined;
-  const lockIn = (rest.lock_in_period ?? rest.lockIn) as number | undefined;
-  const notice = (rest.notice_period ?? rest.notice) as number | undefined;
+export function PackageReceipt({
+  name: rawName,
+  rent: rawRent,
+  ac,
+  food,
+  furnishing,
+  security_deposit: deposit,
+  lock_in_period: lockIn,
+  notice_period: notice,
+}: PackageReceiptProps) {
+  const name = rawName || "Package";
+  const rent = rawRent || 0;
   const terms = [
     deposit ? `₹${Number(deposit).toLocaleString("en-IN")} deposit` : null,
     lockIn ? `${lockIn}mo lock-in` : null,

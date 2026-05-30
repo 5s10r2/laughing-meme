@@ -2,9 +2,7 @@
 
 import { ArrowRight, Check } from "lucide-react";
 import { cn } from "../../lib/cn";
-import {
-  CARD, CARD_DIVIDER, ICON_SM, BTN_PRIMARY,
-} from "./primitives";
+import { ICON_SM } from "./primitives";
 
 const STAGE_LABELS: Record<string, string> = {
   intro: "Introduction",
@@ -32,7 +30,6 @@ export function StageTransitionCard({
   completedStage,
   nextStage,
   summary,
-  onSendMessage,
 }: StageTransitionCardProps) {
   return (
     <div className="bg-bg-surface border border-border rounded-2xl overflow-hidden">

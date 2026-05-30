@@ -8,6 +8,7 @@ import json
 
 from .state import get_state, update_state, advance_stage
 from .ui import validate_emit_ui, emit_ui_result
+from tarini.state_schema import STATE_UPDATE_SCHEMA
 
 TOOL_DEFINITIONS = [
     {
@@ -35,11 +36,10 @@ TOOL_DEFINITIONS = [
             "type": "object",
             "properties": {
                 "updates": {
-                    "type": "object",
-                    "additionalProperties": True,
+                    **STATE_UPDATE_SCHEMA,
                     "description": (
                         "Key-value pairs to deep-merge into current state. "
-                        "Use nested dicts for structured data."
+                        "Only canonical onboarding state fields are accepted."
                     ),
                 }
             },

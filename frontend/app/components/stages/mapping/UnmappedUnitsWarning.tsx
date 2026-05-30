@@ -36,7 +36,6 @@ export function UnmappedUnitsWarning({
   floors: rawFloors,
   totalUnmapped: rawTotalUnmapped,
   onSendMessage,
-  ...rest
 }: UnmappedUnitsWarningProps & Record<string, unknown>) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedFloorIdx, setSelectedFloorIdx] = useState(0);

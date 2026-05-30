@@ -12,6 +12,7 @@ interface IntroSummaryCardProps {
   property_type?: string;
   property_location?: string;
   gender_preference?: string;
+  fields?: Array<{ label: string; value: string }>;
   onSendMessage?: (text: string) => void;
 }
 
@@ -37,11 +38,10 @@ export function IntroSummaryCard({
   property_type,
   property_location,
   gender_preference,
+  fields: rawFields,
   onSendMessage,
-  ...rest
-}: IntroSummaryCardProps & Record<string, unknown>) {
-  const rawFields = rest.fields as Array<{ label: string; value: string }> | undefined;
-  const gender = gender_preference || (rest.gender as string) || "";
+}: IntroSummaryCardProps) {
+  const gender = gender_preference || "";
 
   const ICON_MAP: Record<string, typeof User> = {
     owner: User, operator: User, name: User,

@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "../../../lib/cn";
 import { CARD } from "../../ui/primitives";
 
 interface MappingMatrixProps {
@@ -19,7 +18,6 @@ export function MappingMatrix({
   mapping: rawMapping,
   floorTotals: rawFloorTotals,
   unmappedByFloor,
-  ...rest
 }: MappingMatrixProps & Record<string, unknown>) {
   // Defensive: handle missing/malformed props from Claude
   const floors = Array.isArray(rawFloors)
@@ -63,9 +61,6 @@ export function MappingMatrix({
               count: floorMapping[pkg.id] || 0,
             }))
             .filter((s) => s.count > 0);
-
-          // Calculate total mapped for bar proportions
-          const totalSegments = segments.reduce((sum, s) => sum + s.count, 0) + unmapped;
 
           return (
             <div key={floor.index}>

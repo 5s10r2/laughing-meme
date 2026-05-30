@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, ArrowRight, Check, ChevronDown } from "lucide-react";
 import { cn } from "../../../lib/cn";
 import {
-  CARD, ICON_CIRCLE, BTN_PRIMARY, BTN_SECONDARY,
+  ICON_CIRCLE, BTN_PRIMARY, BTN_SECONDARY,
 } from "../../ui/primitives";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -33,29 +33,15 @@ interface BulkMappingPreviewProps {
 const GROUPED_THRESHOLD = 4;
 
 export function BulkMappingPreview({
-  description: rawDescription,
+  description,
   operations: rawOperations,
-  totalUnits: rawTotalUnits,
-  totalFloors: rawTotalFloors,
+  totalUnits,
+  totalFloors,
   onSendMessage,
-  ...rest
-}: BulkMappingPreviewProps & Record<string, unknown>) {
+}: BulkMappingPreviewProps) {
   const [expandedPkg, setExpandedPkg] = useState<string | null>(null);
 
-  // Defensive: handle missing/malformed props from Claude
-  const rawList = Array.isArray(rawOperations)
-    ? rawOperations
-    : Array.isArray((rest as Record<string, unknown>).suggestions)
-      ? ((rest as Record<string, unknown>).suggestions as BulkOperation[])
-      : Array.isArray((rest as Record<string, unknown>).mappings)
-        ? ((rest as Record<string, unknown>).mappings as BulkOperation[])
-        : Array.isArray((rest as Record<string, unknown>).assignments)
-          ? ((rest as Record<string, unknown>).assignments as BulkOperation[])
-          : Array.isArray((rest as Record<string, unknown>).floors)
-            ? ((rest as Record<string, unknown>).floors as BulkOperation[])
-            : Array.isArray((rest as Record<string, unknown>).items)
-              ? ((rest as Record<string, unknown>).items as BulkOperation[])
-              : [];
+  const rawList = Array.isArray(rawOperations) ? rawOperations : [];
 
   const operations: BulkOperation[] = (rawList as unknown[]).map((raw: unknown) => {
     const op = raw as Record<string, unknown>;
@@ -91,19 +77,13 @@ export function BulkMappingPreview({
     return [];
   }
 
-  const totalUnits = rawTotalUnits
-    || (rest.total_units as number)
-    || (rest.total_rooms as number)
-    || (rest.totalRooms as number)
-    || (rest.room_count as number)
+  const resolvedTotalUnits = totalUnits
     || operations.reduce((sum, op) => sum + getAssignments(op).reduce((a, b) => a + (b.unitCount || 0), 0), 0)
     || 0;
-  const totalFloors = rawTotalFloors
-    || (rest.total_floors as number)
-    || (rest.floor_count as number)
+  const resolvedTotalFloors = totalFloors
     || operations.length
     || 0;
-  const description = rawDescription || (rest.description as string) || (rest.title as string) || `Assign ${totalUnits} room${totalUnits !== 1 ? "s" : ""} across ${totalFloors} floor${totalFloors !== 1 ? "s" : ""}`;
+  const resolvedDescription = description || `Assign ${resolvedTotalUnits} room${resolvedTotalUnits !== 1 ? "s" : ""} across ${resolvedTotalFloors} floor${resolvedTotalFloors !== 1 ? "s" : ""}`;
 
   // Count total assignment rows for threshold
   const totalAssignmentRows = operations.reduce((sum, op) => sum + getAssignments(op).length, 0);
@@ -154,10 +134,10 @@ export function BulkMappingPreview({
           <AlertTriangle className="w-4 h-4 text-warning" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-content">{description}</p>
+          <p className="text-sm font-semibold text-content">{resolvedDescription}</p>
           <p className="text-[11px] text-content-tertiary mt-0.5">
-            This will assign packages to {totalUnits} room{totalUnits !== 1 ? "s" : ""} across {totalFloors}{" "}
-            floor{totalFloors !== 1 ? "s" : ""}
+            This will assign packages to {resolvedTotalUnits} room{resolvedTotalUnits !== 1 ? "s" : ""} across {resolvedTotalFloors}{" "}
+            floor{resolvedTotalFloors !== 1 ? "s" : ""}
           </p>
         </div>
       </div>

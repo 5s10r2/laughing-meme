@@ -10,7 +10,7 @@ import {
   MapPin, Building2, User, Tag, Check, Snowflake, Fan,
   ArrowRight, SquarePen, BedDouble, Hotel, Home, Box, Users, Boxes,
   UtensilsCrossed, Sofa, Layers, Loader2, AlertCircle, AlertTriangle,
-  ChevronDown, Sparkles, X,
+  ChevronDown, Sparkles,
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,14 +18,9 @@ import { motion, AnimatePresence } from "framer-motion";
 // ─── Shared Design Primitives ───────────────────────────────────────
 
 const CARD = "bg-bg-surface border border-border rounded-2xl p-5";
-const CARD_TIGHT = "bg-bg-surface border border-border rounded-2xl p-4";
 const CARD_DIVIDER = "border-b border-border";
 const PILL = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium";
-const PILL_NEUTRAL = cn(PILL, "bg-bg-elevated text-content-secondary");
-const PILL_SUCCESS = cn(PILL, "bg-success/10 text-success");
 const PILL_ACCENT = cn(PILL, "bg-accent/10 text-accent-lighter");
-const PILL_WARNING = cn(PILL, "bg-warning/10 text-warning");
-const PILL_ERROR = cn(PILL, "bg-error/10 text-error");
 const BTN_PRIMARY = "w-full py-3 rounded-xl text-sm font-semibold bg-accent hover:bg-accent-light text-white transition-all active:scale-[0.98] cursor-pointer";
 const BTN_SECONDARY = "py-2.5 px-4 rounded-xl text-sm font-medium text-content-secondary border border-border hover:bg-bg-elevated transition-all active:scale-[0.98] cursor-pointer";
 const BTN_GHOST = "py-2.5 px-4 rounded-xl text-sm font-medium text-accent-lighter hover:bg-accent/8 transition-all active:scale-[0.98] cursor-pointer";
@@ -45,6 +40,40 @@ function SectionHeader({ label, count }: { label: string; count?: number }) {
 
 function ComponentLabel({ name }: { name: string }) {
   return <p className="text-[10px] font-mono text-content-tertiary/50 mb-2 px-1">{name}</p>;
+}
+
+function ToggleRow({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { v: string; l: string }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <p className="text-[11px] text-content-tertiary mb-2">{label}</p>
+      <div className="flex gap-1.5">
+        {options.map((o) => (
+          <button
+            key={o.v}
+            onClick={() => onChange(o.v)}
+            className={cn(
+              "flex-1 px-2 py-2 rounded-lg text-xs font-medium transition-all border cursor-pointer",
+              value === o.v
+                ? "border-accent/30 bg-accent/8 text-accent-lighter"
+                : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-subtle"
+            )}
+          >
+            {o.l}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function EditButton({ onClick }: { onClick?: () => void }) {
@@ -549,17 +578,6 @@ function RevisedPackageForm() {
   const [furnishing, setFurnishing] = useState("fully");
   const [rent, setRent] = useState("8500");
 
-  const ToggleRow = ({ label, options, value, onChange }: { label: string; options: { v: string; l: string }[]; value: string; onChange: (v: string) => void }) => (
-    <div>
-      <p className="text-[11px] text-content-tertiary mb-2">{label}</p>
-      <div className="flex gap-1.5">
-        {options.map((o) => (
-          <button key={o.v} onClick={() => onChange(o.v)} className={cn("flex-1 px-2 py-2 rounded-lg text-xs font-medium transition-all border cursor-pointer", value === o.v ? "border-accent/30 bg-accent/8 text-accent-lighter" : "border-border bg-bg-elevated text-content-tertiary hover:bg-bg-subtle")}>{o.l}</button>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
     <div className={CARD}>
       <p className="text-xs font-medium text-content-tertiary mb-4">New package</p>
@@ -717,7 +735,12 @@ function RevisedMappingSuggestion() {
 function RevisedFloorMappingRow() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const rooms = ["001", "002", "003", "004", "005"];
-  const toggle = (r: string) => setSelected((prev) => { const n = new Set(prev); n.has(r) ? n.delete(r) : n.add(r); return n; });
+  const toggle = (r: string) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(r)) next.delete(r);
+    else next.add(r);
+    return next;
+  });
   return (
     <div className={CARD}>
       <div className="flex items-center justify-between mb-4">

@@ -75,7 +75,7 @@ export function FloorTray({ floor, expanded, onToggle, onOpen }: FloorTrayProps)
             <span
               className={cn(
                 "text-xs font-mono",
-                empty ? "text-content-tertiary" : expanded ? "text-accent-lighter" : "text-content-secondary"
+                empty ? "text-content-tertiary" : expanded ? "text-accent" : "text-content-secondary"
               )}
             >
               {status}
@@ -119,7 +119,7 @@ export function FloorTray({ floor, expanded, onToggle, onOpen }: FloorTrayProps)
             <button
               type="button"
               onClick={onOpen}
-              className="text-xs font-medium text-accent-lighter hover:underline cursor-pointer"
+              className="text-xs font-medium text-accent hover:underline cursor-pointer"
             >
               Open floor →
             </button>

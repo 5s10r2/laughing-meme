@@ -1,7 +1,9 @@
 "use client";
 
+import { MassingModel } from "../components/blueprint/MassingModel";
 import { FloorComposition, type CompositionSegment } from "../components/blueprint/FloorComposition";
 import { FloorLedger, type LedgerFloor, type FloorUnit } from "../components/blueprint/FloorLedger";
+import { MappingRow, type MappingUnit, type MappingPackage } from "../components/blueprint/MappingRow";
 import { TYPE_COLORS } from "../components/blueprint/tokens";
 import { CARD } from "../components/ui/primitives";
 
@@ -59,6 +61,22 @@ const LEDGER_FLOORS: LedgerFloor[] = [
   },
 ];
 
+// mapping-stage sample: a floor with two packages and some unmapped rooms
+const MAP_PACKAGES: MappingPackage[] = [
+  { id: "ac-single", name: "AC Single" },
+  { id: "nonac-double", name: "Non-AC Double" },
+];
+const MAP_UNITS: MappingUnit[] = [
+  { id: "201", name: "201", category: "single", packageId: "ac-single" },
+  { id: "202", name: "202", category: "single", packageId: "ac-single" },
+  { id: "203", name: "203", category: "single", packageId: "ac-single" },
+  { id: "204", name: "204", category: "single" },
+  { id: "205", name: "205", category: "double", packageId: "nonac-double" },
+  { id: "206", name: "206", category: "double", packageId: "nonac-double" },
+  { id: "207", name: "207", category: "double" },
+  { id: "208", name: "208", category: "double" },
+];
+
 function Specimen({ caption, children }: { caption: string; children: React.ReactNode }) {
   return (
     <div className={CARD}>
@@ -114,6 +132,23 @@ export default function BlueprintStorybookPage() {
       </header>
 
       <div className="w-full max-w-md flex flex-col gap-5">
+        <div>
+          <p className="text-[11px] font-mono uppercase tracking-wider text-content-tertiary mb-3">
+            Massing model (§4.1) — the signature · see /massing-spike for the live state machine
+          </p>
+          <MassingModel
+            state="settled"
+            blocks={[{ label: "Block A", floors: 8, accentTop: true }]}
+            propertyName="Sunrise Residency"
+            meta="HSR LAYOUT · 8 FLOORS"
+            stats={[
+              { label: "Floors", value: 8 },
+              { label: "Rooms", value: "~112" },
+              { label: "Types", value: 4 },
+            ]}
+          />
+        </div>
+
         <Specimen caption="Homogeneous floor — bar + legend">
           <FloorRow name="Floor 1" rooms={14}>
             <FloorComposition segments={[typeSeg("single", 14)]} showLegend />
@@ -170,6 +205,18 @@ export default function BlueprintStorybookPage() {
           <FloorLedger
             floors={LEDGER_FLOORS}
             activeId={5}
+            onSendMessage={(t) => alert(`would send: ${t}`)}
+          />
+        </div>
+
+        <div>
+          <p className="text-[11px] font-mono uppercase tracking-wider text-content-tertiary mb-3">
+            Mapping row (§5.4) — select rooms (or a quick-select), then assign a package; unmapped surfaced
+          </p>
+          <MappingRow
+            floorLabel="Floor 2"
+            units={MAP_UNITS}
+            packages={MAP_PACKAGES}
             onSendMessage={(t) => alert(`would send: ${t}`)}
           />
         </div>

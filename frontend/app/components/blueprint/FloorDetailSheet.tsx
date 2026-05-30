@@ -2,14 +2,10 @@
 
 import { useMemo } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { cn } from "../../lib/cn";
 import { FloorComposition } from "./FloorComposition";
-import { typeColor } from "./tokens";
+import { RoomChip } from "./RoomChip";
+import { typeColor, cap } from "./tokens";
 import type { LedgerFloor, FloorUnit } from "./FloorTray";
-
-/** Category keys are the blueprint's normalised vocabulary (single/double/…),
- *  mapped from domain codes upstream — so a simple capitalize is the label. */
-const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 /**
  * FloorDetailSheet — the §9 full floor drill-down.
@@ -101,24 +97,13 @@ function FloorDetailBody({
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {rooms.map((u) => (
-                  <button
+                  <RoomChip
                     key={u.id}
-                    type="button"
-                    aria-label={`${cap(category)} room ${u.name}`}
+                    label={u.name}
+                    ariaLabel={`${cap(category)} room ${u.name}`}
+                    dotColor={typeColor(category)}
                     onClick={() => onSendMessage?.(`Edit room ${u.name} on ${floor.name}`)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg",
-                      "bg-bg-elevated border border-border text-content text-xs font-mono font-medium",
-                      "cursor-pointer transition-colors hover:border-border-strong active:scale-95"
-                    )}
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ background: typeColor(category) }}
-                      aria-hidden="true"
-                    />
-                    {u.name}
-                  </button>
+                  />
                 ))}
               </div>
             </div>
@@ -130,7 +115,7 @@ function FloorDetailBody({
         <button
           type="button"
           onClick={() => onSendMessage?.(`Show me the rooms on ${floor.name}`)}
-          className="text-xs font-medium text-accent-lighter hover:underline cursor-pointer self-start"
+          className="text-xs font-medium text-accent hover:underline cursor-pointer self-start"
         >
           List the individual rooms →
         </button>

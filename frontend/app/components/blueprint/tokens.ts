@@ -18,3 +18,6 @@ export const TYPE_COLOR_FALLBACK = "var(--t-single)";
 
 export const typeColor = (category: string): string =>
   TYPE_COLORS[category] ?? TYPE_COLOR_FALLBACK;
+
+/** Capitalize a normalised category/label key (e.g. "single" → "Single"). */
+export const cap = (s: string): string => (s ? s[0].toUpperCase() + s.slice(1) : s);

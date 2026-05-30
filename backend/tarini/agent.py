@@ -161,7 +161,7 @@ async def stream_chat(
                     max_tokens=4096,
                     system=[{
                         "type": "text",
-                        "text": system_prompt,
+                        "text": system_prompt + _chat_only_suffix(),
                         "cache_control": {"type": "ephemeral"},
                     }],
                     messages=api_history,
@@ -334,6 +334,19 @@ def _select_tools(tools: list[dict]) -> list[dict]:
     return [t for t in tools if t.get("name") != "emit_ui"]
 
 
+_CHAT_ONLY_NOTE = (
+    "\n\n[UI components are disabled for this session.] Respond in plain "
+    "conversational text only — do not offer, describe, or imply interactive "
+    "cards, selectors, or visual components."
+)
+
+
+def _chat_only_suffix() -> str:
+    """A system-prompt suffix (only when UI is disabled) so the model knows to
+    stay text-only and won't narrate components it cannot render."""
+    return "" if _ui_components_enabled() else _CHAT_ONLY_NOTE
+
+
 def opening_prompt() -> str:
     """The silent opening message that triggers the greeting, matched to the active experience.
 
@@ -406,7 +419,7 @@ async def _stream_chat_v2(
                     system=[
                         {
                             "type": "text",
-                            "text": core_prompt,
+                            "text": core_prompt + _chat_only_suffix(),
                             "cache_control": {"type": "ephemeral"},
                         },
                         {"type": "text", "text": live_block},

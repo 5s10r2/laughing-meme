@@ -8,7 +8,12 @@ cannot render components — a clean fallback to text-only, in BOTH backend path
 """
 from __future__ import annotations
 
-from tarini.agent import _select_tools, _ui_components_enabled, _use_new_experience
+from tarini.agent import (
+    _chat_only_suffix,
+    _select_tools,
+    _ui_components_enabled,
+    _use_new_experience,
+)
 from tarini.tools import TOOL_DEFINITIONS
 from tarini.tools.agent_tools import TOOL_DEFINITIONS_V2
 
@@ -73,3 +78,12 @@ def test_select_tools_does_not_mutate_input(monkeypatch):
     before = len(TOOL_DEFINITIONS_V2)
     _select_tools(TOOL_DEFINITIONS_V2)
     assert len(TOOL_DEFINITIONS_V2) == before  # original list untouched
+
+
+def test_chat_only_prompt_suffix(monkeypatch):
+    """In chat-only mode the model is told to stay text-only (so it won't narrate
+    components it can't render); enabled → no suffix (prompt + cache unchanged)."""
+    monkeypatch.delenv("ENABLE_UI_COMPONENTS", raising=False)
+    assert _chat_only_suffix() == ""
+    monkeypatch.setenv("ENABLE_UI_COMPONENTS", "0")
+    assert "text only" in _chat_only_suffix().lower()

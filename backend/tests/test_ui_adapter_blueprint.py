@@ -107,3 +107,51 @@ async def test_unmapped_props_empty_when_all_mapped():
     ids = [room["id"] for room in r["model"]["rooms"]]
     r = await svc.apply("s", [c.MapRooms(room_ids=ids, package_id=pkg)])
     assert unmapped_props(r["model"]) == {"floors": []}
+
+
+# ----------------------------------------------------- dangling / inactive package
+async def test_inactive_package_makes_rooms_unmapped():
+    """DisablePackage leaves a stale package_id on rooms — they must read as
+    unmapped (matches the frontend isMapped), not silently 'mapped'."""
+    svc = CommandService(InMemoryPropertyRepository())
+    r = await svc.apply("s", [c.AddFloors(count=1, start_index=1)])
+    f = r["model"]["floors"][0]["id"]
+    r = await svc.apply("s", [c.SetFloorRooms(floor_id=f, count=2)])
+    r = await svc.apply("s", [c.CreatePackage(name="AC", rent=8000)])
+    pkg = r["model"]["packages"][0]["id"]
+    ids = [room["id"] for room in r["model"]["rooms"]]
+    r = await svc.apply("s", [c.MapRooms(room_ids=ids, package_id=pkg)])
+    assert floor_ledger_props(r["model"])["floors"][0]["mapped"] is True  # sanity
+    assert unmapped_props(r["model"]) == {"floors": []}
+
+    r = await svc.apply("s", [c.DisablePackage(package_id=pkg)])  # rooms keep stale id
+    m = r["model"]
+    assert floor_ledger_props(m)["floors"][0]["mapped"] is False
+    assert sum(len(fl["units"]) for fl in unmapped_props(m)["floors"]) == 2
+    assert mapping_props(m)["packages"] == []  # inactive package isn't offered
+
+
+# ----------------------------------------------------- active-only filtering
+async def test_unavailable_room_excluded_from_all_projections():
+    svc = CommandService(InMemoryPropertyRepository())
+    r = await svc.apply("s", [c.AddFloors(count=1, start_index=1)])
+    f = r["model"]["floors"][0]["id"]
+    r = await svc.apply("s", [c.SetFloorRooms(floor_id=f, count=3)])
+    rid = r["model"]["rooms"][0]["id"]
+    r = await svc.apply("s", [c.MarkUnavailable(room_ids=[rid])])
+    m = r["model"]
+    assert floor_ledger_props(m)["floors"][0]["rooms"] == 2
+    assert {s["label"]: s["value"] for s in massing_props(m)["stats"]}["Rooms"] == 2
+    assert sum(len(fl["units"]) for fl in mapping_props(m)["floors"]) == 2
+
+
+# ----------------------------------------------------- name range natural sort
+async def test_name_range_natural_sort_mixed_width():
+    svc = CommandService(InMemoryPropertyRepository())
+    r = await svc.apply("s", [c.AddFloors(count=1, start_index=1)])
+    f = r["model"]["floors"][0]["id"]
+    r = await svc.apply("s", [c.SetFloorRooms(floor_id=f, count=3)])
+    rooms = [room["id"] for room in r["model"]["rooms"]]
+    for rid, name in zip(rooms, ["9", "10", "11"]):
+        r = await svc.apply("s", [c.RenameRoom(room_id=rid, name=name)])
+    assert floor_ledger_props(r["model"])["floors"][0]["nameRange"] == "9–11"

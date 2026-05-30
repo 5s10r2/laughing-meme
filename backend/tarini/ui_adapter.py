@@ -10,6 +10,8 @@ source of truth. Phase B retargets this adapter to the Living Blueprint componen
 """
 from __future__ import annotations
 
+import re
+
 
 def normalize_gender(value: str | None) -> str | None:
     """Map a free-text gender to the frontend enum (male | female | coed), or None."""
@@ -146,6 +148,34 @@ def _category(room: dict) -> str:
     return room.get("category") or "room"
 
 
+def _active_package_ids(model: dict) -> set[str]:
+    return {p["id"] for p in model.get("packages", []) if p.get("active", True)}
+
+
+def _is_mapped(room: dict, active_pkg_ids: set[str]) -> bool:
+    """A room is mapped only if its package_id resolves to a LIVE package — a
+    dangling/inactive reference reads as unmapped (mirrors the frontend isMapped)."""
+    pid = room.get("package_id")
+    return bool(pid) and pid in active_pkg_ids
+
+
+def _unit_base(room: dict) -> dict:
+    return {"id": room["id"], "name": room.get("name", "")}
+
+
+def _typed_unit(room: dict) -> dict:
+    return {**_unit_base(room), "category": _category(room)}
+
+
+def _mapping_unit(room: dict) -> dict:
+    return {**_typed_unit(room), "packageId": room.get("package_id")}
+
+
+def _natkey(s: str) -> list:
+    """Natural sort key so '9' < '10' (room names may be mixed-width)."""
+    return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", s)]
+
+
 def _mix_segments(rooms: list[dict]) -> list[dict]:
     """Group rooms by category (first-seen order) → [{key,label,count}]. No colour."""
     order: list[str] = []
@@ -160,7 +190,7 @@ def _mix_segments(rooms: list[dict]) -> list[dict]:
 
 
 def _name_range(rooms: list[dict]) -> str | None:
-    names = sorted(r["name"] for r in rooms if r.get("name"))
+    names = sorted((r["name"] for r in rooms if r.get("name")), key=_natkey)
     if not names:
         return None
     return names[0] if names[0] == names[-1] else f"{names[0]}–{names[-1]}"
@@ -201,6 +231,7 @@ def massing_props(model: dict) -> dict:
 def floor_ledger_props(model: dict) -> dict:
     """Props for FloorLedger — every floor (top-down) with its category mix + units."""
     rooms = _active_rooms(model)
+    apids = _active_package_ids(model)
     out = []
     for f in _floors_top_down(model):
         fr = _rooms_on(rooms, f["id"])
@@ -210,11 +241,8 @@ def floor_ledger_props(model: dict) -> dict:
             "rooms": len(fr),
             "segments": _mix_segments(fr),
             "nameRange": _name_range(fr),
-            "mapped": len(fr) > 0 and all(r.get("package_id") for r in fr),
-            "units": [
-                {"id": r["id"], "name": r.get("name", ""), "category": _category(r)}
-                for r in fr
-            ],
+            "mapped": len(fr) > 0 and all(_is_mapped(r, apids) for r in fr),
+            "units": [_typed_unit(r) for r in fr],
         })
     return {"floors": out}
 
@@ -235,28 +263,21 @@ def mapping_props(model: dict) -> dict:
         floors.append({
             "floorId": f["id"],
             "floorLabel": f["label"],
-            "units": [
-                {
-                    "id": r["id"],
-                    "name": r.get("name", ""),
-                    "category": _category(r),
-                    "packageId": r.get("package_id"),
-                }
-                for r in fr
-            ],
+            "units": [_mapping_unit(r) for r in fr],
         })
     return {"packages": packages, "floors": floors}
 
 
 def unmapped_props(model: dict) -> dict:
-    """Props for UnmappedWarning — floors with rooms that have no package, rolled up."""
+    """Props for UnmappedWarning — floors with rooms not mapped to a live package."""
     rooms = _active_rooms(model)
+    apids = _active_package_ids(model)
     out = []
     for f in _floors_top_down(model):
-        unm = [r for r in _rooms_on(rooms, f["id"]) if not r.get("package_id")]
+        unm = [r for r in _rooms_on(rooms, f["id"]) if not _is_mapped(r, apids)]
         if unm:
             out.append({
                 "floorLabel": f["label"],
-                "units": [{"id": r["id"], "name": r.get("name", "")} for r in unm],
+                "units": [_unit_base(r) for r in unm],
             })
     return {"floors": out}

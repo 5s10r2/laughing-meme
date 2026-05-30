@@ -165,7 +165,7 @@ async def stream_chat(
                         "cache_control": {"type": "ephemeral"},
                     }],
                     messages=api_history,
-                    tools=TOOL_DEFINITIONS,
+                    tools=_select_tools(TOOL_DEFINITIONS),
                 ) as stream:
                     async for event in stream:
                         if event.type == "content_block_delta":
@@ -320,6 +320,20 @@ def _use_new_experience() -> bool:
     return os.environ.get("USE_NEW_EXPERIENCE", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _ui_components_enabled() -> bool:
+    """The generative-UI switch. Default ON (the rich experience is the product);
+    set ENABLE_UI_COMPONENTS=0/false/no/off for a pure-text AI chat."""
+    return os.environ.get("ENABLE_UI_COMPONENTS", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _select_tools(tools: list[dict]) -> list[dict]:
+    """Drop emit_ui when UI components are disabled, so the model can only reply in
+    text. Pure (never mutates the input) + env-driven so it can flip per request."""
+    if _ui_components_enabled():
+        return list(tools)
+    return [t for t in tools if t.get("name") != "emit_ui"]
+
+
 def opening_prompt() -> str:
     """The silent opening message that triggers the greeting, matched to the active experience.
 
@@ -398,7 +412,7 @@ async def _stream_chat_v2(
                         {"type": "text", "text": live_block},
                     ],
                     messages=api_history,
-                    tools=TOOL_DEFINITIONS_V2,
+                    tools=_select_tools(TOOL_DEFINITIONS_V2),
                 ) as stream:
                     async for event in stream:
                         if event.type == "content_block_delta":

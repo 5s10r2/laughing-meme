@@ -1,6 +1,7 @@
 "use client";
 
 import { FloorComposition, type CompositionSegment } from "../components/blueprint/FloorComposition";
+import { FloorLedger, type LedgerFloor } from "../components/blueprint/FloorLedger";
 import { TYPE_COLORS } from "../components/blueprint/tokens";
 import { CARD } from "../components/ui/primitives";
 
@@ -21,6 +22,27 @@ const typeSeg = (key: string, count: number): CompositionSegment => ({
 
 // distinct package palette for the mapping re-skin demo
 const PKG_COLORS = ["var(--t-single)", "var(--t-double)", "var(--t-deluxe)", "var(--t-triple)"];
+
+// a realistic building for the ledger (top-down), incl. a mapped floor + an empty one
+const LEDGER_FLOORS: LedgerFloor[] = [
+  {
+    id: 5, name: "Floor 5", sub: "top", rooms: 18, nameRange: "501–518",
+    segments: [typeSeg("single", 10), typeSeg("double", 4), typeSeg("deluxe", 2), typeSeg("triple", 2)],
+  },
+  {
+    id: 4, name: "Floor 4", rooms: 16, mapped: true, nameRange: "401–416",
+    segments: [typeSeg("single", 12), typeSeg("double", 4)],
+  },
+  {
+    id: 3, name: "Floor 3", rooms: 16, nameRange: "301–316",
+    segments: [typeSeg("single", 11), typeSeg("triple", 5)],
+  },
+  { id: 2, name: "Floor 2", rooms: 0, segments: [] },
+  {
+    id: 1, name: "Ground", sub: "reception", rooms: 14, nameRange: "001–014",
+    segments: [typeSeg("single", 10), typeSeg("double", 2), typeSeg("deluxe", 2)],
+  },
+];
 
 function Specimen({ caption, children }: { caption: string; children: React.ReactNode }) {
   return (
@@ -125,6 +147,17 @@ export default function BlueprintStorybookPage() {
             />
           </FloorRow>
         </Specimen>
+
+        <div>
+          <p className="text-[11px] font-mono uppercase tracking-wider text-content-tertiary mb-3">
+            Floor ledger (§4.2) — tap a row to expand; Floor 4 is mapped, Floor 2 is empty
+          </p>
+          <FloorLedger
+            floors={LEDGER_FLOORS}
+            activeId={5}
+            onSendMessage={(t) => alert(`would send: ${t}`)}
+          />
+        </div>
       </div>
     </div>
   );

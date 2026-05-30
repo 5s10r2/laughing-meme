@@ -11,6 +11,13 @@ import { QuickReplyChips } from "./ui/QuickReplyChips";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+// Mirrors the backend USE_NEW_EXPERIENCE flag. When on, the shell wears the warm
+// Living Blueprint palette (.lp-theme re-scopes the design tokens); when off, the
+// default dark theme is preserved byte-for-byte. Set both flags together.
+const USE_NEW_EXPERIENCE = ["1", "true", "yes", "on"].includes(
+  (process.env.NEXT_PUBLIC_USE_NEW_EXPERIENCE ?? "").trim().toLowerCase()
+);
+
 function uid() {
   return crypto.randomUUID();
 }
@@ -294,7 +301,7 @@ export default function ChatUI() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-screen bg-bg-deep text-content">
+    <div className={`flex flex-col h-screen bg-bg-deep text-content${USE_NEW_EXPERIENCE ? " lp-theme" : ""}`}>
       {/* Header with stage progress bar */}
       <ChatHeader onNewSession={handleNewSession} isStreaming={isStreaming} />
 

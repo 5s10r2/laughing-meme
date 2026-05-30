@@ -61,7 +61,11 @@ export function FloorLedger({ floors, activeId, onSendMessage }: FloorLedgerProp
   if (!floors.length) return null;
 
   return (
-    <div className="flex flex-col gap-2">
+    // Self-scope .lp-theme: this ledger renders FloorComposition's categorical
+    // colours (var(--t-single)…), which are defined ONLY under .lp-theme. Scoping
+    // here keeps the component correct even if the shell theme isn't applied
+    // (e.g. server/client experience flags diverge), matching BlueprintMapping.
+    <div className="lp-theme flex flex-col gap-2">
       {floors.map((floor) => (
         <FloorTray
           key={floor.id}

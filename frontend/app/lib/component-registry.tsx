@@ -40,6 +40,12 @@ import { VerificationSummary } from "../components/stages/verification/Verificat
 import { PendingItemsList } from "../components/stages/verification/PendingItemsList";
 import { CompletionCelebration } from "../components/stages/verification/CompletionCelebration";
 
+// Living Blueprint (v2) — props are projected from the model on the backend.
+import { MassingModel } from "../components/blueprint/MassingModel";
+import { FloorLedger } from "../components/blueprint/FloorLedger";
+import { BlueprintMapping } from "../components/blueprint/BlueprintMapping";
+import { UnmappedWarning } from "../components/blueprint/UnmappedWarning";
+
 type RegistryComponent = ComponentType<Record<string, unknown>>;
 
 const asRegistryComponent = (component: ComponentType<unknown>): RegistryComponent =>
@@ -82,6 +88,12 @@ const COMPONENT_REGISTRY: Record<string, RegistryComponent> = {
   VerificationSummary: asRegistryComponent(VerificationSummary as ComponentType<unknown>),
   PendingItemsList: asRegistryComponent(PendingItemsList as ComponentType<unknown>),
   CompletionCelebration: asRegistryComponent(CompletionCelebration as ComponentType<unknown>),
+
+  // Living Blueprint (v2)
+  MassingModel: asRegistryComponent(MassingModel as ComponentType<unknown>),
+  FloorLedger: asRegistryComponent(FloorLedger as ComponentType<unknown>),
+  BlueprintMapping: asRegistryComponent(BlueprintMapping as ComponentType<unknown>),
+  UnmappedWarning: asRegistryComponent(UnmappedWarning as ComponentType<unknown>),
 };
 
 /**

@@ -1,3 +1,5 @@
+import { typeColor } from "../components/blueprint/tokens";
+
 type Props = Record<string, unknown>;
 type Adapter = (props: Props) => Props;
 
@@ -316,6 +318,31 @@ const ADAPTERS: Record<string, Adapter> = {
         stage: pickString(pending, ["stage"], "verification"),
         fixAction: pickString(pending, ["fixAction", "fix_action"]),
       };
+    }),
+  }),
+
+  // ── Living Blueprint (v2) — backend sends colourless data; map category → palette ──
+  MassingModel: (props) => ({
+    ...props,
+    // An emitted massing is a settled snapshot of the model at emit time.
+    state: pickString(props, ["state"], "settled"),
+  }),
+
+  FloorLedger: (props) => ({
+    ...props,
+    floors: (pickArray(props, ["floors"]) ?? []).map((raw) => {
+      const floor = asRecord(raw);
+      const segments = (arrayFrom(floor.segments) ?? []).map((rawSegment) => {
+        const segment = asRecord(rawSegment);
+        const key = pickString(segment, ["key", "category"], "room") as string;
+        return {
+          key,
+          label: pickString(segment, ["label"], key) as string,
+          count: pickNumber(segment, ["count"]),
+          color: pickString(segment, ["color"]) ?? typeColor(key),
+        };
+      });
+      return { ...floor, segments };
     }),
   }),
 

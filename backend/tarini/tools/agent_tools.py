@@ -25,8 +25,9 @@ from tarini.application.command_codec import (
 )
 from tarini.application.command_service import CommandService
 from tarini.application.errors import Conflict
-from tarini.domain.commands import Command
+from tarini.domain.commands import Command, Publish
 from tarini.domain.errors import InvariantViolation, NotFound, PublishBlocked
+from tarini.observability import emit_event
 from tarini.tools.ui import validate_emit_ui, emit_ui_result
 
 # Command names, for the apply_commands schema enum (auto-synced with the domain).
@@ -107,12 +108,19 @@ async def get_model_tool(svc: CommandService, session_id: str) -> str:
     return json.dumps(snapshot, ensure_ascii=False)
 
 
+def _reject(session_id: str, code: str, message: str, ops: list[str] | None = None, **extra) -> str:
+    emit_event("command_rejected", session=session_id, code=code, **({"ops": ops} if ops else {}))
+    return _err(code, message, **extra)
+
+
 async def apply_commands_tool(svc: CommandService, session_id: str, tool_input: dict) -> str:
     # 1) decode at the boundary — fail fast, nothing applied
     try:
         commands: list[Command] = decode_commands(tool_input.get("commands"))
     except CommandDecodeError as e:
-        return _err("BAD_COMMAND", str(e))
+        return _reject(session_id, "BAD_COMMAND", str(e))
+
+    ops = [type(c).__name__ for c in commands]
 
     # 2) apply atomically, translating every domain/application error into a clean result
     try:
@@ -123,13 +131,21 @@ async def apply_commands_tool(svc: CommandService, session_id: str, tool_input: 
             idempotency_key=tool_input.get("idempotency_key"),
         )
     except PublishBlocked as e:
-        return _err("PUBLISH_BLOCKED", str(e), open_items=e.open_items)
+        return _reject(session_id, "PUBLISH_BLOCKED", str(e), ops=ops, open_items=e.open_items)
     except NotFound as e:
-        return _err("NOT_FOUND", str(e))
+        return _reject(session_id, "NOT_FOUND", str(e), ops=ops)
     except InvariantViolation as e:
-        return _err("INVARIANT", str(e))
+        return _reject(session_id, "INVARIANT", str(e), ops=ops)
     except Conflict as e:
-        return _err("CONFLICT", str(e))
+        return _reject(session_id, "CONFLICT", str(e), ops=ops)
+
+    completeness = snapshot.get("completeness", {})
+    emit_event(
+        "commands_applied", session=session_id, ops=ops,
+        version=snapshot.get("version"), publishable=completeness.get("publishable", False),
+    )
+    if any(isinstance(c, Publish) for c in commands):
+        emit_event("published", session=session_id, counts=completeness.get("counts", {}))
 
     return json.dumps({"ok": True, **snapshot}, ensure_ascii=False)
 

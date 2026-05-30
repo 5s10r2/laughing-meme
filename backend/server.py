@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 load_dotenv(override=True)
 
-from tarini.agent import opening_prompt
+from tarini.agent import _use_new_experience, opening_prompt
 from tarini.db import client as db
 from tarini.session_manager import session_manager
 
@@ -43,7 +43,10 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Tarini server starting up")
+    logger.info(
+        "Tarini server starting up (experience=%s)",
+        "new" if _use_new_experience() else "legacy",
+    )
     await db.init_client()
     session_manager.start_eviction_task()
     yield

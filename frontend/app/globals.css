@@ -178,7 +178,9 @@ body {
   /* Text — warm near-black */
   --text-primary:   #191712;
   --text-secondary: #575148;
-  --text-tertiary:  #928B7D;
+  --text-tertiary:  #736A5B;  /* darkened from #928B7D → ~4.9:1 on warm paper (AA);
+                                 tertiary is still used as small label TEXT, so it
+                                 must clear AA, not just read as "muted" */
   --text-on-accent: #FFFFFF;
 
   /* Borders & glass */

@@ -38,7 +38,7 @@ export function RoomChip({ label, ariaLabel, dotColor, selected, dashed, onClick
           : dashed
             ? // unmapped: dashed border + hollow dot signal the state; text stays
               // full-contrast (text-content) since these are the rooms to act on
-              "bg-bg-elevated border border-dashed border-border-strong text-content hover:border-border-strong"
+              "bg-bg-elevated border border-dashed border-border-strong text-content hover:bg-bg-subtle"
             : "bg-bg-elevated border border-border text-content hover:border-border-strong"
       )}
     >

@@ -116,3 +116,147 @@ def to_legacy_session_snapshot(snapshot: dict) -> dict:
         "stage": derive_stage(facets),
         "stateVersion": snapshot.get("version", 0),
     }
+
+
+# =========================================================================== #
+#  Phase B — Living Blueprint component projections                            #
+#                                                                             #
+#  Pure presentation projections of the Property model into the props the new #
+#  blueprint components consume. Colour is deliberately NOT emitted — the     #
+#  frontend maps category/package → palette; the backend speaks only data.    #
+# =========================================================================== #
+
+def _active_floors(model: dict) -> list[dict]:
+    return [f for f in model.get("floors", []) if f.get("active", True)]
+
+
+def _active_rooms(model: dict) -> list[dict]:
+    return [r for r in model.get("rooms", []) if r.get("status", "active") == "active"]
+
+
+def _rooms_on(rooms: list[dict], floor_id: str) -> list[dict]:
+    return [r for r in rooms if r.get("floor_id") == floor_id]
+
+
+def _floors_top_down(model: dict) -> list[dict]:
+    return sorted(_active_floors(model), key=lambda f: f["index"], reverse=True)
+
+
+def _category(room: dict) -> str:
+    return room.get("category") or "room"
+
+
+def _mix_segments(rooms: list[dict]) -> list[dict]:
+    """Group rooms by category (first-seen order) → [{key,label,count}]. No colour."""
+    order: list[str] = []
+    counts: dict[str, int] = {}
+    for r in rooms:
+        cat = _category(r)
+        if cat not in counts:
+            counts[cat] = 0
+            order.append(cat)
+        counts[cat] += 1
+    return [{"key": cat, "label": cat, "count": counts[cat]} for cat in order]
+
+
+def _name_range(rooms: list[dict]) -> str | None:
+    names = sorted(r["name"] for r in rooms if r.get("name"))
+    if not names:
+        return None
+    return names[0] if names[0] == names[-1] else f"{names[0]}–{names[-1]}"
+
+
+def massing_props(model: dict) -> dict:
+    """Props for MassingModel — blocks (with floor counts), name, meta, stats."""
+    floors = _active_floors(model)
+    rooms = _active_rooms(model)
+    per_block: dict[str | None, int] = {}
+    for f in floors:
+        per_block[f.get("block_id")] = per_block.get(f.get("block_id"), 0) + 1
+    blocks_src = model.get("blocks") or []
+    blocks = [
+        {"label": b["label"], "floors": per_block.get(b["id"], 0), "accentTop": i == 0}
+        for i, b in enumerate(blocks_src)
+    ]
+    if not blocks and floors:
+        blocks = [{"label": "Main", "floors": len(floors), "accentTop": True}]
+    categories = {_category(r) for r in rooms}
+    location = model.get("location")
+    meta_parts: list[str] = []
+    if location:
+        meta_parts.append(location)
+    meta_parts.append(f"{len(blocks)} block{'s' if len(blocks) != 1 else ''}")
+    return {
+        "propertyName": model.get("name") or "Your property",
+        "meta": " · ".join(meta_parts),
+        "blocks": blocks,
+        "stats": [
+            {"label": "Floors", "value": len(floors)},
+            {"label": "Rooms", "value": len(rooms)},
+            {"label": "Types", "value": len(categories)},
+        ],
+    }
+
+
+def floor_ledger_props(model: dict) -> dict:
+    """Props for FloorLedger — every floor (top-down) with its category mix + units."""
+    rooms = _active_rooms(model)
+    out = []
+    for f in _floors_top_down(model):
+        fr = _rooms_on(rooms, f["id"])
+        out.append({
+            "id": f["id"],
+            "name": f["label"],
+            "rooms": len(fr),
+            "segments": _mix_segments(fr),
+            "nameRange": _name_range(fr),
+            "mapped": len(fr) > 0 and all(r.get("package_id") for r in fr),
+            "units": [
+                {"id": r["id"], "name": r.get("name", ""), "category": _category(r)}
+                for r in fr
+            ],
+        })
+    return {"floors": out}
+
+
+def mapping_props(model: dict) -> dict:
+    """Props for the mapping stage — packages + per-floor units (with current assignment)."""
+    rooms = _active_rooms(model)
+    packages = [
+        {"id": p["id"], "name": p["name"]}
+        for p in model.get("packages", [])
+        if p.get("active", True)
+    ]
+    floors = []
+    for f in _floors_top_down(model):
+        fr = _rooms_on(rooms, f["id"])
+        if not fr:
+            continue
+        floors.append({
+            "floorId": f["id"],
+            "floorLabel": f["label"],
+            "units": [
+                {
+                    "id": r["id"],
+                    "name": r.get("name", ""),
+                    "category": _category(r),
+                    "packageId": r.get("package_id"),
+                }
+                for r in fr
+            ],
+        })
+    return {"packages": packages, "floors": floors}
+
+
+def unmapped_props(model: dict) -> dict:
+    """Props for UnmappedWarning — floors with rooms that have no package, rolled up."""
+    rooms = _active_rooms(model)
+    out = []
+    for f in _floors_top_down(model):
+        unm = [r for r in _rooms_on(rooms, f["id"]) if not r.get("package_id")]
+        if unm:
+            out.append({
+                "floorLabel": f["label"],
+                "units": [{"id": r["id"], "name": r.get("name", "")} for r in unm],
+            })
+    return {"floors": out}

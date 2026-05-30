@@ -199,9 +199,9 @@ body {
   --t-double: #5E7C6B;  /* forest  */
   --t-deluxe: #B07A3A;  /* ochre   */
   --t-triple: #64708A;  /* slate   */
-
-  background: var(--bg-deep);
-  color: var(--text-primary);
+  /* token scope only — consumers apply bg/text utilities (which now resolve
+     warm here). Do NOT set background/color on .lp-theme itself, or it would
+     clobber bg-bg-surface on elements that also carry the class (e.g. sheets). */
 }
 
 /* ═══════════════════════════════════════════════════════════

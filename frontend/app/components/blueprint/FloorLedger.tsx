@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FloorTray, type LedgerFloor } from "./FloorTray";
+import { FloorDetailSheet } from "./FloorDetailSheet";
 
 /** The ledger's public data contract (re-exported so consumers compose with one unit). */
-export type { LedgerFloor } from "./FloorTray";
+export type { LedgerFloor, FloorUnit } from "./FloorTray";
 
 /**
  * FloorLedger — the Living Blueprint working view (design system §4.2).
@@ -35,6 +36,10 @@ export function FloorLedger({ floors, activeId, onSendMessage }: FloorLedgerProp
   );
   const prevActiveId = useRef(activeId);
 
+  // the floor whose full drill-down sheet is open (null = closed)
+  const [detailId, setDetailId] = useState<string | number | null>(null);
+  const detailFloor = detailId != null ? floors.find((f) => f.id === detailId) ?? null : null;
+
   // Reconcile the open floor with post-mount prop changes (this is an LLM-fed
   // surface): follow a changed `activeId`, and recover if the open floor was
   // removed — while respecting an explicit collapse-all (openId === null).
@@ -63,13 +68,16 @@ export function FloorLedger({ floors, activeId, onSendMessage }: FloorLedgerProp
           floor={floor}
           expanded={openId === floor.id}
           onToggle={() => setOpenId((prev) => (prev === floor.id ? null : floor.id))}
-          onOpen={
-            onSendMessage
-              ? () => onSendMessage(`Open ${floor.name} so I can edit its rooms`)
-              : undefined
-          }
+          onOpen={() => setDetailId(floor.id)}
         />
       ))}
+
+      <FloorDetailSheet
+        floor={detailFloor}
+        open={detailFloor !== null}
+        onClose={() => setDetailId(null)}
+        onSendMessage={onSendMessage}
+      />
     </div>
   );
 }

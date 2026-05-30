@@ -1,7 +1,7 @@
 "use client";
 
 import { FloorComposition, type CompositionSegment } from "../components/blueprint/FloorComposition";
-import { FloorLedger, type LedgerFloor } from "../components/blueprint/FloorLedger";
+import { FloorLedger, type LedgerFloor, type FloorUnit } from "../components/blueprint/FloorLedger";
 import { TYPE_COLORS } from "../components/blueprint/tokens";
 import { CARD } from "../components/ui/primitives";
 
@@ -23,15 +23,30 @@ const typeSeg = (key: string, count: number): CompositionSegment => ({
 // distinct package palette for the mapping re-skin demo
 const PKG_COLORS = ["var(--t-single)", "var(--t-double)", "var(--t-deluxe)", "var(--t-triple)"];
 
+// generate sequentially-named rooms from a category mix (for the drill-down sheet)
+function mkUnits(start: number, mix: [string, number][]): FloorUnit[] {
+  const out: FloorUnit[] = [];
+  let n = start;
+  for (const [category, count] of mix) {
+    for (let i = 0; i < count; i++) {
+      out.push({ id: String(n), name: String(n), category });
+      n++;
+    }
+  }
+  return out;
+}
+
 // a realistic building for the ledger (top-down), incl. a mapped floor + an empty one
 const LEDGER_FLOORS: LedgerFloor[] = [
   {
     id: 5, name: "Floor 5", sub: "top", rooms: 18, nameRange: "501–518",
     segments: [typeSeg("single", 10), typeSeg("double", 4), typeSeg("deluxe", 2), typeSeg("triple", 2)],
+    units: mkUnits(501, [["single", 10], ["double", 4], ["deluxe", 2], ["triple", 2]]),
   },
   {
     id: 4, name: "Floor 4", rooms: 16, mapped: true, nameRange: "401–416",
     segments: [typeSeg("single", 12), typeSeg("double", 4)],
+    units: mkUnits(401, [["single", 12], ["double", 4]]),
   },
   {
     id: 3, name: "Floor 3", rooms: 16, nameRange: "301–316",
@@ -83,7 +98,7 @@ function FloorRow({
 export default function BlueprintStorybookPage() {
   // dev-only surface — prod reachability is blocked in middleware.ts
   return (
-    <div className="lp-theme min-h-screen px-6 py-10 flex flex-col items-center gap-7">
+    <div className="lp-theme bg-bg-deep text-content min-h-screen px-6 py-10 flex flex-col items-center gap-7">
       <header className="text-center max-w-xl">
         <p className="text-[11px] font-mono uppercase tracking-widest text-accent">
           Living Blueprint · Storybook

@@ -16,6 +16,12 @@ import { FloorComposition, type CompositionSegment } from "./FloorComposition";
  * "Open floor" control lives OUTSIDE it (no nested buttons).
  */
 
+export interface FloorUnit {
+  id: string | number;
+  name: string; // "501"
+  category: string; // "single" | "double" | …
+}
+
 export interface LedgerFloor {
   id: string | number;
   name: string;
@@ -26,6 +32,8 @@ export interface LedgerFloor {
   nameRange?: string;
   /** mapping-stage status; when true the row reads "✓ mapped" */
   mapped?: boolean;
+  /** individual rooms — fed to the full drill-down sheet (uncapped) */
+  units?: FloorUnit[];
 }
 
 interface FloorTrayProps {

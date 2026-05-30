@@ -21,10 +21,23 @@ from typing import AsyncIterator
 import anthropic
 
 from tarini.db import client as db
-from tarini.prompts import load_system_prompt
+from tarini.prompts import (
+    INITIAL_PROMPT,
+    INITIAL_PROMPT_V2,
+    load_system_prompt,
+    load_system_prompt_v2,
+    render_live_context,
+)
 from tarini.stage_ui import build_transition_event
 from tarini.tools import TOOL_DEFINITIONS, execute_tool
 from tarini.tools.ui import validate_emit_ui
+
+# Redesigned-backend path (gated behind USE_NEW_EXPERIENCE) ------------------
+from tarini.adapters.inmemory_repository import InMemoryPropertyRepository
+from tarini.adapters.supabase_repository import SupabasePropertyRepository
+from tarini.application.command_service import CommandService
+from tarini.tools.agent_tools import TOOL_DEFINITIONS_V2, execute_agent_tool
+from tarini.ui_adapter import to_legacy_session_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +130,12 @@ async def stream_chat(
         SSE event dicts with various types (text, tool_start, tool_complete,
         component, state_snapshot, done, etc.)
     """
+    # Redesigned backend, gated. When off (default) the legacy path below runs unchanged.
+    if _use_new_experience():
+        async for event in _stream_chat_v2(session_id, user_message, history):
+            yield event
+        return
+
     client = _get_anthropic_client()
     system_prompt = load_system_prompt()
 
@@ -142,11 +161,11 @@ async def stream_chat(
                     max_tokens=4096,
                     system=[{
                         "type": "text",
-                        "text": system_prompt,
+                        "text": system_prompt + _chat_only_suffix(),
                         "cache_control": {"type": "ephemeral"},
                     }],
                     messages=api_history,
-                    tools=TOOL_DEFINITIONS,
+                    tools=_select_tools(TOOL_DEFINITIONS),
                 ) as stream:
                     async for event in stream:
                         if event.type == "content_block_delta":
@@ -284,8 +303,242 @@ async def stream_chat(
 
 
 # ---------------------------------------------------------------------------
+# Redesigned backend path (USE_NEW_EXPERIENCE)
+# ---------------------------------------------------------------------------
+
+_TOOL_DESCRIPTIONS_V2 = {
+    "get_model": "Reading your property...",
+    "apply_commands": "Saving your changes...",
+    "emit_ui": None,  # handled specially — no tool indicator shown
+}
+
+# Lazy singleton — survives across turns so the in-memory repo retains state.
+_command_service: CommandService | None = None
+
+
+def _use_new_experience() -> bool:
+    return os.environ.get("USE_NEW_EXPERIENCE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _ui_components_enabled() -> bool:
+    """The generative-UI switch. Default ON (the rich experience is the product);
+    set ENABLE_UI_COMPONENTS=0/false/no/off for a pure-text AI chat."""
+    return os.environ.get("ENABLE_UI_COMPONENTS", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _select_tools(tools: list[dict]) -> list[dict]:
+    """Drop emit_ui when UI components are disabled, so the model can only reply in
+    text. Pure (never mutates the input) + env-driven so it can flip per request."""
+    if _ui_components_enabled():
+        return list(tools)
+    return [t for t in tools if t.get("name") != "emit_ui"]
+
+
+_CHAT_ONLY_NOTE = (
+    "\n\n[UI components are disabled for this session.] Respond in plain "
+    "conversational text only — do not offer, describe, or imply interactive "
+    "cards, selectors, or visual components."
+)
+
+
+def _chat_only_suffix() -> str:
+    """A system-prompt suffix (only when UI is disabled) so the model knows to
+    stay text-only and won't narrate components it cannot render."""
+    return "" if _ui_components_enabled() else _CHAT_ONLY_NOTE
+
+
+def opening_prompt() -> str:
+    """The silent opening message that triggers the greeting, matched to the active experience.
+
+    The legacy prompt tells the model to call get_state; the v2 prompt tells it to call
+    get_model — sending the wrong one makes the model reach for a tool that isn't wired in.
+    """
+    return INITIAL_PROMPT_V2 if _use_new_experience() else INITIAL_PROMPT
+
+
+def _get_command_service() -> CommandService:
+    """Build (once) the CommandService for the new path.
+
+    Uses the Supabase-backed repository when the DB is live, else the in-memory repository
+    (mirrors the db client's own memory/Supabase choice). Singleton so the in-memory store
+    persists across turns within a process.
+    """
+    global _command_service
+    if _command_service is None:
+        if getattr(db, "_USE_MEMORY", True):
+            repo = InMemoryPropertyRepository()
+        else:
+            repo = SupabasePropertyRepository(db._get_client())
+        _command_service = CommandService(repo)
+    return _command_service
+
+
+def _snapshot_event(result_data: dict) -> dict | None:
+    """Map a tool result that carries a model (get_model / successful apply_commands) into a
+    legacy-shaped state_snapshot SSE event. Returns None for error results (no model)."""
+    if not isinstance(result_data, dict) or "model" not in result_data:
+        return None
+    return {"type": "state_snapshot", **to_legacy_session_snapshot(result_data)}
+
+
+async def _stream_chat_v2(
+    session_id: str,
+    user_message: str,
+    history: list[dict],
+) -> AsyncIterator[dict]:
+    """Redesigned tool loop: get_model / apply_commands over CommandService, thin cached prompt
+    + live context, legacy-shaped state_snapshot events. Mirrors the legacy streaming skeleton so
+    the SSE contract (text / tool_start / tool_complete / component / state_snapshot / done) is
+    preserved for the existing frontend."""
+    client = _get_anthropic_client()
+    svc = _get_command_service()
+    core_prompt = load_system_prompt_v2()
+
+    history.append({"role": "user", "content": user_message})
+
+    # Live context (small, uncached) reflects state at the start of the turn; within the turn
+    # the model gets fresh state from the apply_commands/get_model tool results it just received.
+    try:
+        live_block = render_live_context(await svc.get_model(session_id))
+    except Exception:
+        logger.exception("[stream_chat_v2] failed to render live context for %s", session_id)
+        live_block = "## Current model (live)\n(Call get_model for the current state.)"
+
+    for _round in range(MAX_TOOL_ROUNDS):
+        api_history = _trim_history_for_api(history)
+        logger.info(
+            "[stream_chat_v2] round %d for session %s (%d messages, %d sent to API)",
+            _round, session_id, len(history), len(api_history),
+        )
+
+        try:
+            async with asyncio.timeout(_STREAM_TIMEOUT):
+                async with client.messages.stream(
+                    model=MODEL,
+                    max_tokens=4096,
+                    system=[
+                        {
+                            "type": "text",
+                            "text": core_prompt + _chat_only_suffix(),
+                            "cache_control": {"type": "ephemeral"},
+                        },
+                        {"type": "text", "text": live_block},
+                    ],
+                    messages=api_history,
+                    tools=_select_tools(TOOL_DEFINITIONS_V2),
+                ) as stream:
+                    async for event in stream:
+                        if event.type == "content_block_delta":
+                            if event.delta.type == "text_delta":
+                                yield {"type": "text", "text": event.delta.text}
+                    final_message = await stream.get_final_message()
+        except TimeoutError:
+            logger.error("[stream_chat_v2] stream timed out after %ds for session %s", _STREAM_TIMEOUT, session_id)
+            yield {"type": "error", "message": "Response timed out. Please try again."}
+            return
+        except anthropic.APIConnectionError as exc:
+            logger.error("[stream_chat_v2] Connection error for session %s: %s", session_id, exc)
+            yield {"type": "error", "message": "Connection to AI service was interrupted. Please try again."}
+            return
+        except anthropic.RateLimitError as exc:
+            logger.error("[stream_chat_v2] Rate limit hit for session %s: %s", session_id, exc)
+            yield {"type": "error", "message": "Too many requests. Please wait a moment and try again."}
+            return
+        except anthropic.APIStatusError as exc:
+            logger.error("[stream_chat_v2] API error %d for session %s: %s", exc.status_code, session_id, exc)
+            yield {"type": "error", "message": "AI service returned an error. Please try again."}
+            return
+
+        _log_usage(session_id, _round, final_message)
+
+        history.append({
+            "role": "assistant",
+            "content": _serialize_content(final_message.content),
+        })
+
+        tool_use_blocks = [b for b in final_message.content if b.type == "tool_use"]
+        if final_message.stop_reason != "tool_use" or not tool_use_blocks:
+            yield {"type": "done"}
+            return
+
+        tool_results = []
+        for tool_block in tool_use_blocks:
+            tool_id = f"tool_{tool_block.id}"
+
+            # ── emit_ui: emit a component event, not a tool indicator ──
+            if tool_block.name == "emit_ui":
+                component = tool_block.input.get("component", "")
+                props = tool_block.input.get("props", {})
+                error = validate_emit_ui(component, props)
+                if not error:
+                    yield {
+                        "type": "component",
+                        "name": component,
+                        "props": props,
+                        "id": f"comp_{tool_block.id}",
+                    }
+                result_str = await _safe_execute_agent_tool(svc, session_id, tool_block.name, tool_block.input)
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool_block.id,
+                    "content": result_str,
+                })
+                continue
+
+            # ── get_model / apply_commands: tool_start → execute → tool_complete ──
+            description = _TOOL_DESCRIPTIONS_V2.get(tool_block.name) or f"Running {tool_block.name}..."
+            logger.info("[stream_chat_v2] executing tool %s for session %s", tool_block.name, session_id)
+            yield {
+                "type": "tool_start",
+                "tool": tool_block.name,
+                "description": description,
+                "id": tool_id,
+            }
+
+            result_str = await _safe_execute_agent_tool(svc, session_id, tool_block.name, tool_block.input)
+            try:
+                result_data = json.loads(result_str)
+            except (json.JSONDecodeError, TypeError):
+                result_data = {}
+
+            yield {
+                "type": "tool_complete",
+                "tool": tool_block.name,
+                "id": tool_id,
+                "result": result_data,
+            }
+
+            # Emit a state_snapshot whenever the result carries a model (get_model or a
+            # successful apply_commands). Error results carry no model → no snapshot.
+            snapshot_event = _snapshot_event(result_data)
+            if snapshot_event is not None:
+                yield snapshot_event
+
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": tool_block.id,
+                "content": result_str,
+            })
+
+        history.append({"role": "user", "content": tool_results})
+
+    logger.warning("[stream_chat_v2] hit MAX_TOOL_ROUNDS for session %s", session_id)
+    yield {"type": "done"}
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+async def _safe_execute_agent_tool(
+    svc: CommandService, session_id: str, tool_name: str, tool_input: dict,
+) -> str:
+    """Execute a redesigned-path tool with error handling — never raises, always returns JSON."""
+    try:
+        return await execute_agent_tool(svc, session_id, tool_name, tool_input)
+    except Exception:
+        logger.exception("[_safe_execute_agent_tool] %s failed for session %s", tool_name, session_id)
+        return json.dumps({"error": f"Tool '{tool_name}' failed. Please try again.", "code": "TOOL_ERROR"})
 
 async def _safe_execute_tool(
     session_id: str, tool_name: str, tool_input: dict,

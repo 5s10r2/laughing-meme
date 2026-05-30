@@ -29,8 +29,8 @@ from pydantic import BaseModel, Field
 
 load_dotenv(override=True)
 
+from tarini.agent import _use_new_experience, opening_prompt
 from tarini.db import client as db
-from tarini.prompts import INITIAL_PROMPT
 from tarini.session_manager import session_manager
 
 logging.basicConfig(level=logging.INFO)
@@ -43,7 +43,10 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Tarini server starting up")
+    logger.info(
+        "Tarini server starting up (experience=%s)",
+        "new" if _use_new_experience() else "legacy",
+    )
     await db.init_client()
     session_manager.start_eviction_task()
     yield
@@ -214,7 +217,7 @@ async def chat(session_id: str, body: ChatRequest, _: None = Depends(require_aut
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    user_message = INITIAL_PROMPT if body.initial else _sanitize(body.message or "")
+    user_message = opening_prompt() if body.initial else _sanitize(body.message or "")
     if not user_message:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 

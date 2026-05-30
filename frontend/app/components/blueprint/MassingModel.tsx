@@ -50,13 +50,13 @@ const HW = 62; // half-width of the iso diamond
 const HH = 30; // half-height of the iso diamond
 const MAX_TH = 17; // fattest a floor gets (few floors)
 const LEGIBILITY_TH = 10; // thinnest before the canvas grows instead
-const MIN_TH = 6; // hard floor when even a grown canvas must be capped
 const TICK_MIN_TH = 13; // per-floor window ticks only when floors are this thick
 const BASE_Y = 30;
 const STACK_BUDGET = 136; // baseline stack height (8 × 17)
 const BOTTOM_PAD = 50; // room for contact shadow + label
-const MAX_VIEWH = 560; // cap so a tall building never makes an absurd bubble
-const MAX_FLOORS = 40; // sane upper bound for a PG/hostel block
+// Upper bound on floors; with LEGIBILITY_TH this keeps viewH within a sane
+// bubble (40 floors → ~540px), so no separate height cap is needed.
+const MAX_FLOORS = 40;
 
 /** Coerce loosely-typed LLM `blocks` into validated MassingBlock[]. */
 function coerceBlocks(raw: unknown): MassingBlock[] {
@@ -192,12 +192,8 @@ export function MassingModel({
   // Geometry: portrait scaling — clamp thickness to a legibility floor, grow the
   // canvas to fit, and cap total height so a tall building never overflows.
   const { th, showTicks, viewH, descriptors, shadowCy, glowCy } = useMemo(() => {
-    let thickness = clamp(STACK_BUDGET / floors, LEGIBILITY_TH, MAX_TH);
-    let height = BASE_Y + (floors - 1) * thickness + 2 * HH + thickness + BOTTOM_PAD;
-    if (height > MAX_VIEWH) {
-      thickness = Math.max(MIN_TH, (MAX_VIEWH - BASE_Y - 2 * HH - BOTTOM_PAD) / floors);
-      height = BASE_Y + (floors - 1) * thickness + 2 * HH + thickness + BOTTOM_PAD;
-    }
+    const thickness = clamp(STACK_BUDGET / floors, LEGIBILITY_TH, MAX_TH);
+    const height = BASE_Y + (floors - 1) * thickness + 2 * HH + thickness + BOTTOM_PAD;
     const ticks = thickness >= TICK_MIN_TH;
     const desc: FloorDescriptor[] = [];
     for (let k = floors - 1; k >= 0; k--) {
@@ -223,13 +219,11 @@ export function MassingModel({
   // a tall building still enter in sequence (no flat simultaneous batch).
   const staggerStep = floors > 1 ? Math.min(0.04, 0.45 / (floors - 1)) : 0;
 
+  // Single-block render for now (multi-block deferred), so the default stat
+  // describes the rendered block — no aggregate that would imply more is drawn.
   const derivedStats = useMemo(
-    () =>
-      stats ?? [
-        { label: "Blocks", value: blocks.length },
-        { label: "Floors", value: blocks.reduce((s, b) => s + b.floors, 0) },
-      ],
-    [stats, blocks]
+    () => stats ?? [{ label: "Floors", value: floors }],
+    [stats, floors]
   );
 
   const springY = reduce
@@ -309,7 +303,7 @@ export function MassingModel({
 
             {/* cx is constant for a single block: translate once, animate only y + opacity */}
             <g transform={`translate(${cx} 0)`}>
-              <AnimatePresence mode="popLayout">
+              <AnimatePresence>
                 {descriptors.map((f) => (
                   <motion.g
                     key={`${genEpoch}-${f.id}`}

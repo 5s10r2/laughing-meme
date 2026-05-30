@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { notFound } from "next/navigation";
 import {
   MassingModel,
   type MassingBlock,
@@ -15,8 +14,7 @@ const STATES: MassingState[] = ["idle", "generating", "updating", "settled", "er
  * deltas live. Not part of the shipped product (404s in production).
  */
 export default function MassingSpikePage() {
-  if (process.env.NODE_ENV === "production") notFound();
-
+  // dev-only surface — prod reachability is blocked in middleware.ts
   const [floors, setFloors] = useState(8);
   const [state, setState] = useState<MassingState>("settled");
 

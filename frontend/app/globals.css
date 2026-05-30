@@ -155,6 +155,56 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   LIVING BLUEPRINT — Theme scope (warm paper + indigo)
+   Additive: overrides the design-token SOURCES within `.lp-theme` only, so the
+   existing Tailwind utilities (bg-bg-surface, text-content, …) flip to warm
+   paper inside this scope while the live dark app is untouched. Wrap a page or
+   the chat shell in `.lp-theme` to adopt the Living Blueprint look.
+   ═══════════════════════════════════════════════════════════ */
+
+.lp-theme {
+  /* Backgrounds — warm paper */
+  --bg-deep:     #ECE6D9;  /* page behind cards */
+  --bg-surface:  #FCFAF5;  /* card surface */
+  --bg-elevated: #F3F0E8;  /* raised / chip fill */
+  --bg-subtle:   #EFEADF;
+
+  /* Accent — electric indigo (the AI signature) */
+  --accent-600: #3A34B0;
+  --accent-500: #4B45D6;
+  --accent-400: #6E68E8;
+  --accent-300: #C9C5F2;
+
+  /* Text — warm near-black */
+  --text-primary:   #191712;
+  --text-secondary: #575148;
+  --text-tertiary:  #928B7D;
+  --text-on-accent: #FFFFFF;
+
+  /* Borders & glass */
+  --border-default: rgba(25, 23, 18, 0.10);
+  --border-strong:  rgba(25, 23, 18, 0.18);
+  --border-accent:  rgba(75, 69, 214, 0.30);
+  --glass-bg:       rgba(25, 23, 18, 0.03);
+  --glass-border:   rgba(25, 23, 18, 0.08);
+
+  /* Semantic — calmer, paper-appropriate */
+  --success: #1E8A5F; --success-surface: rgba(30, 138, 95, 0.10);
+  --warning: #B0791F; --warning-surface: rgba(176, 121, 31, 0.10);
+  --error:   #C0492E; --error-surface:   rgba(192, 73, 46, 0.10);
+  --info:    #4B45D6; --info-surface:    rgba(75, 69, 214, 0.10);
+
+  /* Categorical room-type / package colours (consumed directly via var()) */
+  --t-single: #4B45D6;  /* indigo  */
+  --t-double: #5E7C6B;  /* forest  */
+  --t-deluxe: #B07A3A;  /* ochre   */
+  --t-triple: #64708A;  /* slate   */
+
+  background: var(--bg-deep);
+  color: var(--text-primary);
+}
+
+/* ═══════════════════════════════════════════════════════════
    LIVING BLUEPRINT — Massing model (self-contained display case)
    The "studio" is a dark canvas regardless of page theme. Motion is
    EVENT-DRIVEN: the building draws once on first paint; the sheen and

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tarini — Living Blueprint v4 (animated + scales to many floors)</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;450;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#F3F0E8; --surface:#FCFAF5; --surface-2:#F7F3EB;
+    --ink:#191712; --ink-2s:#575148; --ink-3:#928B7D;
+    --line:#E6DFD0; --line-2:#D6CCB7;
+    --indigo:#4B45D6; --indigo-2:#6E68E8; --indigo-soft:#EBEAFB; --indigo-line:#C9C5F2;
+    --studio:#14131A;
+    --t-single:#4B45D6; --t-double:#5E7C6B; --t-deluxe:#B07A3A; --t-triple:#64708A;
+    --ease:cubic-bezier(0.23,1,0.32,1);
+    --shadow:0 1px 2px rgba(25,23,18,.05),0 10px 30px -14px rgba(25,23,18,.22);
+    --shadow-lg:0 2px 6px rgba(25,23,18,.06),0 30px 60px -24px rgba(25,23,18,.32);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  body{background:radial-gradient(120% 70% at 50% -5%,#FBF9F3,var(--paper) 60%,#ECE5D7);min-height:100vh;
+    font-family:'Inter',sans-serif;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:28px;padding:50px 30px 70px;}
+  .masthead{text-align:center;max-width:780px;}
+  .masthead .kicker{font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--indigo);font-weight:500;}
+  .masthead h1{font-family:'Fraunces',serif;font-weight:500;font-size:32px;letter-spacing:-.015em;margin-top:10px;}
+  .masthead p{color:var(--ink-2s);font-size:13.5px;margin-top:9px;line-height:1.55;}
+  .masthead .live-note{display:inline-flex;align-items:center;gap:7px;margin-top:12px;font-family:'Geist Mono',monospace;font-size:11px;color:var(--indigo);}
+  .masthead .live-note i{width:7px;height:7px;border-radius:50%;background:var(--indigo);animation:livedot 1.4s ease-in-out infinite;}
+  @keyframes livedot{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
+  .stage{display:flex;gap:42px;flex-wrap:wrap;justify-content:center;align-items:flex-start;}
+  .frame-wrap{display:flex;flex-direction:column;align-items:center;gap:13px;}
+  .frame-label{font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);}
+  .frame-label b{color:var(--ink);font-weight:500;}
+
+  .phone{width:392px;height:850px;border-radius:48px;background:var(--paper);
+    box-shadow:var(--shadow-lg),inset 0 0 0 1px rgba(255,255,255,.6);border:11px solid #100E0B;position:relative;overflow:hidden;display:flex;flex-direction:column;}
+  .phone::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:28px 28px;opacity:.3;-webkit-mask-image:radial-gradient(130% 80% at 50% 25%,#000 30%,transparent 88%);mask-image:radial-gradient(130% 80% at 50% 25%,#000 30%,transparent 88%);}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:28px;background:#100E0B;border-radius:0 0 18px 18px;z-index:6;}
+  .appbar{position:relative;z-index:2;padding:44px 22px 12px;display:flex;align-items:center;justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .seal{width:34px;height:34px;border-radius:11px;background:linear-gradient(150deg,#5E59EA,#3F39C2);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 14px -4px rgba(75,69,214,.6),inset 0 1px 0 rgba(255,255,255,.4);}
+  .brand .nm{font-family:'Fraunces',serif;font-weight:600;font-size:18px;letter-spacing:-.01em;line-height:1;}
+  .brand .nm small{display:block;font-family:'Inter';font-weight:500;font-size:10px;color:var(--ink-3);margin-top:3px;}
+  .restart{font-size:12px;color:var(--ink-3);font-weight:500;}
+  .spine{position:relative;z-index:2;display:flex;align-items:center;padding:4px 24px 14px;}
+  .spine .node{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .spine .dot{width:8px;height:8px;border-radius:50%;background:var(--line-2);box-shadow:0 0 0 4px var(--paper);}
+  .spine .node.done .dot{background:var(--ink-2s);}.spine .node.active .dot{background:var(--indigo);box-shadow:0 0 0 4px var(--indigo-soft);}
+  .spine .lbl{font-size:9px;letter-spacing:.05em;color:var(--ink-3);font-weight:500;text-transform:uppercase;}
+  .spine .node.active .lbl{color:var(--indigo);}.spine .node.done .lbl{color:var(--ink-2s);}
+  .spine .seg{flex:1;height:1.5px;background:var(--line-2);margin:0 3px 16px;border-radius:2px;}.spine .seg.done{background:var(--ink-2s);}
+  .body{position:relative;z-index:2;flex:1;overflow:hidden;padding:4px 18px 0;display:flex;flex-direction:column;gap:13px;}
+  .ai-line{display:flex;gap:9px;align-items:flex-start;}
+  .ai-line .mk{flex:0 0 24px;height:24px;border-radius:7px;background:var(--indigo-soft);display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .ai-line p{font-size:14px;line-height:1.5;max-width:88%;}
+  .ai-line .lead{font-family:'Fraunces',serif;font-weight:600;}
+
+  /* ===== STUDIO ===== */
+  .studio{position:relative;border-radius:24px;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,#211F2A,var(--studio) 70%);box-shadow:var(--shadow),inset 0 0 0 1px rgba(255,255,255,.05);padding:15px 16px 13px;}
+  .studio .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:22px 22px;-webkit-mask-image:radial-gradient(80% 70% at 50% 40%,#000,transparent 80%);mask-image:radial-gradient(80% 70% at 50% 40%,#000,transparent 80%);}
+  /* perpetual sheen sweep — guarantees visible motion */
+  .studio .sheen{position:absolute;top:0;bottom:0;width:80px;background:linear-gradient(100deg,transparent,rgba(150,145,236,.16),transparent);filter:blur(4px);animation:sweep 3.6s ease-in-out infinite;z-index:3;pointer-events:none;}
+  @keyframes sweep{0%{transform:translateX(-120px)}55%,100%{transform:translateX(420px)}}
+  .studio .shead{position:relative;z-index:4;display:flex;justify-content:space-between;align-items:flex-start;}
+  .studio .shead .ti{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:#F4F1EA;}
+  .studio .shead .meta{font-family:'Geist Mono',monospace;font-size:10px;color:#A7A2C4;letter-spacing:.04em;margin-top:3px;}
+  .studio .shead .live{font-family:'Geist Mono',monospace;font-size:10px;color:#9C97EC;display:flex;align-items:center;gap:5px;}
+  .studio .shead .live i{width:6px;height:6px;border-radius:50%;background:#6E68E8;box-shadow:0 0 8px #6E68E8;animation:livedot 1.4s ease-in-out infinite;}
+  .massing{position:relative;z-index:2;display:block;width:100%;height:auto;}
+  .studio .foot{position:relative;z-index:4;display:flex;gap:13px;margin-top:4px;}
+  .studio .foot .kv b{font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:#F4F1EA;line-height:1;}
+  .studio .foot .kv span{display:block;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#8E89AE;margin-top:4px;}
+
+  /* floor rise (re-runnable by toggling .build on .massing) */
+  .massing .floor{opacity:1;}
+  .massing.build .floor{opacity:0;transform:translateY(12px);animation:floorRise .5s var(--ease) forwards;animation-delay:calc(var(--i)*70ms + .15s);}
+  @keyframes floorRise{to{opacity:1;transform:translateY(0)}}
+  /* active floor perpetual glow */
+  .massing .glow{animation:glowPulse 2.6s ease-in-out infinite;transform-origin:center;}
+  @keyframes glowPulse{0%,100%{opacity:.35}50%{opacity:.75}}
+
+  /* ===== BLOCK TABS / LEDGER ===== */
+  .blocks{display:flex;gap:7px;}
+  .blocks .tab{font-size:12px;font-weight:600;padding:7px 13px;border-radius:11px;border:1px solid var(--line-2);color:var(--ink-2s);background:var(--surface);}
+  .blocks .tab.on{background:var(--ink);color:#F4F1EA;border-color:var(--ink);}
+  .blocks .tab .c{font-family:'Geist Mono',monospace;font-size:10px;opacity:.7;margin-left:5px;}
+  .ledger{display:flex;flex-direction:column;gap:7px;overflow:hidden;}
+  .tray{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 13px;box-shadow:var(--shadow);
+    opacity:0;transform:translateY(12px);animation:floorRise .45s var(--ease) forwards;}
+  .tray.active{border-color:var(--indigo-line);box-shadow:0 0 0 1px var(--indigo-line),var(--shadow);}
+  .tray .trow{display:flex;align-items:center;justify-content:space-between;}
+  .tray .fname{font-weight:600;font-size:13.5px;}.tray .fname .sub{font-weight:500;font-size:11px;color:var(--ink-3);}
+  .tray .count{font-family:'Geist Mono',monospace;font-size:12px;color:var(--ink-2s);font-weight:500;}.tray .count.act{color:var(--indigo);}
+  .propbar{display:flex;height:6px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--line);}
+  .propbar i{height:100%;transform:scaleX(0);transform-origin:left;animation:barGrow .55s var(--ease) forwards;animation-delay:.35s;}
+  @keyframes barGrow{to{transform:scaleX(1)}}
+  .legend{display:flex;gap:11px;margin-top:8px;flex-wrap:wrap;}
+  .legend span{font-size:10.5px;color:var(--ink-2s);display:flex;align-items:center;gap:5px;font-weight:500;}
+  .legend span b{width:8px;height:8px;border-radius:3px;display:inline-block;}
+  .cells{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+  .cell{width:29px;height:29px;border-radius:8px;opacity:0;transform:scale(.9);animation:cellPop .26s var(--ease) forwards;}
+  @keyframes cellPop{to{opacity:1;transform:scale(1)}}
+  .cell.more{display:flex;align-items:center;justify-content:center;background:var(--surface-2);border:1px dashed var(--line-2);color:var(--ink-3);font-family:'Geist Mono',monospace;font-size:9px;font-weight:500;}
+  .dock{position:relative;z-index:2;padding:10px 18px 18px;}
+  .dock .field{background:var(--surface);border:1px solid var(--line-2);border-radius:18px;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;padding:10px 11px 10px 16px;}
+  .dock .field .ph{flex:1;color:var(--ink-3);font-size:13.5px;}
+  .dock .send{width:36px;height:36px;border-radius:12px;background:var(--ink);display:flex;align-items:center;justify-content:center;}
+  .dock .hintline{text-align:center;font-size:10px;color:var(--ink-3);margin-top:8px;}
+  </style>
+</head>
+<body>
+  <div class="masthead">
+    <div class="kicker">Tarini · Living Blueprint v4 — animated &amp; data-driven</div>
+    <h1>8 floors, 2 blocks, ~120 rooms — drawn from data, never a wall of boxes.</h1>
+    <p>The building is generated from a floor list, so 2 or 10 floors just works. Motion is continuous (sheen + glow) and the build-in replays every few seconds. Built on Emil Kowalski's principles: custom easing, stagger, transform/opacity only.</p>
+    <div class="live-note"><i></i>This loops — watch it draw, then redraw</div>
+  </div>
+
+  <div class="stage">
+    <!-- ===== PHONE A: LEDGER (8 floors) ===== -->
+    <div class="frame-wrap">
+      <div class="frame-label"><b>A</b> · Working view — 8 floors, many rooms, stays calm</div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="appbar"><div class="brand"><div class="seal"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" fill="none"/><path d="M3 10.2 H15 M9 10.2 V14.5" stroke="#fff" stroke-width="1.1" opacity=".7"/></svg></div><div class="nm">Tarini<small>Sunrise Residency · HSR Layout</small></div></div><div class="restart">Restart</div></div>
+        <div class="spine">
+          <div class="node done"><span class="dot"></span><span class="lbl">Intro</span></div><div class="seg done"></div>
+          <div class="node active"><span class="dot"></span><span class="lbl">Build</span></div><div class="seg"></div>
+          <div class="node"><span class="dot"></span><span class="lbl">Plans</span></div><div class="seg"></div>
+          <div class="node"><span class="dot"></span><span class="lbl">Map</span></div><div class="seg"></div>
+          <div class="node"><span class="dot"></span><span class="lbl">Verify</span></div>
+        </div>
+        <div class="body">
+          <div class="ai-line"><div class="mk"><svg width="14" height="14" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#4B45D6" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" fill="none"/></svg></div><p><span class="lead">Block A — 8 floors.</span> Tap any floor to adjust.</p></div>
+          <div class="blocks"><div class="tab on">Block A <span class="c">8F</span></div><div class="tab">Block B <span class="c">3F</span></div><div class="tab" style="border-style:dashed;color:#928B7D">+ Block</div></div>
+          <div class="ledger" id="ledger"></div>
+        </div>
+        <div class="dock"><div class="field"><span class="ph">“Floors 6–8 are deluxe singles”</span><div class="send"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 12 L20 4 L13 20 L11 13 Z" fill="#F3F0E8"/></svg></div></div><div class="hintline">Talk or tap — both update the same building</div></div>
+      </div>
+    </div>
+
+    <!-- ===== PHONE B: MASSING (generated, tall) ===== -->
+    <div class="frame-wrap">
+      <div class="frame-label"><b>B</b> · The whole property — 3D massing, generated from data</div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="appbar"><div class="brand"><div class="seal"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" fill="none"/><path d="M3 10.2 H15 M9 10.2 V14.5" stroke="#fff" stroke-width="1.1" opacity=".7"/></svg></div><div class="nm">Tarini<small>Sunrise Residency · HSR Layout</small></div></div><div class="restart">Restart</div></div>
+        <div class="spine">
+          <div class="node done"><span class="dot"></span><span class="lbl">Intro</span></div><div class="seg done"></div>
+          <div class="node active"><span class="dot"></span><span class="lbl">Build</span></div><div class="seg"></div>
+          <div class="node"><span class="dot"></span><span class="lbl">Plans</span></div><div class="seg"></div>
+          <div class="node"><span class="dot"></span><span class="lbl">Map</span></div><div class="seg"></div>
+          <div class="node"><span class="dot"></span><span class="lbl">Verify</span></div>
+        </div>
+        <div class="body">
+          <div class="ai-line"><div class="mk"><svg width="14" height="14" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#4B45D6" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" fill="none"/></svg></div><p><span class="lead">Here's your whole property.</span> Two blocks, eleven floors — looking right?</p></div>
+          <div class="studio">
+            <div class="grid"></div><div class="sheen"></div>
+            <div class="shead"><div><div class="ti">Sunrise Residency</div><div class="meta">HSR LAYOUT · 2 BLOCKS</div></div><div class="live"><i></i>BUILDING</div></div>
+            <svg class="massing build" id="massing" viewBox="0 0 320 320" fill="none"></svg>
+            <div class="foot">
+              <div class="kv"><b>2</b><span>Blocks</span></div><div class="kv"><b>11</b><span>Floors</span></div><div class="kv"><b>118</b><span>Rooms</span></div><div class="kv"><b>4</b><span>Types</span></div>
+            </div>
+          </div>
+          <div class="ai-line"><div class="mk"><svg width="14" height="14" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#4B45D6" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" fill="none"/></svg></div><p style="color:var(--ink-2s);font-size:13px">Tap a block to open its floors, or tell me what to change.</p></div>
+        </div>
+        <div class="dock"><div class="field"><span class="ph">Message Tarini…</span><div class="send"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 12 L20 4 L13 20 L11 13 Z" fill="#F3F0E8"/></svg></div></div><div class="hintline">Enter to send · Shift+Enter for new line</div></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  function el(n,a){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;}
+
+  // ---- Generative isometric massing: draw a block from a floor count ----
+  function drawBlock(svg, {cx, baseY, floors, hw, hh, th, accentTop, idxStart}){
+    let idx=idxStart;
+    // draw bottom -> top so upper overlaps lower
+    for(let k=floors-1;k>=0;k--){
+      const o=k*th;                       // vertical offset, 0 = top floor
+      const isTop=(k===0);
+      const top=baseY+o, mid=baseY+o+hh, lowMid=mid+th;
+      const back=[cx,top], right=[cx+hw,top+hh], front=[cx,top+2*hh], left=[cx-hw,top+hh];
+      const frontB=[cx,top+2*hh+th], rightB=[cx+hw,top+hh+th], leftB=[cx-hw,top+hh+th];
+      const stagger=floors-1-k+idxStart;  // bottom rises first
+      const g=el('g',{class:'floor',style:`--i:${stagger}`});
+      // faces
+      g.appendChild(el('polygon',{points:`${left} ${front} ${frontB} ${leftB}`, fill:isTop&&accentTop?'#8E88E4':'url(#lft)', stroke:isTop&&accentTop?'#5650D8':'#9C8E73','stroke-width':isTop&&accentTop?'1.1':'1','stroke-linejoin':'round'}));
+      g.appendChild(el('polygon',{points:`${right} ${front} ${frontB} ${rightB}`, fill:isTop&&accentTop?'#736CDD':'url(#rgt)', stroke:isTop&&accentTop?'#5650D8':'#9C8E73','stroke-width':isTop&&accentTop?'1.1':'1','stroke-linejoin':'round'}));
+      if(isTop) g.appendChild(el('polygon',{points:`${back} ${right} ${front} ${left}`, fill:accentTop?'url(#topA)':'url(#top)', stroke:accentTop?'#5650D8':'#9C8E73','stroke-width':'1','stroke-linejoin':'round'}));
+      // window ticks on right face (rooms suggestion)
+      const tickG=el('g',{stroke:isTop&&accentTop?'#bdb8f2':'#8a7c61','stroke-width':'0.7',opacity:'0.5'});
+      for(let w=0;w<3;w++){const fx=cx+22+w*16; const fy=top+hh+4+w*3.2; tickG.appendChild(el('line',{x1:fx,y1:fy,x2:fx,y2:fy+th-2}));}
+      g.appendChild(tickG);
+      svg.appendChild(g);
+    }
+  }
+
+  const svg=document.getElementById('massing');
+  // defs
+  svg.insertAdjacentHTML('beforeend',`<defs>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0EADD"/><stop offset="1" stop-color="#E2D9C7"/></linearGradient>
+    <linearGradient id="lft" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D8CDB6"/><stop offset="1" stop-color="#CABEA3"/></linearGradient>
+    <linearGradient id="rgt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#BCAE92"/><stop offset="1" stop-color="#A89A7C"/></linearGradient>
+    <linearGradient id="topA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9C5F2"/><stop offset="1" stop-color="#A9A3E8"/></linearGradient>
+    <radialGradient id="gl" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#6E68E8" stop-opacity=".5"/><stop offset="1" stop-color="#6E68E8" stop-opacity="0"/></radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>`);
+  // glow + shadows (under building)
+  svg.insertAdjacentHTML('beforeend',`<ellipse class="glow" cx="108" cy="120" rx="95" ry="70" fill="url(#gl)"/>
+    <ellipse cx="108" cy="248" rx="74" ry="17" fill="#000" opacity=".30" filter="url(#soft)"/>
+    <ellipse cx="240" cy="262" rx="44" ry="12" fill="#000" opacity=".22" filter="url(#soft)"/>`);
+  // BLOCK A — 8 floors (tall), BLOCK B — 3 floors (short). th auto-fit by floor count.
+  drawBlock(svg,{cx:108, baseY:30, floors:8, hw:62, hh:30, th:17, accentTop:true, idxStart:0});
+  drawBlock(svg,{cx:240, baseY:150, floors:3, hw:42, hh:21, th:15, accentTop:false, idxStart:8});
+  svg.insertAdjacentHTML('beforeend',`<text x="108" y="252" font-family="Geist Mono" font-size="9" fill="#9C97C4" text-anchor="middle">BLOCK A · 8F</text>
+    <text x="240" y="268" font-family="Geist Mono" font-size="9" fill="#8E89AE" text-anchor="middle">BLOCK B · 3F</text>`);
+
+  // ---- Ledger: 8 floors from data ----
+  const types=[['single','--t-single'],['double','--t-double'],['deluxe','--t-deluxe'],['triple','--t-triple']];
+  const floorsA=[
+    {n:'Floor 8',sub:'· top',rooms:14,mix:[8,3,2,1],active:true},
+    {n:'Floor 7',rooms:14,mix:[9,3,0,2]},{n:'Floor 6',rooms:14,mix:[9,3,0,2]},
+    {n:'Floor 5',rooms:16,mix:[10,4,0,2]},{n:'Floor 4',rooms:16,mix:[10,4,0,2]},
+    {n:'Floor 3',rooms:16,mix:[11,3,0,2]},{n:'Floor 2',rooms:14,mix:[10,4,0,0]},
+    {n:'Ground',sub:'· reception',rooms:14,mix:[10,2,2,0]},
+  ];
+  const led=document.getElementById('ledger');
+  floorsA.forEach((f,i)=>{
+    const tot=f.mix.reduce((a,b)=>a+b,0);
+    const segs=f.mix.map((c,j)=>c>0?`<i style="width:${(c/tot*100).toFixed(0)}%;background:var(${types[j][1]})"></i>`:'').join('');
+    let html=`<div class="tray ${f.active?'active':''}" style="animation-delay:${i*55}ms">
+      <div class="trow"><div class="fname">${f.n} ${f.sub?`<span class="sub">${f.sub}</span>`:''}</div><div class="count ${f.active?'act':''}">${f.rooms} rooms</div></div>
+      <div class="propbar">${segs}</div>`;
+    if(f.active){
+      html+=`<div class="legend">${f.mix.map((c,j)=>c>0?`<span><b style="background:var(${types[j][1]})"></b>${c} ${types[j][0]}</span>`:'').join('')}</div>`;
+      const shown=Math.min(8,f.rooms); let cells='';
+      const flat=[]; f.mix.forEach((c,j)=>{for(let x=0;x<c;x++)flat.push(j);});
+      for(let c=0;c<shown;c++) cells+=`<div class="cell" style="background:var(${types[flat[c]][1]});animation-delay:${500+c*40}ms"></div>`;
+      if(f.rooms>shown) cells+=`<div class="cell more">+${f.rooms-shown}</div>`;
+      html+=`<div class="cells">${cells}</div>`;
+    }
+    html+='</div>';
+    led.insertAdjacentHTML('beforeend',html);
+  });
+
+  // ---- Replay the build-in every few seconds (robust, CSS-driven) ----
+  function replay(){
+    svg.classList.remove('build'); void svg.offsetWidth; svg.classList.add('build');
+    led.querySelectorAll('.tray,.propbar i,.cell').forEach(n=>{n.style.animation='none';void n.offsetWidth;n.style.animation='';});
+  }
+  setInterval(replay, 5200);
+})();
+</script>
+</body>
+</html>

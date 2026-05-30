@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tarini · Living Blueprint — Design System</title>
+<style>
+:root{
+  /* ===== CANVAS / INK ===== */
+  --paper:#F3F0E8; --paper-2:#F7F3EB; --surface:#FCFAF5; --surface-sunk:#EFEADF;
+  --ink:#191712; --ink-2:#575148; --ink-3:#928B7D; --ink-on:#F6F2EA;
+  --line:#E6DFD0; --line-2:#D6CCB7; --line-3:#C7BBA3;
+  /* ===== INDIGO (AI signature) ramp ===== */
+  --indigo-50:#EBEAFB; --indigo-100:#DAD8F6; --indigo-200:#C9C5F2; --indigo-400:#6E68E8;
+  --indigo:#4B45D6; --indigo-700:#3A34B0; --indigo-ink:#262261;
+  /* ===== ROOM TYPES (restrained categorical) ===== */
+  --t-single:#4B45D6; --t-double:#5E7C6B; --t-deluxe:#B07A3A; --t-triple:#64708A;
+  /* ===== SEMANTIC ===== */
+  --ok:#1E8A5F; --ok-soft:#E0F0E7; --warn:#B0791F; --warn-soft:#F6ECD6; --err:#C0492E; --err-soft:#F6E2DC;
+  /* ===== RADII ===== */
+  --r-xs:8px; --r-sm:12px; --r-md:16px; --r-lg:20px; --r-xl:26px; --r-2xl:32px; --r-pill:999px;
+  /* ===== SHADOW (elevation) ===== */
+  --e1:0 1px 2px rgba(25,23,18,.05),0 2px 6px -3px rgba(25,23,18,.08);
+  --e2:0 1px 2px rgba(25,23,18,.05),0 6px 14px -6px rgba(25,23,18,.12),0 18px 34px -16px rgba(25,23,18,.18);
+  --e3:0 2px 6px rgba(25,23,18,.06),0 14px 28px -10px rgba(25,23,18,.18),0 40px 64px -22px rgba(25,23,18,.32);
+  --e-indigo:0 2px 6px rgba(75,69,214,.35),0 12px 26px -8px rgba(75,69,214,.55);
+  --ring-top:inset 0 1px 0 rgba(255,255,255,.7);
+  --ring-top-light:inset 0 1px 0 rgba(255,255,255,.28);
+  --grad-indigo:linear-gradient(160deg,#6963ED,#4B45D6 55%,#3A34B0);
+  --grad-indigo-soft:linear-gradient(160deg,#F2F1FE,#E7E5FA);
+  --grad-surface:linear-gradient(180deg,#FDFCF8,#F6F2EA);
+  --grad-ink:linear-gradient(160deg,#2C2920,#17150F);
+  --grad-aurora:radial-gradient(55% 75% at 12% -5%,rgba(110,104,232,.16),transparent 60%),radial-gradient(45% 65% at 98% 8%,rgba(176,122,58,.10),transparent 55%);
+  /* ===== MOTION ===== */
+  --ease-out:cubic-bezier(0.23,1,0.32,1); --ease-in-out:cubic-bezier(0.77,0,0.175,1);
+  --ease-drawer:cubic-bezier(0.32,0.72,0,1); --ease-spring:cubic-bezier(0.34,1.56,0.64,1);
+  --studio:#14131A;
+  --ff-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --ff-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --ff-mono:ui-monospace,"SF Mono","SFMono-Regular",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+body{background:var(--paper);color:var(--ink);font-family:var(--ff-ui);line-height:1.5;}
+a{color:inherit;text-decoration:none;}
+.mono{font-family:var(--ff-mono);}
+.serif{font-family:var(--ff-display);}
+
+/* ===== LAYOUT ===== */
+.shell{display:flex;min-height:100vh;}
+.nav{position:sticky;top:0;align-self:flex-start;height:100vh;width:230px;flex:0 0 230px;overflow-y:auto;
+  background:var(--surface);border-right:1px solid var(--line);padding:24px 18px;}
+.nav .brandrow{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.nav .seal{width:32px;height:32px;border-radius:10px;background:linear-gradient(150deg,#5E59EA,#3F39C2);display:flex;align-items:center;justify-content:center;box-shadow:var(--e-indigo),inset 0 1px 0 rgba(255,255,255,.4);}
+.nav h1{font-family:var(--ff-display);font-size:17px;font-weight:600;line-height:1;}
+.nav .ver{font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);letter-spacing:.08em;margin:6px 0 20px 42px;}
+.nav .grp{font-family:var(--ff-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 7px;}
+.nav a.lnk{display:block;font-size:13px;color:var(--ink-2);padding:5px 9px;border-radius:8px;font-weight:500;}
+.nav a.lnk:hover{background:var(--paper);color:var(--ink);}
+.main{flex:1;min-width:0;}
+.hero-head{padding:54px 56px 30px;border-bottom:1px solid var(--line);background:var(--grad-aurora),radial-gradient(120% 100% at 0% 0%,#FBF9F3,var(--paper) 70%);}
+.hero-head .kick{font-family:var(--ff-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--indigo);font-weight:500;}
+.hero-head h2{font-family:var(--ff-display);font-weight:500;font-size:40px;letter-spacing:-.02em;margin-top:12px;max-width:760px;}
+.hero-head p{color:var(--ink-2);font-size:15px;margin-top:14px;max-width:620px;}
+.hero-head .legendrow{display:flex;gap:22px;margin-top:22px;flex-wrap:wrap;}
+.hero-head .legendrow b{font-family:var(--ff-display);font-size:22px;font-weight:600;display:block;}
+.hero-head .legendrow span{font-family:var(--ff-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);}
+
+section{padding:46px 56px;border-bottom:1px solid var(--line);}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px;}
+.sec-head .num{font-family:var(--ff-mono);font-size:12px;color:var(--indigo);font-weight:500;}
+.sec-head h3{font-family:var(--ff-display);font-size:26px;font-weight:600;letter-spacing:-.01em;}
+.sec-desc{color:var(--ink-2);font-size:14px;max-width:680px;margin-bottom:28px;}
+.subhead{font-family:var(--ff-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500;margin:30px 0 14px;display:flex;align-items:center;gap:10px;}
+.subhead::after{content:"";flex:1;height:1px;background:var(--line);}
+
+/* specimen scaffold */
+.specs{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;}
+.spec{background:var(--grad-surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;box-shadow:var(--e1),var(--ring-top);}
+.spec .cap{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:3px;}
+.spec .note{font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);margin-bottom:14px;}
+.spec .demo{display:flex;flex-wrap:wrap;gap:12px;align-items:center;}
+
+/* phone frame for in-context demos */
+.phone{width:300px;border-radius:38px;background:var(--paper);border:9px solid #100E0B;box-shadow:var(--e3);overflow:hidden;position:relative;}
+.phone .pgrid{position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:24px 24px;opacity:.28;-webkit-mask-image:radial-gradient(120% 70% at 50% 20%,#000 30%,transparent 85%);mask-image:radial-gradient(120% 70% at 50% 20%,#000 30%,transparent 85%);}
+.phone .inner{position:relative;z-index:1;padding:18px 14px;}
+
+/* ============== FOUNDATIONS ============== */
+.sw{width:120px;}
+.sw .chip{height:62px;border-radius:var(--r-sm);border:1px solid rgba(0,0,0,.06);box-shadow:var(--e1),var(--ring-top);}
+.sw .nm{font-size:11px;font-weight:600;margin-top:8px;}
+.sw .hex{font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);}
+.swatchwrap{display:flex;flex-wrap:wrap;gap:14px;}
+
+.typescale .row{display:flex;align-items:baseline;gap:18px;padding:11px 0;border-bottom:1px dashed var(--line);}
+.typescale .row .meta{font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);width:150px;flex:0 0 150px;}
+
+.scaleboxes{display:flex;align-items:flex-end;gap:10px;}
+.scaleboxes .b{background:var(--indigo-100);border:1px solid var(--indigo-200);border-radius:6px;}
+.scaleboxes .b span{display:block;font-family:var(--ff-mono);font-size:9px;color:var(--ink-3);text-align:center;margin-top:6px;}
+
+.radiirow{display:flex;gap:14px;flex-wrap:wrap;}
+.radiirow .rb{width:74px;height:74px;background:var(--indigo-50);border:1.5px solid var(--indigo);}
+.radiirow .rl{font-family:var(--ff-mono);font-size:9px;color:var(--ink-3);text-align:center;margin-top:6px;}
+
+.elevrow{display:flex;gap:22px;flex-wrap:wrap;}
+.elevrow .eb{width:120px;height:74px;background:var(--surface);border-radius:var(--r-md);display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);}
+
+.easel{display:flex;gap:18px;flex-wrap:wrap;}
+.easel .ec{width:150px;}
+.easel svg{width:150px;height:70px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);}
+.easel .el{font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);margin-top:7px;}
+.easel .el b{color:var(--ink);font-weight:600;display:block;font-family:var(--ff-ui);font-size:11px;}
+
+/* ============== PRIMITIVES ============== */
+.btn{font-family:var(--ff-ui);font-weight:600;font-size:14px;border:1px solid transparent;border-radius:var(--r-md);padding:11px 18px;cursor:pointer;transition:transform .14s var(--ease-out),background .16s,box-shadow .16s;display:inline-flex;align-items:center;gap:8px;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--grad-indigo);color:#fff;box-shadow:var(--e-indigo),var(--ring-top-light);}
+.btn-primary:hover{filter:brightness(1.07);transform:translateY(-1px);}
+.btn-secondary{background:var(--surface);color:var(--ink);border-color:var(--line-2);}
+.btn-secondary:hover{background:var(--paper-2);border-color:var(--line-3);}
+.btn-ghost{background:transparent;color:var(--indigo);}
+.btn-ghost:hover{background:var(--indigo-50);}
+.btn-ink{background:var(--ink);color:var(--ink-on);}
+.btn[disabled]{opacity:.4;cursor:not-allowed;box-shadow:none;}
+.btn-icon{width:42px;height:42px;padding:0;justify-content:center;border-radius:var(--r-sm);}
+.btn .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* stepper */
+.stepper{display:flex;align-items:center;gap:16px;}
+.stepbtn{width:42px;height:42px;border-radius:var(--r-sm);border:1px solid var(--line-2);background:var(--surface);font-size:22px;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .14s var(--ease-out),background .15s;user-select:none;}
+.stepbtn:hover{background:var(--paper-2);}.stepbtn:active{transform:scale(.92);}
+.stepbtn.plus{background:var(--indigo);color:#fff;border-color:var(--indigo);box-shadow:var(--e-indigo);}
+.stepbtn.plus:hover{background:var(--indigo-700);}
+.stepbtn.dis{opacity:.35;pointer-events:none;}
+.stepval{font-family:var(--ff-display);font-weight:600;font-size:32px;min-width:54px;text-align:center;}
+.rangebar{height:5px;border-radius:4px;background:var(--line);position:relative;margin-top:14px;width:230px;}
+.rangebar .fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--indigo),var(--indigo-400));border-radius:4px;transition:width .35s var(--ease-out);}
+.rangehint{font-family:var(--ff-mono);font-size:10px;color:var(--ink-3);margin-top:8px;}
+
+/* chips */
+.chip-sel{border:1px solid var(--line-2);background:var(--surface);border-radius:var(--r-md);padding:12px 14px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;gap:2px;min-width:120px;}
+.chip-sel:hover{border-color:var(--line-3);background:var(--paper-2);}
+.chip-sel.sel{border-color:var(--indigo);background:var(--grad-indigo-soft);box-shadow:0 0 0 1px var(--indigo),var(--ring-top);}
+.chip-sel .t{font-weight:600;font-size:14px;}.chip-sel.sel .t{color:var(--indigo);}
+.chip-sel .s{font-size:11px;color:var(--ink-3);}
+.qchip{border:1px solid var(--line-2);background:var(--surface);border-radius:var(--r-pill);padding:8px 15px;font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;transition:.15s;}
+.qchip:hover{border-color:var(--indigo);color:var(--indigo);background:var(--indigo-50);}
+.filterchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:var(--surface);border-radius:var(--r-pill);padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+.filterchip.on{background:var(--ink);color:var(--ink-on);border-color:var(--ink);}
+.filterchip .c{font-family:var(--ff-mono);font-size:10px;opacity:.7;}
+/* inline expansion chip */
+.xchip{border:1px solid var(--line-2);background:var(--surface);border-radius:var(--r-md);overflow:hidden;transition:box-shadow .2s;width:260px;}
+.xchip .xhead{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;cursor:pointer;}
+.xchip .xhead .t{font-size:13px;font-weight:600;}
+.xchip .xhead .chev{transition:transform .25s var(--ease-out);color:var(--ink-3);}
+.xchip.open{box-shadow:var(--e2),var(--ring-top);border-color:var(--indigo-200);}
+.xchip.open .chev{transform:rotate(90deg);}
+.xchip .xbody{max-height:0;overflow:hidden;transition:max-height .3s var(--ease-drawer);background:var(--paper-2);}
+.xchip.open .xbody{max-height:160px;}
+.xchip .xbody .pad{padding:12px 14px;font-size:12px;color:var(--ink-2);}
+
+/* input dock */
+.dock{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-lg);padding:9px 9px 9px 16px;width:300px;transition:border-color .15s,box-shadow .15s;}
+.dock:focus-within{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigo-50);}
+.dock input{flex:1;border:none;background:none;outline:none;font-family:var(--ff-ui);font-size:14px;color:var(--ink);}
+.dock .send{width:36px;height:36px;border-radius:var(--r-sm);background:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+
+/* toggle */
+.tgl{width:46px;height:27px;border-radius:var(--r-pill);background:var(--line-2);position:relative;cursor:pointer;transition:background .2s;}
+.tgl.on{background:var(--indigo);}
+.tgl::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:var(--e1),var(--ring-top);transition:transform .22s var(--ease-spring);}
+.tgl.on::after{transform:translateX(19px);}
+
+/* badges / pills */
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:var(--r-pill);font-size:11px;font-weight:600;padding:5px 11px;}
+.pill-ok{background:var(--ok-soft);color:var(--ok);}
+.pill-warn{background:var(--warn-soft);color:var(--warn);}
+.pill-err{background:var(--err-soft);color:var(--err);}
+.pill-indigo{background:var(--indigo-50);color:var(--indigo);}
+
+/* tooltip */
+.tipwrap{position:relative;display:inline-flex;}
+.tip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--ink);color:var(--ink-on);font-size:11px;font-weight:500;padding:6px 10px;border-radius:8px;white-space:nowrap;box-shadow:var(--e2),var(--ring-top);}
+.tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink);}
+
+/* loaders */
+.typing{display:inline-flex;gap:4px;align-items:center;padding:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--indigo);animation:bounce 1.1s ease-in-out infinite;}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,100%{opacity:.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-4px)}}
+.skel{background:linear-gradient(100deg,var(--surface-sunk) 30%,var(--paper-2) 50%,var(--surface-sunk) 70%);background-size:200% 100%;animation:shimmer 1.4s linear infinite;border-radius:8px;}
+@keyframes shimmer{to{background-position:-200% 0}}
+
+/* state cards */
+.statecard{width:280px;background:var(--grad-surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px;text-align:center;box-shadow:var(--e1),var(--ring-top);}
+.statecard .ic{width:44px;height:44px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;}
+.statecard .t{font-weight:600;font-size:14px;margin-bottom:4px;}
+.statecard .d{font-size:12.5px;color:var(--ink-2);margin-bottom:14px;}
+
+/* ============== ATOMS ============== */
+.bubble-ai{display:flex;gap:10px;max-width:300px;}
+.bubble-ai .mk{flex:0 0 26px;height:26px;border-radius:8px;background:var(--indigo-50);display:flex;align-items:center;justify-content:center;margin-top:2px;}
+.bubble-ai .bub{background:var(--surface);border:1px solid var(--line);border-radius:6px 18px 18px 18px;padding:12px 15px;font-size:14px;box-shadow:var(--e1),var(--ring-top);}
+.bubble-ai .bub .lead{font-family:var(--ff-display);font-weight:600;}
+.bubble-user{margin-left:auto;background:var(--ink);color:var(--ink-on);border-radius:18px 18px 6px 18px;padding:11px 16px;font-size:14px;max-width:230px;box-shadow:var(--e1),var(--ring-top);width:fit-content;}
+
+.spine{display:flex;align-items:center;width:300px;}
+.spine .node{display:flex;flex-direction:column;align-items:center;gap:5px;}
+.spine .dot{width:8px;height:8px;border-radius:50%;background:var(--line-2);box-shadow:0 0 0 4px var(--surface);}
+.spine .node.done .dot{background:var(--ink-2);}.spine .node.active .dot{background:var(--indigo);box-shadow:0 0 0 4px var(--indigo-50);}
+.spine .lbl{font-size:8.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);font-weight:500;}
+.spine .node.active .lbl{color:var(--indigo);}.spine .node.done .lbl{color:var(--ink-2);}
+.spine .seg{flex:1;height:1.5px;background:var(--line-2);margin:0 3px 15px;}.spine .seg.done{background:var(--ink-2);}
+
+.toolact{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 14px;width:280px;box-shadow:var(--e1),var(--ring-top);}
+.toolact .ti{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.toolact.run .ti{background:var(--indigo-50);}.toolact.done .ti{background:var(--ok-soft);}
+.toolact .tx{font-size:13px;font-weight:500;}
+.toolact.run .tx{color:var(--ink-2);}
+
+.receipt{width:280px;background:var(--grad-surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;box-shadow:var(--e2),var(--ring-top);}
+.receipt .rh{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.receipt .rrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px;}
+.receipt .rrow span{color:var(--ink-3);}.receipt .rrow b{font-weight:600;}
+
+/* ============== HERO: STUDIO MASSING ============== */
+.studio{position:relative;border-radius:var(--r-xl);overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,#211F2A,var(--studio) 70%);box-shadow:var(--e2),inset 0 0 0 1px rgba(255,255,255,.05);padding:16px;width:300px;}
+.studio .sgrid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:22px 22px;-webkit-mask-image:radial-gradient(80% 70% at 50% 40%,#000,transparent 80%);mask-image:radial-gradient(80% 70% at 50% 40%,#000,transparent 80%);}
+.studio .sheen{position:absolute;top:0;bottom:0;width:70px;background:linear-gradient(100deg,transparent,rgba(150,145,236,.16),transparent);filter:blur(4px);animation:sweep 3.8s ease-in-out infinite;z-index:3;pointer-events:none;}
+@keyframes sweep{0%{transform:translateX(-100px)}55%,100%{transform:translateX(330px)}}
+.studio .sh{position:relative;z-index:4;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px;}
+.studio .sh .ti{font-family:var(--ff-display);font-weight:600;font-size:16px;color:var(--ink-on);}
+.studio .sh .meta{font-family:var(--ff-mono);font-size:9px;color:#A7A2C4;letter-spacing:.04em;margin-top:2px;}
+.studio .sh .live{font-family:var(--ff-mono);font-size:9px;color:#9C97EC;display:flex;align-items:center;gap:5px;}
+.studio .sh .live i{width:6px;height:6px;border-radius:50%;background:#6E68E8;box-shadow:0 0 8px #6E68E8;animation:livedot 1.4s ease-in-out infinite;}
+@keyframes livedot{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
+.massing{position:relative;z-index:2;display:block;width:100%;height:auto;}
+.massing .floor{opacity:1;}
+.massing.build .floor{opacity:0;transform:translateY(11px);animation:floorRise .5s var(--ease-out) forwards;animation-delay:calc(var(--i)*65ms + .12s);}
+@keyframes floorRise{to{opacity:1;transform:translateY(0)}}
+.massing .glow{animation:glowPulse 2.6s ease-in-out infinite;}
+@keyframes glowPulse{0%,100%{opacity:.35}50%{opacity:.7}}
+.studio .foot{position:relative;z-index:4;display:flex;gap:14px;margin-top:4px;}
+.studio .foot b{font-family:var(--ff-display);font-size:19px;font-weight:600;color:var(--ink-on);}
+.studio .foot span{display:block;font-family:var(--ff-mono);font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#8E89AE;margin-top:3px;}
+
+/* ledger */
+.ledger{display:flex;flex-direction:column;gap:7px;width:300px;}
+.tray{background:var(--grad-surface);border:1px solid var(--line);border-radius:var(--r-md);padding:11px 13px;box-shadow:var(--e1),var(--ring-top);}
+.tray.active{border-color:var(--indigo-200);box-shadow:0 0 0 1px var(--indigo-200),var(--e1);}
+.tray .trow{display:flex;align-items:center;justify-content:space-between;}
+.tray .fn{font-weight:600;font-size:13.5px;}.tray .fn .s{font-weight:500;font-size:11px;color:var(--ink-3);}
+.tray .ct{font-family:var(--ff-mono);font-size:12px;color:var(--ink-2);}.tray .ct.a{color:var(--indigo);}
+.propbar{display:flex;height:6px;border-radius:4px;overflow:hidden;margin-top:9px;background:var(--line);}
+.propbar i{height:100%;}
+.legend{display:flex;gap:11px;margin-top:9px;flex-wrap:wrap;}
+.legend span{font-size:10.5px;color:var(--ink-2);display:flex;align-items:center;gap:5px;font-weight:500;}
+.legend span b{width:8px;height:8px;border-radius:3px;}
+.cells{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+.cell{width:28px;height:28px;border-radius:7px;}
+.cell.more{display:flex;align-items:center;justify-content:center;background:var(--surface-sunk);border:1px dashed var(--line-2);color:var(--ink-3);font-family:var(--ff-mono);font-size:9px;}
+
+/* bottom sheet */
+.sheet-scrim{position:fixed;inset:0;background:rgba(20,18,14,.4);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .3s;z-index:80;}
+.sheet-scrim.open{opacity:1;pointer-events:auto;}
+.sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:min(440px,94vw);background:var(--surface);border-radius:var(--r-2xl) var(--r-2xl) 0 0;box-shadow:var(--e3);z-index:81;transition:transform .42s var(--ease-drawer);padding:10px 20px 28px;}
+.sheet.open{transform:translate(-50%,0);}
+.sheet .grab{width:38px;height:4px;border-radius:3px;background:var(--line-2);margin:6px auto 16px;}
+.sheet h4{font-family:var(--ff-display);font-size:18px;font-weight:600;margin-bottom:4px;}
+.sheet p{font-size:13px;color:var(--ink-2);margin-bottom:18px;}
+
+/* accordion (verification) */
+.acc{width:300px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--e1),var(--ring-top);}
+.acc .ai{border-bottom:1px solid var(--line);}
+.acc .ah{display:flex;align-items:center;gap:11px;padding:13px 15px;cursor:pointer;}
+.acc .ah .aic{width:30px;height:30px;border-radius:9px;background:var(--paper-2);display:flex;align-items:center;justify-content:center;flex:0 0 30px;}
+.acc .ah .at{font-size:13.5px;font-weight:600;}
+.acc .ah .as{font-size:11.5px;color:var(--ink-3);}
+.acc .ah .chev{margin-left:auto;color:var(--ink-3);transition:transform .25s;}
+.acc .ai.open .chev{transform:rotate(90deg);}
+.acc .ab{max-height:0;overflow:hidden;transition:max-height .3s var(--ease-drawer);}
+.acc .ai.open .ab{max-height:200px;}
+.acc .ab .pad{padding:0 15px 14px 56px;font-size:13px;color:var(--ink-2);}
+
+/* celebration */
+.celebrate{width:300px;background:radial-gradient(120% 90% at 50% 0%,var(--indigo-50),var(--surface) 70%);border:1px solid var(--indigo-100);border-radius:var(--r-xl);padding:28px 20px;text-align:center;box-shadow:var(--e2),var(--ring-top);}
+.celebrate .seal-lg{width:54px;height:54px;border-radius:16px;background:linear-gradient(150deg,#5E59EA,#3F39C2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:var(--e-indigo);animation:pop .5s var(--ease-spring);}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.celebrate h4{font-family:var(--ff-display);font-size:22px;font-weight:600;}
+.celebrate p{font-size:13px;color:var(--ink-2);margin-top:6px;}
+
+/* ===== AI working composer (the thinking message bar) ===== */
+@property --aura{syntax:'<angle>';inherits:false;initial-value:0deg;}
+.compose{position:relative;width:330px;border-radius:var(--r-lg);}
+.compose .dock{position:relative;z-index:1;width:100%;background:var(--grad-surface);transition:box-shadow .35s var(--ease-out),border-color .3s;}
+/* crisp rotating gradient BORDER (masked) — contained, no leaking blur */
+.compose .ring{position:absolute;inset:0;border-radius:inherit;padding:1.6px;
+  background:conic-gradient(from var(--aura),transparent 0deg,var(--indigo-400) 55deg,#a39df5 110deg,var(--indigo) 165deg,transparent 280deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+  opacity:0;transition:opacity .4s var(--ease-out);pointer-events:none;z-index:2;}
+.compose.working .ring{opacity:1;animation:aura 3.2s linear infinite;}
+@keyframes aura{to{--aura:360deg}}
+.compose.working .dock{border-color:transparent;box-shadow:0 0 0 1px var(--indigo-100),0 12px 32px -14px rgba(75,69,214,.5);}
+.seal-breath{width:30px;height:30px;border-radius:9px;background:var(--grad-indigo);display:flex;align-items:center;justify-content:center;flex:0 0 30px;box-shadow:var(--e-indigo),var(--ring-top-light);animation:breath 2.4s ease-in-out infinite;}
+@keyframes breath{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.statusword{position:relative;flex:1;height:22px;overflow:hidden;}
+.statusword .gw{position:absolute;left:0;top:0;line-height:22px;font-size:14px;font-weight:600;white-space:nowrap;
+  background:linear-gradient(90deg,var(--ink-3) 8%,var(--indigo) 42%,#a39df5 52%,var(--ink-3) 88%);background-size:220% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:textShim 2s linear infinite;
+  transition:opacity .26s var(--ease-out),transform .26s var(--ease-out);}
+.statusword .gw.out{opacity:0;transform:translateY(-8px);}
+@keyframes textShim{to{background-position:-220% 0}}
+.stopbtn{width:30px;height:30px;border-radius:9px;background:var(--surface-sunk);border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 30px;transition:transform .14s var(--ease-out);}
+.stopbtn:active{transform:scale(.9);}
+.stopbtn .sq{width:9px;height:9px;border-radius:2.5px;background:var(--grad-indigo);}
+.drawline{height:2px;border-radius:2px;background:var(--line);margin-top:10px;overflow:hidden;position:relative;}
+.drawline::after{content:"";position:absolute;inset:0 60% 0 0;background:linear-gradient(90deg,var(--indigo-400),var(--indigo));border-radius:2px;animation:draw 2.6s var(--ease-in-out) infinite;}
+@keyframes draw{0%{inset:0 100% 0 0}60%{inset:0 14% 0 0}100%{inset:0 4% 0 0}}
+
+/* ===== EDITING & DIRECT MANIPULATION ===== */
+.efield{display:inline-flex;align-items:center;gap:8px;border:1px solid transparent;border-radius:10px;padding:6px 10px;background:var(--surface);transition:.15s;cursor:text;}
+.efield:hover{border-color:var(--line-2);background:var(--paper-2);}
+.efield .val{font-size:14px;font-weight:600;}
+.efield .pen{opacity:.5;}
+.efield.editing{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigo-50);background:var(--surface);}
+.efield input{border:none;background:none;outline:none;font:inherit;font-weight:600;font-size:14px;width:120px;color:var(--ink);}
+.efield .mini{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.efield .ok-b{background:var(--grad-indigo);color:#fff;}
+.efield .x-b{background:var(--surface-sunk);color:var(--ink-2);}
+.segctrl{display:inline-flex;background:var(--surface-sunk);border-radius:12px;padding:3px;gap:2px;border:1px solid var(--line);}
+.segctrl button{border:none;background:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);padding:7px 13px;border-radius:9px;cursor:pointer;transition:.18s var(--ease-out);}
+.segctrl button.on{background:var(--surface);color:var(--indigo);box-shadow:var(--e1);}
+.ministep{display:inline-flex;align-items:center;gap:10px;}
+.ministep .b{width:28px;height:28px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;user-select:none;}
+.ministep .b.p{background:var(--grad-indigo);color:#fff;border-color:transparent;}
+.ministep .v{font-weight:600;font-size:16px;min-width:22px;text-align:center;}
+.bulkbar{display:flex;align-items:center;gap:10px;background:var(--grad-ink);color:var(--ink-on);border-radius:14px;padding:10px 12px 10px 16px;box-shadow:var(--e2);width:330px;}
+.bulkbar .n{font-weight:600;font-size:13px;flex:1;}
+.bulkbar .ba{background:rgba(255,255,255,.12);color:#fff;border:none;font:inherit;font-size:12px;font-weight:600;padding:7px 11px;border-radius:9px;cursor:pointer;}
+.bulkbar .ba.go{background:var(--grad-indigo);}
+.frow{width:330px;background:var(--grad-surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--e1),var(--ring-top);transition:box-shadow .25s;}
+.frow.open{box-shadow:var(--e2),var(--ring-top);border-color:var(--indigo-200);}
+.frow .fh{display:flex;align-items:center;gap:11px;padding:13px 15px;cursor:pointer;}
+.frow .fh .ft{font-weight:600;font-size:14px;flex:1;}
+.frow .fh .fc{font-family:var(--ff-mono);font-size:12px;color:var(--ink-2);}
+.frow .fh .chev{color:var(--ink-3);transition:transform .25s var(--ease-out);}
+.frow.open .fh .chev{transform:rotate(90deg);}
+.frow .fb{max-height:0;overflow:hidden;transition:max-height .32s var(--ease-drawer);}
+.frow.open .fb{max-height:260px;}
+.frow .fb .pad{padding:0 15px 15px;}
+.frow .roomgrid{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0 12px;}
+.frow .rc{width:30px;height:30px;border-radius:8px;cursor:pointer;border:1.5px solid transparent;transition:transform .12s;}
+.frow .rc:active{transform:scale(.9);}
+.frow .rc.pick{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--indigo);}
+.sheet .frw{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);}
+.sheet .frw .k{font-size:13px;color:var(--ink-2);font-weight:500;}
+.sheet .sactions{display:flex;gap:10px;margin-top:18px;align-items:center;}
+.sheet .danger{color:var(--err);font-weight:600;font-size:13px;cursor:pointer;}
+.ia-phone{width:330px;border-radius:42px;background:var(--paper);border:10px solid #100E0B;box-shadow:var(--e3);overflow:hidden;position:relative;}
+.ia-phone .pg{position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:24px 24px;opacity:.25;-webkit-mask-image:radial-gradient(120% 60% at 50% 15%,#000 30%,transparent 80%);mask-image:radial-gradient(120% 60% at 50% 15%,#000 30%,transparent 80%);}
+.ia-phone .in{position:relative;z-index:1;padding:16px 14px 0;display:flex;flex-direction:column;}
+.ia-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.ia-prog{display:flex;gap:9px;}
+.ia-prog .p{display:flex;align-items:center;gap:4px;font-family:var(--ff-mono);font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;}
+.ia-prog .p b{width:7px;height:7px;border-radius:50%;background:var(--line-2);}
+.ia-prog .p.done b{background:var(--ok);}.ia-prog .p.now b{background:var(--indigo);box-shadow:0 0 0 3px var(--indigo-50);}
+.ia-comp{margin:14px -14px 0;padding:12px 14px 16px;background:linear-gradient(180deg,transparent,var(--paper) 35%);}
+.footer{padding:40px 56px 80px;color:var(--ink-3);font-size:12px;font-family:var(--ff-mono);}
+/* ============================================================
+   PERSONA & RHYTHM PASS
+   Audience: PG/hostel owners ~35–60, Android, daylight, moderate
+   digital literacy. Bigger, weightier type; ≥46px tap targets;
+   one consistent 4/8px spacing rhythm. (Becomes token defaults in port.)
+   ============================================================ */
+/* —— vertical rhythm —— */
+section{padding:48px 56px;}
+.sec-head{margin-bottom:8px;}
+.sec-desc{font-size:15px;line-height:1.62;margin-bottom:28px;}
+.sec-head h3{font-size:27px;}
+.subhead{margin:36px 0 16px;}
+.specs{gap:18px;}
+.spec{padding:20px;}
+.spec .cap{font-size:13px;margin-bottom:4px;}
+.spec .note{margin-bottom:16px;}
+.demo{display:flex;flex-wrap:wrap;align-items:center;gap:16px;}
+.chip-sel{min-width:150px;flex:0 0 auto;}
+/* —— product type: larger + weightier for legibility —— */
+.btn{font-size:15px;padding:13px 20px;min-height:46px;}
+.btn-icon{width:46px;height:46px;min-height:46px;}
+.bubble-ai{max-width:330px;}
+.bubble-ai .bub{font-size:15px;line-height:1.55;padding:14px 16px;}
+.bubble-user{font-size:15px;padding:12px 16px;}
+.chip-sel{padding:15px 16px;gap:3px;}
+.chip-sel .t{font-size:15px;}
+.chip-sel .s{font-size:12.5px;}
+.qchip{font-size:14px;padding:10px 16px;}
+.filterchip{font-size:13px;padding:8px 14px;}
+.dock{padding:11px 11px 11px 17px;}
+.dock input,.dock .ph{font-size:15px;}
+.statusword{height:24px;}
+.statusword .gw{font-size:15px;line-height:24px;}
+.stepval{font-size:34px;}
+.tray{padding:13px 15px;}
+.tray .fn{font-size:14.5px;}
+.tray .ct{font-size:12.5px;}
+.legend span{font-size:12px;}
+.receipt{padding:18px;}
+.receipt .rrow{font-size:14px;padding:9px 0;}
+.statecard{padding:24px;}
+.statecard .t{font-size:15px;}
+.statecard .d{font-size:13.5px;line-height:1.55;margin-bottom:16px;}
+.toolact{padding:11px 14px;}
+.toolact .tx{font-size:14px;}
+.acc .ah{padding:14px 15px;}
+.acc .ah .at{font-size:14.5px;}
+.acc .ah .as{font-size:12.5px;}
+/* —— editing + sheets —— */
+.sheet{padding:12px 22px 30px;}
+.sheet h4{font-size:19px;margin-bottom:5px;}
+.sheet p{font-size:14px;line-height:1.55;margin-bottom:20px;}
+.sheet .frw{padding:14px 0;}
+.sheet .frw .k{font-size:14px;}
+.sheet .sactions{margin-top:22px;}
+.efield{padding:8px 12px;}
+.efield .val,.efield input{font-size:15px;}
+.segctrl button{font-size:13.5px;padding:9px 15px;}
+.ministep .v{font-size:18px;}
+.frow .fh{padding:14px 16px;}
+.frow .fh .ft{font-size:14.5px;}
+.frow .fh .fc{font-size:12.5px;}
+/* —— foundations specimens breathing room —— */
+.swatchwrap{gap:16px;}
+.typescale .row{padding:13px 0;}
+/* ============================================================
+   ROBUSTNESS — long names, overflow, scaling, progressive disclosure
+   ============================================================ */
+/* names that sit beside other elements truncate to one line (full text stays editable) */
+.studio .sh .ti,.tray .fn,.frow .fh .ft,.chip-sel .t,.acc .ah .at{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* flex parents must let the name shrink (min-width:0) rather than push siblings */
+.studio .sh{gap:10px;align-items:flex-start;}
+.studio .sh>div:first-child{min-width:0;flex:1;}
+.studio .sh .live{flex:0 0 auto;}
+.trow{gap:8px;}
+.tray .trow>.fn{min-width:0;flex:1;}
+.tray .trow>.ct{flex:0 0 auto;}
+.frow .fh .ft{min-width:0;}
+.frow .fh .fc{flex:0 0 auto;white-space:nowrap;}
+.chip-sel{overflow:hidden;}
+.chip-sel .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.acc .ah>div{min-width:0;flex:1;}
+.acc .ah .as{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* status verb ellipsizes, never clips mid-word */
+.statusword .gw{max-width:100%;overflow:hidden;text-overflow:ellipsis;}
+/* sheets & expansions scroll instead of growing unbounded with many rooms */
+.sheet{max-height:84vh;overflow-y:auto;}
+.sheet .cells{max-height:44vh;overflow-y:auto;}
+.frow.open .fb{max-height:300px;}
+.frow .roomgrid{max-height:170px;overflow-y:auto;}
+.ledger{max-height:none;}
+/* ===== DRILL-DOWN & STATES (linked data, empty vs filled) ===== */
+.pgroup{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--line);}
+.pgroup .dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto;}
+.pgroup .pinfo{flex:1;min-width:0;}
+.pgroup .pname{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pgroup .pmeta{font-size:12px;color:var(--ink-3);font-family:var(--ff-mono);margin-top:1px;}
+.pgroup .price{font-size:14px;font-weight:700;color:var(--indigo);flex:0 0 auto;}
+.pgroup .pcount{font-size:12px;font-weight:600;color:var(--ink-2);flex:0 0 auto;background:var(--surface-sunk);border-radius:7px;padding:3px 8px;}
+.emptybox{text-align:center;padding:22px 16px;border:1px dashed var(--line-2);border-radius:14px;background:var(--paper-2);}
+.emptybox .eic{width:42px;height:42px;border-radius:12px;background:var(--indigo-50);display:flex;align-items:center;justify-content:center;margin:0 auto 11px;}
+.emptybox .et{font-size:14.5px;font-weight:600;}
+.emptybox .ed{font-size:12.5px;color:var(--ink-2);margin:5px 0 15px;line-height:1.5;}
+.roomrow{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--line);}
+.roomrow .rn{font-family:var(--ff-mono);font-size:13px;font-weight:600;width:44px;flex:0 0 auto;}
+.roomrow .rdot{width:9px;height:9px;border-radius:3px;flex:0 0 auto;}
+.roomrow .rt{font-size:13px;flex:1;}
+.roomrow .rpkg{font-size:12.5px;font-weight:600;color:var(--ink-2);flex:0 0 auto;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- ============ NAV ============ -->
+  <nav class="nav">
+    <div class="brandrow">
+      <div class="seal"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="M3 10.2 H15 M9 10.2 V14.5" stroke="#fff" stroke-width="1.1" opacity=".7"/></svg></div>
+      <h1>Living Blueprint</h1>
+    </div>
+    <div class="ver">DESIGN SYSTEM · v0.1</div>
+    <div class="grp">Foundations</div>
+    <a class="lnk" href="#brand">1.1 Brand &amp; seal</a>
+    <a class="lnk" href="#color">1.2 Color</a>
+    <a class="lnk" href="#type">1.3 Typography</a>
+    <a class="lnk" href="#space">1.4 Spacing &amp; radii</a>
+    <a class="lnk" href="#elevation">1.5 Elevation</a>
+    <a class="lnk" href="#motion">1.6 Motion</a>
+    <div class="grp">Primitives</div>
+    <a class="lnk" href="#buttons">2.1 Buttons</a>
+    <a class="lnk" href="#stepper">2.2 Stepper</a>
+    <a class="lnk" href="#chips">2.3 Chips &amp; selectors</a>
+    <a class="lnk" href="#xchip">2.4 Inline-expansion</a>
+    <a class="lnk" href="#inputs">2.5 Inputs &amp; dock</a>
+    <a class="lnk" href="#toggle">2.6 Toggle &amp; pills</a>
+    <a class="lnk" href="#tooltip">2.7 Tooltip</a>
+    <a class="lnk" href="#sheet">2.8 Bottom sheet</a>
+    <a class="lnk" href="#loaders">2.9 Loaders</a>
+    <a class="lnk" href="#states">2.10 Empty &amp; error</a>
+    <div class="grp">Chat atoms</div>
+    <a class="lnk" href="#bubbles">3.1 Message bubbles</a>
+    <a class="lnk" href="#spinex">3.2 Stage spine</a>
+    <a class="lnk" href="#tool">3.3 Tool activity</a>
+    <a class="lnk" href="#receipt">3.4 Receipt card</a>
+    <div class="grp">Hero system</div>
+    <a class="lnk" href="#massing">4.1 Massing model</a>
+    <a class="lnk" href="#ledger">4.2 Floor ledger</a>
+    <div class="grp">Stages</div>
+    <a class="lnk" href="#intro">5.1 Intro</a>
+    <a class="lnk" href="#structure">5.2 Structure</a>
+    <a class="lnk" href="#packages">5.3 Packages</a>
+    <a class="lnk" href="#mapping">5.4 Mapping</a>
+    <a class="lnk" href="#verify">5.5 Verification</a>
+    <div class="grp">Editing</div>
+    <a class="lnk" href="#editing">6.1 Edit-in-place</a>
+    <a class="lnk" href="#editing">6.2 Segmented &amp; stepper</a>
+    <a class="lnk" href="#editing">6.3 Multi-select bar</a>
+    <a class="lnk" href="#editing">6.4 Row expansion</a>
+    <a class="lnk" href="#editing">6.5 Contextual sheets</a>
+    <div class="grp">Architecture</div>
+    <a class="lnk" href="#ia">7 Rethought home (IA)</a>
+    <a class="lnk" href="#resilience">8 Resilience &amp; edge cases</a>
+    <a class="lnk" href="#drill">9 Drill-down &amp; states</a>
+  </nav>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <div class="hero-head">
+      <div class="kick">Tarini · Living Blueprint</div>
+      <h2>The complete design system — every token, primitive, and component.</h2>
+      <p>A trust-first, AI-native onboarding language for Indian property owners. Warm paper, an electric-indigo intelligence, architect's restraint, and motion built on Emil Kowalski's principles. This is the executable spec — touch it, break it, tell me what to change.</p>
+      <div class="legendrow">
+        <div><b>6</b><span>Foundations</span></div>
+        <div><b>10</b><span>Primitives</span></div>
+        <div><b>4</b><span>Chat atoms</span></div>
+        <div><b>5</b><span>Stages</span></div>
+        <div><b>Light</b><span>Theme (dark deferred)</span></div>
+      </div>
+    </div>
+
+    <!-- ===== 1.1 BRAND ===== -->
+    <section id="brand">
+      <div class="sec-head"><span class="num">1.1</span><h3>Brand &amp; seal</h3></div>
+      <p class="sec-desc">A geometric architect's seal — a roofline over a floor grid — not a glowing AI orb. It reads as "structure," ties to the domain, and stays crisp at any size.</p>
+      <div class="specs">
+        <div class="spec"><div class="cap">Seal · gradient</div><div class="note">--indigo gradient · r 11px</div><div class="demo"><div class="seal" style="width:48px;height:48px;border-radius:14px"><svg width="26" height="26" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="M3 10.2 H15 M9 10.2 V14.5" stroke="#fff" stroke-width="1.1" opacity=".7"/></svg></div></div></div>
+        <div class="spec"><div class="cap">Seal · on paper</div><div class="note">stroke = --indigo</div><div class="demo"><div style="width:48px;height:48px;border-radius:14px;border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;background:var(--surface)"><svg width="26" height="26" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#4B45D6" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="M3 10.2 H15 M9 10.2 V14.5" stroke="#4B45D6" stroke-width="1.1" opacity=".7"/></svg></div></div></div>
+        <div class="spec"><div class="cap">Lockup</div><div class="note">SF Pro Display 600</div><div class="demo"><div style="display:flex;align-items:center;gap:10px"><div class="seal" style="width:36px;height:36px"><svg width="20" height="20" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div><div class="serif" style="font-weight:600;font-size:18px;line-height:1">Tarini</div><div class="mono" style="font-size:10px;color:var(--ink-3)">Property onboarding</div></div></div></div></div>
+      </div>
+    </section>
+
+    <!-- ===== 1.2 COLOR ===== -->
+    <section id="color">
+      <div class="sec-head"><span class="num">1.2</span><h3>Color</h3></div>
+      <p class="sec-desc">Warm paper canvas (never pure white — trustworthy, daylight-legible), graphite ink, a single electric-indigo intensity ramp as the AI signature, a restrained categorical set for room types, and quiet semantics. No candy, no rainbow.</p>
+      <div class="subhead">Canvas &amp; ink</div>
+      <div class="swatchwrap">
+        <div class="sw"><div class="chip" style="background:var(--paper)"></div><div class="nm">Paper</div><div class="hex">#F3F0E8</div></div>
+        <div class="sw"><div class="chip" style="background:var(--surface)"></div><div class="nm">Surface</div><div class="hex">#FCFAF5</div></div>
+        <div class="sw"><div class="chip" style="background:var(--surface-sunk)"></div><div class="nm">Sunk</div><div class="hex">#EFEADF</div></div>
+        <div class="sw"><div class="chip" style="background:var(--ink)"></div><div class="nm">Ink</div><div class="hex">#191712</div></div>
+        <div class="sw"><div class="chip" style="background:var(--ink-2)"></div><div class="nm">Ink-2</div><div class="hex">#575148</div></div>
+        <div class="sw"><div class="chip" style="background:var(--ink-3)"></div><div class="nm">Ink-3</div><div class="hex">#928B7D</div></div>
+        <div class="sw"><div class="chip" style="background:var(--line-2)"></div><div class="nm">Line</div><div class="hex">#D6CCB7</div></div>
+      </div>
+      <div class="subhead">Indigo ramp · AI signature</div>
+      <div class="swatchwrap">
+        <div class="sw"><div class="chip" style="background:var(--indigo-50)"></div><div class="nm">Indigo 50</div><div class="hex">#EBEAFB</div></div>
+        <div class="sw"><div class="chip" style="background:var(--indigo-200)"></div><div class="nm">Indigo 200</div><div class="hex">#C9C5F2</div></div>
+        <div class="sw"><div class="chip" style="background:var(--indigo-400)"></div><div class="nm">Indigo 400</div><div class="hex">#6E68E8</div></div>
+        <div class="sw"><div class="chip" style="background:var(--indigo)"></div><div class="nm">Indigo</div><div class="hex">#4B45D6</div></div>
+        <div class="sw"><div class="chip" style="background:var(--indigo-700)"></div><div class="nm">Indigo 700</div><div class="hex">#3A34B0</div></div>
+      </div>
+      <div class="subhead">Room types · categorical</div>
+      <div class="swatchwrap">
+        <div class="sw"><div class="chip" style="background:var(--t-single)"></div><div class="nm">Single</div><div class="hex">#4B45D6</div></div>
+        <div class="sw"><div class="chip" style="background:var(--t-double)"></div><div class="nm">Double</div><div class="hex">#5E7C6B</div></div>
+        <div class="sw"><div class="chip" style="background:var(--t-deluxe)"></div><div class="nm">Deluxe</div><div class="hex">#B07A3A</div></div>
+        <div class="sw"><div class="chip" style="background:var(--t-triple)"></div><div class="nm">Triple</div><div class="hex">#64708A</div></div>
+      </div>
+      <div class="subhead">Semantic</div>
+      <div class="swatchwrap">
+        <div class="sw"><div class="chip" style="background:var(--ok)"></div><div class="nm">Success</div><div class="hex">#1E8A5F</div></div>
+        <div class="sw"><div class="chip" style="background:var(--warn)"></div><div class="nm">Warning</div><div class="hex">#B0791F</div></div>
+        <div class="sw"><div class="chip" style="background:var(--err)"></div><div class="nm">Error</div><div class="hex">#C0492E</div></div>
+      </div>
+    </section>
+
+    <!-- ===== 1.3 TYPE ===== -->
+    <section id="type">
+      <div class="sec-head"><span class="num">1.3</span><h3>Typography</h3></div>
+      <p class="sec-desc">SF Pro Display (warm editorial serif) for Tarini's voice and key numbers — the premium/novel signal. SF Pro Text for all UI. SF Mono for labels, counts, and spec annotations.</p>
+      <div class="typescale">
+        <div class="row"><span class="meta">SF Pro Display · 600 · 40px</span><span class="serif" style="font-weight:500;font-size:40px">Your property, taking shape</span></div>
+        <div class="row"><span class="meta">SF Pro Display · 600 · 26px</span><span class="serif" style="font-weight:600;font-size:26px">Section heading</span></div>
+        <div class="row"><span class="meta">SF Pro Display · 600 · 32px (numerals)</span><span class="serif" style="font-weight:600;font-size:32px">8 · 118 · ₹9,500</span></div>
+        <div class="row"><span class="meta">SF Pro Text · 600 · 16px</span><span style="font-weight:600;font-size:16px">Button &amp; emphasis label</span></div>
+        <div class="row"><span class="meta">SF Pro Text · 400 · 14px</span><span style="font-weight:450;font-size:14px">Body text — the default reading size for chat and cards.</span></div>
+        <div class="row"><span class="meta">SF Pro Text · 500 · 12px</span><span style="font-weight:500;font-size:12px">Secondary / helper text</span></div>
+        <div class="row"><span class="meta">SF Mono · 500 · 11px</span><span class="mono" style="font-weight:500;font-size:11px;letter-spacing:.1em;text-transform:uppercase">LABEL · COUNT · ANNOTATION</span></div>
+      </div>
+    </section>
+
+    <!-- ===== 1.4 SPACE / RADII ===== -->
+    <section id="space">
+      <div class="sec-head"><span class="num">1.4</span><h3>Spacing &amp; radii</h3></div>
+      <p class="sec-desc">A 4px base scale for spacing; generous, friendly radii. Cards round at 16–26px, the bottom sheet at 32px, pills fully round.</p>
+      <div class="subhead">Spacing scale (4px base)</div>
+      <div class="scaleboxes">
+        <div><div class="b" style="width:4px;height:30px"></div><span>4</span></div>
+        <div><div class="b" style="width:8px;height:30px"></div><span>8</span></div>
+        <div><div class="b" style="width:12px;height:30px"></div><span>12</span></div>
+        <div><div class="b" style="width:16px;height:30px"></div><span>16</span></div>
+        <div><div class="b" style="width:24px;height:30px"></div><span>24</span></div>
+        <div><div class="b" style="width:32px;height:30px"></div><span>32</span></div>
+        <div><div class="b" style="width:48px;height:30px"></div><span>48</span></div>
+      </div>
+      <div class="subhead">Radii</div>
+      <div class="radiirow">
+        <div><div class="rb" style="border-radius:8px"></div><div class="rl">xs 8</div></div>
+        <div><div class="rb" style="border-radius:12px"></div><div class="rl">sm 12</div></div>
+        <div><div class="rb" style="border-radius:16px"></div><div class="rl">md 16</div></div>
+        <div><div class="rb" style="border-radius:20px"></div><div class="rl">lg 20</div></div>
+        <div><div class="rb" style="border-radius:26px"></div><div class="rl">xl 26</div></div>
+        <div><div class="rb" style="border-radius:32px"></div><div class="rl">2xl 32</div></div>
+      </div>
+    </section>
+
+    <!-- ===== 1.5 ELEVATION ===== -->
+    <section id="elevation">
+      <div class="sec-head"><span class="num">1.5</span><h3>Elevation</h3></div>
+      <p class="sec-desc">Soft, warm-tinted shadows — three steps, plus an indigo glow reserved for the primary action and the AI's presence.</p>
+      <div class="elevrow">
+        <div><div class="eb" style="box-shadow:var(--e1)">e1 · rest</div></div>
+        <div><div class="eb" style="box-shadow:var(--e2)">e2 · card</div></div>
+        <div><div class="eb" style="box-shadow:var(--e3)">e3 · sheet/modal</div></div>
+        <div><div class="eb" style="box-shadow:var(--e-indigo);background:var(--indigo);color:#fff">indigo glow</div></div>
+      </div>
+    </section>
+
+    <!-- ===== 1.6 MOTION ===== -->
+    <section id="motion">
+      <div class="sec-head"><span class="num">1.6</span><h3>Motion</h3></div>
+      <p class="sec-desc">Custom easing only (never CSS defaults), UI transitions under ~300ms, only transform/opacity animate (GPU — matters on cheap Android), and motion always has a purpose. Honors prefers-reduced-motion in production.</p>
+      <div class="easel">
+        <div class="ec"><svg viewBox="0 0 150 70"><polyline points="6,64 30,20 60,8 144,6" fill="none" stroke="#4B45D6" stroke-width="2"/></svg><div class="el"><b>ease-out</b>cubic-bezier(.23,1,.32,1)<br>entrances · 200–280ms</div></div>
+        <div class="ec"><svg viewBox="0 0 150 70"><polyline points="6,64 40,58 110,12 144,6" fill="none" stroke="#4B45D6" stroke-width="2"/></svg><div class="el"><b>ease-in-out</b>cubic-bezier(.77,0,.175,1)<br>on-screen moves</div></div>
+        <div class="ec"><svg viewBox="0 0 150 70"><polyline points="6,64 36,28 80,6 144,6" fill="none" stroke="#4B45D6" stroke-width="2"/></svg><div class="el"><b>drawer</b>cubic-bezier(.32,.72,0,1)<br>sheets · 300–420ms</div></div>
+        <div class="ec"><svg viewBox="0 0 150 70"><polyline points="6,64 34,10 60,16 90,4 144,8" fill="none" stroke="#4B45D6" stroke-width="2"/></svg><div class="el"><b>spring</b>overshoot 0.2<br>toggle · settle · pop</div></div>
+      </div>
+    </section>
+
+    <!-- ===== 2.1 BUTTONS ===== -->
+    <section id="buttons">
+      <div class="sec-head"><span class="num">2.1</span><h3>Buttons</h3></div>
+      <p class="sec-desc">Press feedback is non-negotiable — every button scales to 0.97 on :active (try them). Primary carries the indigo glow; reserved for the one main action per view.</p>
+      <div class="subhead">Variants</div>
+      <div class="demo" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+        <button class="btn btn-primary">Continue <svg width="15" height="15" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn btn-secondary">Modify</button>
+        <button class="btn btn-ghost">Skip for now</button>
+        <button class="btn btn-ink">Confirm &amp; finish</button>
+        <button class="btn btn-icon btn-secondary"><svg width="17" height="17" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      </div>
+      <div class="subhead">States</div>
+      <div class="demo" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+        <button class="btn btn-primary">Default</button>
+        <button class="btn btn-primary" style="background:var(--indigo-700)">Hover</button>
+        <button class="btn btn-primary"><span class="spin"></span> Saving…</button>
+        <button class="btn btn-primary" disabled>Disabled</button>
+      </div>
+    </section>
+
+    <!-- ===== 2.2 STEPPER ===== -->
+    <section id="stepper">
+      <div class="sec-head"><span class="num">2.2</span><h3>Stepper · unit-count instrument</h3></div>
+      <p class="sec-desc">The core "how many rooms" control. Big SF Pro Display numeral, indigo plus, range bar with min/max guidance. Minus disables at the suggested minimum (no below-range values). Interactive — try it.</p>
+      <div class="spec" style="width:auto">
+        <div class="cap">Floor 5 — rooms</div><div class="note">range 6–10 · clamps to bounds</div>
+        <div class="demo" style="flex-direction:column;align-items:flex-start;gap:0">
+          <div class="stepper">
+            <div class="stepbtn" id="minus">−</div>
+            <div class="stepval" id="sval">8</div>
+            <div class="stepbtn plus" id="plus">+</div>
+          </div>
+          <div class="rangebar"><div class="fill" id="rfill" style="width:50%"></div></div>
+          <div class="rangehint" id="rhint">min 6 · max 10 · suggested 8</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 2.3 CHIPS ===== -->
+    <section id="chips">
+      <div class="sec-head"><span class="num">2.3</span><h3>Chips &amp; selectors</h3></div>
+      <p class="sec-desc">Selection cards (single-select, try clicking), quick-reply pills, and filter/tab chips. Selected state uses the indigo signature.</p>
+      <div class="subhead">Property-type selector (single-select)</div>
+      <div class="demo" id="ptypes">
+        <div class="chip-sel sel"><span class="t">PG</span><span class="s">Paying guest</span></div>
+        <div class="chip-sel"><span class="t">Hostel</span><span class="s">Dormitory</span></div>
+        <div class="chip-sel"><span class="t">Flat</span><span class="s">Apartment</span></div>
+        <div class="chip-sel"><span class="t">Co-living</span><span class="s">Shared</span></div>
+      </div>
+      <div class="subhead">Quick replies</div>
+      <div class="demo"><div class="qchip">Yes, that's right</div><div class="qchip">Let me change it</div><div class="qchip">Skip</div></div>
+      <div class="subhead">Filter / block tabs</div>
+      <div class="demo"><div class="filterchip on">Block A <span class="c">8F</span></div><div class="filterchip">Block B <span class="c">3F</span></div><div class="filterchip" style="border-style:dashed">+ Block</div></div>
+    </section>
+
+    <!-- ===== 2.4 INLINE EXPANSION ===== -->
+    <section id="xchip">
+      <div class="sec-head"><span class="num">2.4</span><h3>Inline-expansion chip</h3></div>
+      <p class="sec-desc">Progressive disclosure without leaving the flow — a chip expands in place to reveal detail. Click to toggle. Uses the drawer easing.</p>
+      <div class="demo">
+        <div class="xchip" data-x><div class="xhead"><span class="t">Floor 3 · 16 rooms</span><span class="chev">›</span></div><div class="xbody"><div class="pad">10 single · 4 double · 2 triple<br>Naming: 301–316 · all active</div></div></div>
+        <div class="xchip open" data-x><div class="xhead"><span class="t">Floor 4 · 16 rooms</span><span class="chev">›</span></div><div class="xbody"><div class="pad">11 single · 3 double · 2 triple<br>Naming: 401–416 · all active</div></div></div>
+      </div>
+    </section>
+
+    <!-- ===== 2.5 INPUTS ===== -->
+    <section id="inputs">
+      <div class="sec-head"><span class="num">2.5</span><h3>Inputs &amp; the thinking composer</h3></div>
+      <p class="sec-desc">The composer is where Tarini's presence lives. At rest it's a calm dock; while the agent works, a living indigo aura ignites and the bar narrates the <em>actual</em> work with shimmer-gradient verbs that track the real pipeline — building trust, not just patience.</p>
+      <div class="subhead">Rest &amp; focus</div>
+      <div class="demo" style="flex-direction:column;align-items:flex-start;gap:14px">
+        <div class="dock"><input placeholder="Message Tarini…"/><div class="send"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 12 L20 4 L13 20 L11 13 Z" fill="#F6F2EA"/></svg></div></div>
+        <div class="dock" style="border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigo-50)"><input value="Floor 5 — make 2 deluxe" /><div class="send"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 12 L20 4 L13 20 L11 13 Z" fill="#F6F2EA"/></svg></div></div>
+      </div>
+      <div class="subhead">Thinking · aura + live verbs <span style="text-transform:none;letter-spacing:0;color:var(--ink-3);font-weight:400">(watch it cycle)</span></div>
+      <div class="demo" style="flex-direction:column;align-items:flex-start;gap:16px">
+        <div class="compose working">
+          <div class="ring"></div>
+          <div class="dock" style="padding:9px 12px 9px 10px;gap:11px">
+            <div class="seal-breath"><svg width="17" height="17" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div>
+            <div class="statusword"><span class="gw" id="sw">Structuring the floors</span></div>
+            <div class="stopbtn"><span class="sq"></span></div>
+          </div>
+          <div class="drawline" style="width:100%"></div>
+        </div>
+        <p class="mono" style="font-size:10px;color:var(--ink-3);max-width:330px">Verbs are domain-grounded &amp; pipeline-driven — e.g. on the Mapping stage they'd read "Mapping the rooms / Checking unmapped". The seal breathes; a hairline draws underneath; aura intensity can scale with effort.</p>
+      </div>
+      <div class="subhead">Done</div>
+      <div class="demo">
+        <div class="compose">
+          <div class="dock"><div class="seal-breath" style="animation:none"><svg width="17" height="17" viewBox="0 0 18 18"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="scale(0.7) translate(3.5 3.5)"/></svg></div><div class="statusword" style="color:var(--ok);font-weight:600">Floor 2 drawn · 8 rooms</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 2.6 TOGGLE / PILLS ===== -->
+    <section id="toggle">
+      <div class="sec-head"><span class="num">2.6</span><h3>Toggle &amp; pills</h3></div>
+      <p class="sec-desc">Spring-settled toggle (try it). Status pills for verified / warning / error / info.</p>
+      <div class="demo" style="gap:24px">
+        <div class="tgl on" data-tgl></div>
+        <div class="tgl" data-tgl></div>
+        <span class="pill pill-ok">✓ Saved</span>
+        <span class="pill pill-warn">⚠ 2 pending</span>
+        <span class="pill pill-err">✕ Not mapped</span>
+        <span class="pill pill-indigo">AI suggested</span>
+      </div>
+    </section>
+
+    <!-- ===== 2.7 TOOLTIP ===== -->
+    <section id="tooltip">
+      <div class="sec-head"><span class="num">2.7</span><h3>Tooltip</h3></div>
+      <p class="sec-desc">Ink tooltip, origin-aware. In production: delay on first hover, instant on adjacent (Emil's rule).</p>
+      <div class="demo" style="padding-top:30px"><div class="tipwrap"><div class="tip">Rooms on this floor</div><button class="btn btn-secondary">Hover target</button></div></div>
+    </section>
+
+    <!-- ===== 2.8 BOTTOM SHEET ===== -->
+    <section id="sheet">
+      <div class="sec-head"><span class="num">2.8</span><h3>Bottom sheet</h3></div>
+      <p class="sec-desc">For dense actions on mobile (e.g. "view all rooms"). Slides from bottom with drawer easing, scrim blur, grab handle, drag-to-dismiss in production. Try it.</p>
+      <div class="demo"><button class="btn btn-secondary" data-sheet="rooms">Open bottom sheet</button></div>
+    </section>
+
+    <!-- ===== 2.9 LOADERS ===== -->
+    <section id="loaders">
+      <div class="sec-head"><span class="num">2.9</span><h3>Loaders</h3></div>
+      <p class="sec-desc">Typing indicator while Tarini "draws," shimmer skeletons for loading content, spinner for actions.</p>
+      <div class="demo" style="gap:20px">
+        <div class="typing"><i></i><i></i><i></i></div>
+        <div style="display:flex;flex-direction:column;gap:8px;width:180px"><div class="skel" style="height:12px;width:70%"></div><div class="skel" style="height:12px;width:100%"></div><div class="skel" style="height:12px;width:45%"></div></div>
+        <div class="spin" style="border-color:var(--indigo-200);border-top-color:var(--indigo);width:24px;height:24px"></div>
+      </div>
+    </section>
+
+    <!-- ===== 2.10 EMPTY / ERROR ===== -->
+    <section id="states">
+      <div class="sec-head"><span class="num">2.10</span><h3>Empty &amp; error states</h3></div>
+      <p class="sec-desc">Never a dead end. Empty states invite the next action; errors stay calm, name the problem, and offer recovery (no raw stack traces to a property owner).</p>
+      <div class="specs">
+        <div class="statecard"><div class="ic" style="background:var(--indigo-50)"><svg width="22" height="22" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#4B45D6" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div class="t">No floors yet</div><div class="d">Tell me how many floors your building has and I'll start drawing.</div><button class="btn btn-primary" style="width:100%;justify-content:center">Add first floor</button></div>
+        <div class="statecard"><div class="ic" style="background:var(--err-soft)"><span style="color:var(--err);font-size:20px">!</span></div><div class="t">Couldn't connect</div><div class="d">The server may be starting up. Your progress is saved — try again in a moment.</div><button class="btn btn-secondary" style="width:100%;justify-content:center">Try again</button></div>
+      </div>
+    </section>
+
+    <!-- ===== 3.1 BUBBLES ===== -->
+    <section id="bubbles">
+      <div class="sec-head"><span class="num">3.1</span><h3>Message bubbles</h3></div>
+      <p class="sec-desc">Tarini speaks on paper with the seal and a SF Pro Display lead line; the owner's replies are ink-filled, right-aligned.</p>
+      <div class="demo" style="flex-direction:column;align-items:stretch;gap:12px;max-width:320px">
+        <div class="bubble-ai"><div class="mk"><svg width="15" height="15" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#4B45D6" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div class="bub"><span class="lead">Perfect.</span> A PG in Koramangala with 2 floors. Let's give it shape.</div></div>
+        <div class="bubble-user">Koramangala, 2 floors, 8 rooms each</div>
+      </div>
+    </section>
+
+    <!-- ===== 3.2 SPINE ===== -->
+    <section id="spinex">
+      <div class="sec-head"><span class="num">3.2</span><h3>Stage spine</h3></div>
+      <p class="sec-desc">A quiet 5-stage progress rail. Done = ink, active = indigo halo, pending = muted.</p>
+      <div class="demo">
+        <div class="spine">
+          <div class="node done"><span class="dot"></span><span class="lbl">Intro</span></div><div class="seg done"></div>
+          <div class="node active"><span class="dot"></span><span class="lbl">Build</span></div><div class="seg"></div>
+          <div class="node"><span class="dot"></span><span class="lbl">Plans</span></div><div class="seg"></div>
+          <div class="node"><span class="dot"></span><span class="lbl">Map</span></div><div class="seg"></div>
+          <div class="node"><span class="dot"></span><span class="lbl">Verify</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 3.3 TOOL ACTIVITY ===== -->
+    <section id="tool">
+      <div class="sec-head"><span class="num">3.3</span><h3>Tool activity</h3></div>
+      <p class="sec-desc">Shows the agent working — running (indigo, pulsing) → complete (green check). Honest feedback that something happened.</p>
+      <div class="demo" style="flex-direction:column;align-items:flex-start;gap:10px">
+        <div class="toolact run"><div class="ti"><div class="spin" style="width:13px;height:13px;border-color:var(--indigo-200);border-top-color:var(--indigo)"></div></div><div class="tx">Saving your floors…</div></div>
+        <div class="toolact done"><div class="ti"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="#1E8A5F" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="tx" style="color:var(--ink)">Floors saved</div></div>
+      </div>
+    </section>
+
+    <!-- ===== 3.4 RECEIPT ===== -->
+    <section id="receipt">
+      <div class="sec-head"><span class="num">3.4</span><h3>Receipt / confirmation card</h3></div>
+      <p class="sec-desc">After a milestone, a tidy "here's what I saved" card — builds trust by reflecting captured data back.</p>
+      <div class="demo">
+        <div class="receipt">
+          <div class="rh"><span class="pill pill-ok">✓ Saved</span><span class="serif" style="font-weight:600;font-size:15px">Property info</span></div>
+          <div class="rrow"><span>Name</span><b>Sunrise PG</b></div>
+          <div class="rrow"><span>Type</span><b>PG · Co-ed</b></div>
+          <div class="rrow"><span>Location</span><b>Koramangala</b></div>
+          <div class="rrow" style="border:none"><span>Floors</span><b>2</b></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 4.1 MASSING ===== -->
+    <section id="massing">
+      <div class="sec-head"><span class="num">4.1</span><h3>Massing model — the signature</h3></div>
+      <p class="sec-desc">The "see your whole property" hero. Generated from a floor list, so it scales by height: a 2-floor PG or an 8-floor hostel, one or many blocks. Dark "studio" stage for premium contrast. Floors rise in, the active one glows, a sheen sweeps continuously. Both examples below are generated from data.</p>
+      <div class="specs">
+        <div class="spec"><div class="cap">Small · 2 floors, 1 block</div><div class="note">generated · floors=2</div><div class="demo">
+          <div class="studio"><div class="sgrid"></div><div class="sheen"></div>
+            <div class="sh"><div><div class="ti">Green PG</div><div class="meta">HSR · 1 BLOCK</div></div><div class="live"><i></i>BUILDING</div></div>
+            <svg class="massing build" data-massing='{"blocks":[{"cx":150,"baseY":70,"floors":2,"hw":78,"hh":34,"th":22,"accent":true,"i0":0}],"vb":"0 0 300 220"}' viewBox="0 0 300 220"></svg>
+            <div class="foot"><div><b>1</b><span>Block</span></div><div><b>2</b><span>Floors</span></div><div><b>16</b><span>Rooms</span></div></div>
+          </div>
+        </div></div>
+        <div class="spec"><div class="cap">Large · 8+3 floors, 2 blocks</div><div class="note">generated · floors=8,3</div><div class="demo">
+          <div class="studio"><div class="sgrid"></div><div class="sheen"></div>
+            <div class="sh"><div><div class="ti">Sunrise Residency</div><div class="meta">HSR · 2 BLOCKS</div></div><div class="live"><i></i>BUILDING</div></div>
+            <svg class="massing build" data-massing='{"blocks":[{"cx":108,"baseY":30,"floors":8,"hw":58,"hh":28,"th":16,"accent":true,"i0":0},{"cx":238,"baseY":150,"floors":3,"hw":40,"hh":20,"th":14,"accent":false,"i0":8}],"vb":"0 0 300 300"}' viewBox="0 0 300 300"></svg>
+            <div class="foot"><div><b>2</b><span>Blocks</span></div><div><b>11</b><span>Floors</span></div><div><b>118</b><span>Rooms</span></div></div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ===== 4.2 LEDGER ===== -->
+    <section id="ledger">
+      <div class="sec-head"><span class="num">4.2</span><h3>Floor ledger — the working view</h3></div>
+      <p class="sec-desc">Where rooms get edited. Each floor is one calm row; the active floor expands. Rooms summarize as a type-proportion bar + legend, and cells cap at "+N" so a 30-room floor never floods the screen. This is how "many rooms" stays readable.</p>
+      <div class="demo" style="align-items:flex-start;gap:18px">
+        <div class="ledger">
+          <div class="tray active">
+            <div class="trow"><div class="fn">Floor 5 <span class="s">· top</span></div><div class="ct a">18 rooms</div></div>
+            <div class="propbar"><i style="width:56%;background:var(--t-single)"></i><i style="width:22%;background:var(--t-double)"></i><i style="width:12%;background:var(--t-deluxe)"></i><i style="width:10%;background:var(--t-triple)"></i></div>
+            <div class="legend"><span><b style="background:var(--t-single)"></b>10 single</span><span><b style="background:var(--t-double)"></b>4 double</span><span><b style="background:var(--t-deluxe)"></b>2 deluxe</span><span><b style="background:var(--t-triple)"></b>2 triple</span></div>
+            <div class="cells"><div class="cell" style="background:var(--t-single)"></div><div class="cell" style="background:var(--t-single)"></div><div class="cell" style="background:var(--t-single)"></div><div class="cell" style="background:var(--t-single)"></div><div class="cell" style="background:var(--t-double)"></div><div class="cell" style="background:var(--t-double)"></div><div class="cell" style="background:var(--t-deluxe)"></div><div class="cell" style="background:var(--t-triple)"></div><div class="cell more">+10</div></div>
+          </div>
+          <div class="tray"><div class="trow"><div class="fn">Floor 4</div><div class="ct">16 rooms</div></div><div class="propbar"><i style="width:62%;background:var(--t-single)"></i><i style="width:25%;background:var(--t-double)"></i><i style="width:13%;background:var(--t-triple)"></i></div></div>
+          <div class="tray"><div class="trow"><div class="fn">Floor 3</div><div class="ct">16 rooms</div></div><div class="propbar"><i style="width:62%;background:var(--t-single)"></i><i style="width:25%;background:var(--t-double)"></i><i style="width:13%;background:var(--t-triple)"></i></div></div>
+          <div class="tray"><div class="trow"><div class="fn">Ground <span class="s">· reception</span></div><div class="ct">14 rooms</div></div><div class="propbar"><i style="width:70%;background:var(--t-single)"></i><i style="width:20%;background:var(--t-double)"></i><i style="width:10%;background:var(--t-deluxe)"></i></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 5.1 INTRO ===== -->
+    <section id="intro">
+      <div class="sec-head"><span class="num">5.1</span><h3>Stage · Intro</h3></div>
+      <p class="sec-desc">Welcome + property basics. Warm SF Pro Display greeting, the property-type selector, a verified pill as data is captured.</p>
+      <div class="demo">
+        <div class="phone"><div class="pgrid"></div><div class="inner">
+          <div class="bubble-ai" style="max-width:100%"><div class="mk"><svg width="15" height="15" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#4B45D6" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div class="bub"><span class="lead">Hi, I'm Tarini.</span> I'll set up your property on RentOK. What kind of property is it?</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+            <div class="chip-sel sel"><span class="t">PG</span><span class="s">Paying guest</span></div>
+            <div class="chip-sel"><span class="t">Hostel</span><span class="s">Dormitory</span></div>
+            <div class="chip-sel"><span class="t">Flat</span><span class="s">Apartment</span></div>
+            <div class="chip-sel"><span class="t">Co-living</span><span class="s">Shared</span></div>
+          </div>
+          <div style="margin-top:12px"><span class="pill pill-ok">✓ Sunrise PG · Koramangala</span></div>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ===== 5.2 STRUCTURE ===== -->
+    <section id="structure">
+      <div class="sec-head"><span class="num">5.2</span><h3>Stage · Structure</h3></div>
+      <p class="sec-desc">The signature stage — the building forms (massing) and rooms get set (stepper + ledger).</p>
+      <div class="demo" style="align-items:flex-start">
+        <div class="phone"><div class="pgrid"></div><div class="inner">
+          <div class="bubble-ai" style="max-width:100%;margin-bottom:12px"><div class="mk"><svg width="15" height="15" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#4B45D6" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div class="bub"><span class="lead">Here's Sunrise PG.</span> How many rooms on Floor 2?</div></div>
+          <div class="studio" style="width:100%;margin-bottom:12px"><div class="sgrid"></div><div class="sheen"></div>
+            <div class="sh"><div><div class="ti">Sunrise PG</div><div class="meta">2 FLOORS</div></div><div class="live"><i></i>BUILDING</div></div>
+            <svg class="massing build" data-massing='{"blocks":[{"cx":135,"baseY":56,"floors":2,"hw":66,"hh":30,"th":20,"accent":true,"i0":0}],"vb":"0 0 270 190"}' viewBox="0 0 270 190"></svg>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--indigo-200);border-radius:16px;padding:13px;box-shadow:0 0 0 1px var(--indigo-200)">
+            <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:600;font-size:13px">Floor 2 — rooms</div>
+              <div class="stepper" style="gap:12px"><div class="stepbtn" style="width:34px;height:34px;font-size:18px">−</div><div class="stepval" style="font-size:26px;min-width:36px">8</div><div class="stepbtn plus" style="width:34px;height:34px;font-size:18px">+</div></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ===== 5.3 PACKAGES ===== -->
+    <section id="packages">
+      <div class="sec-head"><span class="num">5.3</span><h3>Stage · Packages</h3></div>
+      <p class="sec-desc">Rent packages — AI suggestions to accept/skip, a guided form, and receipts. ₹0 renders as ₹0 (never "---").</p>
+      <div class="demo" style="align-items:flex-start">
+        <div class="spec" style="width:280px"><div class="cap">Suggestion card</div><div class="note">AI suggested · accept / skip</div>
+          <div style="border:1px solid var(--line);border-radius:16px;padding:14px;background:var(--paper-2)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span class="serif" style="font-weight:600;font-size:15px">Standard Single</span><span class="pill pill-indigo">AI</span></div>
+            <div class="serif" style="font-size:24px;font-weight:600">₹8,500<span style="font-size:12px;color:var(--ink-3);font-family:Inter;font-weight:500">/mo</span></div>
+            <div class="mono" style="font-size:10px;color:var(--ink-3);margin:6px 0 12px">₹16,000 dep · 2mo lock-in · food incl.</div>
+            <div style="display:flex;gap:8px"><button class="btn btn-secondary" style="flex:1;justify-content:center;padding:9px">Skip</button><button class="btn btn-primary" style="flex:1;justify-content:center;padding:9px">Accept</button></div>
+          </div>
+        </div>
+        <div class="receipt" style="width:260px"><div class="rh"><span class="pill pill-ok">✓</span><span class="serif" style="font-weight:600;font-size:15px">Deluxe Double</span></div>
+          <div class="rrow"><span>Rent</span><b>₹12,000</b></div><div class="rrow"><span>Deposit</span><b>₹24,000</b></div><div class="rrow"><span>Food</span><b>Optional</b></div><div class="rrow" style="border:none"><span>AC</span><b>Yes</b></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 5.4 MAPPING ===== -->
+    <section id="mapping">
+      <div class="sec-head"><span class="num">5.4</span><h3>Stage · Mapping</h3></div>
+      <p class="sec-desc">Assign packages to rooms. Select rooms → pick a package from the inline picker. Unmapped rooms are surfaced, never silently dropped.</p>
+      <div class="demo" style="align-items:flex-start">
+        <div class="spec" style="width:300px"><div class="cap">Floor mapping row</div><div class="note">select → assign picker</div>
+          <div style="font-size:12px;color:var(--ink-3);margin-bottom:8px">3 selected on Floor 2</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+            <div class="cell" style="background:var(--indigo);color:#fff;width:38px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:SF Mono;font-size:10px">201</div>
+            <div class="cell" style="background:var(--indigo);color:#fff;width:38px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:SF Mono;font-size:10px">202</div>
+            <div class="cell" style="background:var(--indigo);color:#fff;width:38px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:SF Mono;font-size:10px">203</div>
+            <div class="cell" style="border:1px dashed var(--line-2);width:38px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:SF Mono;font-size:10px;color:var(--ink-3)">204</div>
+          </div>
+          <div style="border-top:1px solid var(--line);padding-top:11px"><div class="mono" style="font-size:10px;color:var(--ink-3);margin-bottom:7px">ASSIGN 3 ROOMS TO:</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap"><div class="filterchip" style="background:var(--t-single);color:#fff;border:none">Single</div><div class="filterchip" style="background:var(--t-double);color:#fff;border:none">Double</div><div class="filterchip" style="background:var(--t-deluxe);color:#fff;border:none">Deluxe</div></div>
+          </div>
+        </div>
+        <div class="statecard" style="width:260px;text-align:left"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="pill pill-warn">⚠ 4 unmapped</span></div><div class="d" style="text-align:left">4 rooms on Ground floor aren't assigned to a package yet. Tap to fix.</div><button class="btn btn-secondary" style="width:100%;justify-content:center">Review unmapped</button></div>
+      </div>
+    </section>
+
+    <!-- ===== 5.5 VERIFICATION ===== -->
+    <section id="verify">
+      <div class="sec-head"><span class="num">5.5</span><h3>Stage · Verification</h3></div>
+      <p class="sec-desc">Final review accordion + completion. "Confirm &amp; finish" is blocked until mapping is complete and there are no pending items. Then — celebration.</p>
+      <div class="demo" style="align-items:flex-start">
+        <div class="acc">
+          <div class="ai open" data-acc><div class="ah"><div class="aic"><svg width="15" height="15" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#4B45D6" stroke-width="1.3" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div><div class="at">Property</div><div class="as">Sunrise PG · PG · Koramangala</div></div><span class="chev">›</span></div><div class="ab"><div class="pad">Owner: Sanchay · Co-ed · 2 blocks</div></div></div>
+          <div class="ai" data-acc><div class="ah"><div class="aic"><span class="mono" style="font-size:11px;color:var(--ink-2)">2</span></div><div><div class="at">Structure</div><div class="as">11 floors · 118 rooms</div></div><span class="chev">›</span></div><div class="ab"><div class="pad">Block A: 8 floors · Block B: 3 floors</div></div></div>
+          <div class="ai" data-acc><div class="ah"><div class="aic"><span class="mono" style="font-size:11px;color:var(--ink-2)">4</span></div><div><div class="at">Mapping</div><div class="as">118 of 118 rooms mapped</div></div><span class="chev">›</span></div><div class="ab"><div class="pad">All rooms assigned. Nothing pending.</div></div></div>
+        </div>
+        <div class="celebrate"><div class="seal-lg"><svg width="30" height="30" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="M3 10.2 H15 M9 10.2 V14.5" stroke="#fff" stroke-width="1.1" opacity=".7"/></svg></div><h4>Sunrise PG is live 🎉</h4><p>11 floors, 118 rooms, all mapped. Your property is ready on RentOK.</p><button class="btn btn-primary" style="margin-top:16px;width:100%;justify-content:center">Go to dashboard</button></div>
+      </div>
+    </section>
+
+    <!-- ===== 6 EDITING & DIRECT MANIPULATION ===== -->
+    <section id="editing">
+      <div class="sec-head"><span class="num">6.1</span><h3>Edit-in-place</h3></div>
+      <p class="sec-desc">In the rethought IA, the model is directly editable — not re-explained to a bot. Tap a value to edit it inline (try it). Save commits, ✕ cancels.</p>
+      <div class="demo"><div class="efield" data-ef><span class="val">Sunrise PG</span><svg class="pen" width="13" height="13" viewBox="0 0 24 24"><path d="M4 20h4L18 10l-4-4L4 16z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg></div>
+        <div class="efield editing"><input value="Floor 3" /><div class="mini ok-b"><svg width="13" height="13" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="mini x-b">✕</div></div>
+      </div>
+
+      <div class="sec-head" style="margin-top:36px"><span class="num">6.2</span><h3>Segmented control &amp; inline stepper</h3></div>
+      <p class="sec-desc">Fast pickers for bounded choices (room type, sharing) and quick counts — no keyboard needed.</p>
+      <div class="demo" style="gap:24px">
+        <div class="segctrl" data-seg><button class="on">Single</button><button>Double</button><button>Deluxe</button><button>Triple</button></div>
+        <div class="ministep"><div class="b">−</div><div class="v">8</div><div class="b p">+</div></div>
+      </div>
+
+      <div class="sec-head" style="margin-top:36px"><span class="num">6.3</span><h3>Multi-select &amp; bulk action bar</h3></div>
+      <p class="sec-desc">Select rooms across a floor, then act on all of them at once — the "touch" path for mapping. Bar rises when a selection exists.</p>
+      <div class="demo"><div class="bulkbar"><span class="n">6 rooms selected</span><button class="ba">Clear</button><button class="ba go">Set package →</button></div></div>
+
+      <div class="sec-head" style="margin-top:36px"><span class="num">6.4</span><h3>Inline floor-row expansion</h3></div>
+      <p class="sec-desc">A floor expands in place to reveal &amp; edit its rooms — lightweight peek without a full sheet. Click to expand; tap rooms to select.</p>
+      <div class="demo" style="flex-direction:column;align-items:flex-start;gap:10px">
+        <div class="frow" data-frow><div class="fh"><span class="ft">Floor 3</span><span class="fc">16 rooms</span><span class="chev">›</span></div></div>
+        <div class="frow open" data-frow><div class="fh"><span class="ft">Floor 4</span><span class="fc">16 rooms</span><span class="chev">›</span></div>
+          <div class="fb"><div class="pad">
+            <div class="segctrl" data-seg style="margin-bottom:4px"><button class="on">All single</button><button>Mixed</button></div>
+            <div class="roomgrid">
+              <div class="rc pick" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-single)"></div><div class="rc pick" style="background:var(--t-double)"></div><div class="rc" style="background:var(--t-double)"></div><div class="rc" style="background:var(--t-deluxe)"></div><div class="rc" style="background:var(--t-triple)"></div><div class="rc" style="border:1.5px dashed var(--line-2)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span class="mono" style="font-size:10px;color:var(--ink-3)">2 selected</span><button class="btn btn-ghost" style="padding:6px 12px;font-size:13px">Assign package</button></div>
+          </div></div>
+        </div>
+      </div>
+
+      <div class="sec-head" style="margin-top:36px"><span class="num">6.5</span><h3>Contextual bottom sheets</h3></div>
+      <p class="sec-desc">The primary <em>editing surface</em> on mobile — tap anything in the model and a focused sheet slides up. Each is a real, dismissible sheet. Try them.</p>
+      <div class="demo"><button class="btn btn-secondary" data-sheet="editfloor">Edit floor</button><button class="btn btn-secondary" data-sheet="editpackage">Edit package</button><button class="btn btn-secondary" data-sheet="rooms">View all rooms</button><button class="btn btn-secondary" data-sheet="remove">Remove floor (destructive)</button></div>
+    </section>
+
+    <!-- ===== 7 RETHOUGHT IA ===== -->
+    <section id="ia">
+      <div class="sec-head"><span class="num">7</span><h3>The rethought home — one living model, talk <em>or</em> touch</h3></div>
+      <p class="sec-desc">Not a linear chat wizard. The property model is the persistent home surface — always visible, directly editable. Conversation is one input; direct manipulation (tap → sheet) is the other. Progress is ambient (the rail up top), never gated. This is the IA the components above are built for.</p>
+      <div class="demo" style="gap:28px;align-items:flex-start">
+        <div class="ia-phone"><div class="pg"></div><div class="in">
+          <div class="ia-top">
+            <div style="display:flex;align-items:center;gap:8px"><div class="seal" style="width:28px;height:28px;border-radius:9px"><svg width="15" height="15" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div><span class="serif" style="font-weight:600;font-size:15px">Sunrise PG</span></div>
+            <div class="ia-prog"><div class="p done"><b></b>Build</div><div class="p now"><b></b>Plans</div><div class="p"><b></b>Map</div></div>
+          </div>
+          <div class="ia-canvas">
+            <div class="studio" style="width:100%;padding:13px;margin-bottom:10px"><div class="sgrid"></div><div class="sheen"></div>
+              <div class="sh"><div><div class="ti" style="font-size:14px">Your property</div><div class="meta">2 BLOCKS · 11 FLOORS</div></div><div class="live"><i></i>LIVE</div></div>
+              <svg class="massing build" data-massing='{"blocks":[{"cx":92,"baseY":24,"floors":6,"hw":48,"hh":24,"th":14,"accent":true,"i0":0},{"cx":210,"baseY":108,"floors":3,"hw":34,"hh":17,"th":12,"accent":false,"i0":6}],"vb":"0 0 280 230"}' viewBox="0 0 280 230"></svg>
+            </div>
+            <div class="frow" data-frow style="width:100%;margin-bottom:7px"><div class="fh" style="padding:11px 13px"><span class="ft" style="font-size:13px">Floor 6</span><span class="fc">14 · ◐ no pkg</span><span class="chev">›</span></div></div>
+            <div class="frow" data-frow style="width:100%"><div class="fh" style="padding:11px 13px"><span class="ft" style="font-size:13px">Floor 5</span><span class="fc">16 · ✓ mapped</span><span class="chev">›</span></div></div>
+          </div>
+          <div class="ia-comp">
+            <div class="compose working" style="width:100%"><div class="ring"></div>
+              <div class="dock" style="padding:9px 11px 9px 10px;gap:10px"><div class="seal-breath"><svg width="16" height="16" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div class="statusword"><span class="gw" id="sw2">Pricing the packages</span></div><div class="stopbtn"><span class="sq"></span></div></div>
+            </div>
+            <div class="mono" style="font-size:9px;color:var(--ink-3);text-align:center;margin-top:8px">Say it or tap it — both edit the same model</div>
+          </div>
+        </div></div>
+        <div style="max-width:300px">
+          <div class="subhead" style="margin-top:0">Why this IA</div>
+          <ul style="font-size:13.5px;color:var(--ink-2);line-height:1.7;padding-left:18px">
+            <li><b style="color:var(--ink)">Model always visible</b> — the truth never scrolls away. Trust.</li>
+            <li><b style="color:var(--ink)">Talk or touch</b> — beginners speak; the confident tap floors/rooms → sheets.</li>
+            <li><b style="color:var(--ink)">No gates</b> — work floors→packages→mapping in any order; the rail shows what's left.</li>
+            <li><b style="color:var(--ink)">Editing is direct</b> — never "re-explain it to the bot."</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 8 RESILIENCE & EDGE CASES ===== -->
+    <section id="resilience">
+      <div class="sec-head"><span class="num">8</span><h3>Resilience &amp; edge cases</h3></div>
+      <p class="sec-desc">Real data is messy: long names, 15 floors, 40-room floors. The system must hold. Every case below is the <em>handled</em> state — truncation, fit-to-height scaling, room caps, and scroll.</p>
+
+      <div class="subhead">Long names — truncate to one line (full name kept on the editable field)</div>
+      <div class="demo" style="align-items:flex-start">
+        <div class="studio" style="width:300px"><div class="sgrid"></div>
+          <div class="sh"><div><div class="ti">Shree Sai Krishna Gents Paying Guest &amp; Hostel, Phase-2 Block-B</div><div class="meta">HSR · 2 BLOCKS</div></div><div class="live"><i></i>LIVE</div></div>
+          <svg class="massing" data-massing='{"blocks":[{"cx":150,"baseY":40,"floors":3,"hw":70,"hh":32,"th":20,"accent":true,"i0":0}],"vb":"0 0 300 200"}' viewBox="0 0 300 200"></svg>
+        </div>
+        <div class="ledger" style="width:300px">
+          <div class="tray active"><div class="trow"><div class="fn">Penthouse Executive Deluxe Wing — North Facing</div><div class="ct a">12 rooms</div></div>
+            <div class="propbar"><i style="width:60%;background:var(--t-deluxe)"></i><i style="width:40%;background:var(--t-single)"></i></div></div>
+          <div class="tray"><div class="trow"><div class="fn">Ground floor reception &amp; common area block</div><div class="ct">14 rooms</div></div></div>
+        </div>
+      </div>
+
+      <div class="subhead">15 floors — massing scales by shrinking thickness, never overflows</div>
+      <div class="demo">
+        <div class="studio" style="width:300px"><div class="sgrid"></div>
+          <div class="sh"><div><div class="ti">Grand Towers</div><div class="meta">15 FLOORS · 1 BLOCK</div></div><div class="live"><i></i>LIVE</div></div>
+          <svg class="massing" data-massing='{"blocks":[{"cx":150,"baseY":26,"floors":15,"hw":62,"hh":28,"th":18,"accent":true,"i0":0}],"vb":"0 0 300 320"}' viewBox="0 0 300 320"></svg>
+          <div class="foot"><div><b>15</b><span>Floors</span></div><div><b>240</b><span>Rooms</span></div></div>
+        </div>
+      </div>
+
+      <div class="subhead">40-room floor — cells cap at “+N”; full set opens in a scrolling sheet</div>
+      <div class="demo">
+        <div class="ledger" style="width:300px"><div class="tray active">
+          <div class="trow"><div class="fn">Floor 7</div><div class="ct a">40 rooms</div></div>
+          <div class="propbar"><i style="width:50%;background:var(--t-single)"></i><i style="width:25%;background:var(--t-double)"></i><i style="width:15%;background:var(--t-triple)"></i><i style="width:10%;background:var(--t-deluxe)"></i></div>
+          <div class="legend"><span><b style="background:var(--t-single)"></b>20 single</span><span><b style="background:var(--t-double)"></b>10 double</span><span><b style="background:var(--t-triple)"></b>6 triple</span><span><b style="background:var(--t-deluxe)"></b>4 deluxe</span></div>
+          <div class="cells"><div class="cell" style="background:var(--t-single)"></div><div class="cell" style="background:var(--t-single)"></div><div class="cell" style="background:var(--t-single)"></div><div class="cell" style="background:var(--t-single)"></div><div class="cell" style="background:var(--t-double)"></div><div class="cell" style="background:var(--t-double)"></div><div class="cell" style="background:var(--t-triple)"></div><div class="cell" style="background:var(--t-deluxe)"></div><div class="cell more">+32</div></div>
+        </div></div>
+        <button class="btn btn-secondary" data-sheet="rooms" style="align-self:center">View all 40 rooms →</button>
+      </div>
+
+      <div class="subhead">Long status verb — ellipsizes, never clips mid-word</div>
+      <div class="demo">
+        <div class="compose working" style="width:330px"><div class="ring"></div>
+          <div class="dock" style="padding:9px 12px 9px 10px;gap:11px"><div class="seal-breath"><svg width="17" height="17" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#fff" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div><div class="statusword"><span class="gw">Cross-checking every room against its package &amp; naming pattern…</span></div><div class="stopbtn"><span class="sq"></span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 9 DRILL-DOWN & STATES ===== -->
+    <section id="drill">
+      <div class="sec-head"><span class="num">9</span><h3>Drill-down &amp; states — empty vs filled, with linked data</h3></div>
+      <p class="sec-desc">Tapping a floor opens it. The same surface must work when it's brand-new (empty) and when it's fully configured (rooms typed, named, and linked to priced packages). Both the inline peek and the full sheet are shown in both states — all live.</p>
+
+      <div class="subhead">Inline drill-down (tap the floor row)</div>
+      <div class="demo" style="flex-direction:column;align-items:flex-start;gap:10px">
+        <div class="frow" data-frow><div class="fh"><span class="ft">Floor 4</span><span class="fc" style="color:var(--ink-3)">empty</span><span class="chev">›</span></div>
+          <div class="fb"><div class="pad"><div class="emptybox" style="padding:18px"><div class="et">No rooms yet</div><div class="ed">Add rooms to start setting up this floor.</div><button class="btn btn-primary" data-sheet="floorEmpty" style="padding:9px 18px">Add rooms</button></div></div></div>
+        </div>
+        <div class="frow open" data-frow><div class="fh"><span class="ft">Floor 3</span><span class="fc" style="color:var(--ok)">16 · ✓ mapped</span><span class="chev">›</span></div>
+          <div class="fb"><div class="pad">
+            <div class="legend" style="margin:2px 0 9px"><span><b style="background:var(--t-single)"></b>10 single</span><span><b style="background:var(--t-deluxe)"></b>4 deluxe</span><span><b style="background:var(--t-triple)"></b>2 triple</span></div>
+            <div class="roomgrid">
+              <div class="rc" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-single)"></div><div class="rc" style="background:var(--t-deluxe)"></div><div class="rc" style="background:var(--t-deluxe)"></div><div class="rc" style="background:var(--t-deluxe)"></div><div class="rc" style="background:var(--t-deluxe)"></div><div class="rc" style="background:var(--t-triple)"></div><div class="rc" style="background:var(--t-triple)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span class="mono" style="font-size:11px;color:var(--ok)">16 / 16 mapped · named 301–316</span><button class="btn btn-ghost" data-sheet="floorFilled" style="padding:7px 13px;font-size:13px">Open floor →</button></div>
+          </div></div>
+        </div>
+      </div>
+
+      <div class="subhead">Full drill-down sheets — tap to open</div>
+      <div class="demo">
+        <button class="btn btn-secondary" data-sheet="floorEmpty">Empty floor sheet</button>
+        <button class="btn btn-secondary" data-sheet="floorFilled">Filled floor sheet (linked)</button>
+        <button class="btn btn-secondary" data-sheet="roomDetail">Single-room detail</button>
+      </div>
+      <p class="mono" style="font-size:11px;color:var(--ink-3);margin-top:14px;max-width:560px">The filled sheet groups rooms by their linked package — name, price, and room range — so the owner sees the whole floor's economics at a glance. Empty sheet invites the first action.</p>
+    </section>
+
+    <div class="footer">Tarini · Living Blueprint Design System · v0.1 · light theme · motion live · executable spec for UAT</div>
+  </div>
+</div>
+
+<!-- bottom sheet -->
+<div class="sheet-scrim" id="scrim"></div>
+<div class="sheet" id="bsheet">
+  <div class="grab"></div>
+  <div id="sheetbody"></div>
+</div>
+
+<script>
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+  // ---- generate massing models from data-massing ----
+  function drawBlock(svg,b,vbH){
+    // fit-to-height: shrink floor thickness so any floor count fits the card (scales gracefully)
+    const avail=(vbH||320)-b.baseY-2*b.hh-18;
+    b.th=Math.min(b.th, Math.max(5, avail/Math.max(1,b.floors)));
+    for(let k=b.floors-1;k>=0;k--){
+      const o=k*b.th, isTop=(k===0), top=b.baseY+o, cx=b.cx, hw=b.hw, hh=b.hh;
+      const left=[cx-hw,top+hh], front=[cx,top+2*hh], right=[cx+hw,top+hh], back=[cx,top];
+      const leftB=[cx-hw,top+hh+b.th], frontB=[cx,top+2*hh+b.th], rightB=[cx+hw,top+hh+b.th];
+      const stagger=(b.floors-1-k)+(b.i0||0);
+      const g=el('g',{class:'floor',style:`--i:${stagger}`});
+      g.appendChild(el('polygon',{points:`${left} ${front} ${frontB} ${leftB}`,fill:isTop&&b.accent?'#8E88E4':'url(#lft)',stroke:isTop&&b.accent?'#5650D8':'#9C8E73','stroke-width':'1','stroke-linejoin':'round'}));
+      g.appendChild(el('polygon',{points:`${right} ${front} ${frontB} ${rightB}`,fill:isTop&&b.accent?'#736CDD':'url(#rgt)',stroke:isTop&&b.accent?'#5650D8':'#9C8E73','stroke-width':'1','stroke-linejoin':'round'}));
+      if(isTop) g.appendChild(el('polygon',{points:`${back} ${right} ${front} ${left}`,fill:b.accent?'url(#topA)':'url(#top)',stroke:b.accent?'#5650D8':'#9C8E73','stroke-width':'1','stroke-linejoin':'round'}));
+      const tg=el('g',{stroke:isTop&&b.accent?'#bdb8f2':'#8a7c61','stroke-width':'0.7',opacity:'0.5'});
+      for(let w=0;w<3;w++){const fx=cx+18+w*14, fy=top+hh+4+w*3; tg.appendChild(el('line',{x1:fx,y1:fy,x2:fx,y2:fy+b.th-3}));}
+      g.appendChild(tg);
+      svg.appendChild(g);
+    }
+  }
+  document.querySelectorAll('.massing[data-massing]').forEach(svg=>{
+    const cfg=JSON.parse(svg.getAttribute('data-massing'));
+    svg.insertAdjacentHTML('afterbegin',`<defs>
+      <linearGradient id="top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0EADD"/><stop offset="1" stop-color="#E2D9C7"/></linearGradient>
+      <linearGradient id="lft" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D8CDB6"/><stop offset="1" stop-color="#CABEA3"/></linearGradient>
+      <linearGradient id="rgt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#BCAE92"/><stop offset="1" stop-color="#A89A7C"/></linearGradient>
+      <linearGradient id="topA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9C5F2"/><stop offset="1" stop-color="#A9A3E8"/></linearGradient>
+      <radialGradient id="gl" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#6E68E8" stop-opacity=".5"/><stop offset="1" stop-color="#6E68E8" stop-opacity="0"/></radialGradient>
+      <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter></defs>`);
+    const vb=cfg.vb.split(' ').map(Number); const midx=vb[2]/2;
+    svg.insertAdjacentHTML('beforeend',`<ellipse class="glow" cx="${cfg.blocks[0].cx}" cy="${vb[3]*0.42}" rx="${vb[2]*0.32}" ry="${vb[3]*0.3}" fill="url(#gl)"/><ellipse cx="${cfg.blocks[0].cx}" cy="${vb[3]-30}" rx="${cfg.blocks[0].hw*1.1}" ry="14" fill="#000" opacity=".28" filter="url(#soft)"/>`);
+    cfg.blocks.forEach(b=>drawBlock(svg,b,vb[3]));
+  });
+
+  function replayMassing(){ document.querySelectorAll('.massing.build').forEach(s=>{s.classList.remove('build');void s.offsetWidth;s.classList.add('build');}); }
+  setInterval(replayMassing, 5400);
+
+  // ---- stepper ----
+  let v=8; const MIN=6,MAX=10;
+  const sval=document.getElementById('sval'),fill=document.getElementById('rfill'),hint=document.getElementById('rhint'),minus=document.getElementById('minus'),plus=document.getElementById('plus');
+  function renderStep(){ sval.textContent=v; fill.style.width=((v-MIN)/(MAX-MIN)*100)+'%'; minus.classList.toggle('dis',v<=MIN); plus.classList.toggle('dis',v>=MAX); hint.textContent=`min ${MIN} · max ${MAX} · current ${v}`; }
+  minus&&minus.addEventListener('click',()=>{if(v>MIN){v--;renderStep();}});
+  plus&&plus.addEventListener('click',()=>{if(v<MAX){v++;renderStep();}});
+  renderStep();
+
+  // ---- single-select chips ----
+  const pt=document.getElementById('ptypes');
+  pt&&pt.querySelectorAll('.chip-sel').forEach(c=>c.addEventListener('click',()=>{pt.querySelectorAll('.chip-sel').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');}));
+
+  // ---- inline expansion ----
+  document.querySelectorAll('[data-x]').forEach(x=>x.querySelector('.xhead').addEventListener('click',()=>x.classList.toggle('open')));
+  // ---- toggles ----
+  document.querySelectorAll('[data-tgl]').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('on')));
+  // ---- accordion ----
+  document.querySelectorAll('[data-acc]').forEach(a=>a.querySelector('.ah').addEventListener('click',()=>a.classList.toggle('open')));
+  // ---- contextual bottom sheets (content per trigger) ----
+  const scrim=document.getElementById('scrim'),sheet=document.getElementById('bsheet'),sbody=document.getElementById('sheetbody');
+  const C='var(--t-single)',D='var(--t-double)',X='var(--t-deluxe)',T='var(--t-triple)';
+  const SHEETS={
+    floorEmpty:`<h4>Floor 3</h4><p>No rooms set up on this floor yet.</p>
+      <div class="emptybox"><div class="eic"><svg width="20" height="20" viewBox="0 0 18 18"><path d="M3 14.5 L3 6 L9 2.5 L15 6 L15 14.5" stroke="#4B45D6" stroke-width="1.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg></div>
+        <div class="et">Let's add rooms</div><div class="ed">How many rooms are on Floor 3? Set it here — or just tell Tarini “16 rooms, mostly singles”.</div>
+        <div class="ministep" style="justify-content:center;margin-bottom:15px"><div class="b">−</div><div class="v">8</div><div class="b p">+</div></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" data-close>Add rooms</button></div>`,
+    floorFilled:`<h4>Floor 3 · 16 rooms</h4><p>Named 301–316 · all rooms mapped ✓</p>
+      <div class="pgroup"><span class="dot" style="background:${C}"></span><div class="pinfo"><div class="pname">Standard Single</div><div class="pmeta">301–310</div></div><span class="price">₹8,500</span><span class="pcount">10</span></div>
+      <div class="pgroup"><span class="dot" style="background:${X}"></span><div class="pinfo"><div class="pname">Deluxe Double · AC</div><div class="pmeta">311–314</div></div><span class="price">₹12,000</span><span class="pcount">4</span></div>
+      <div class="pgroup" style="border:none"><span class="dot" style="background:${T}"></span><div class="pinfo"><div class="pname">Triple Sharing</div><div class="pmeta">315–316</div></div><span class="price">₹6,000</span><span class="pcount">2</span></div>
+      <div class="sactions"><button class="btn btn-secondary" style="flex:1;justify-content:center" data-sheet="rooms">Edit rooms</button><button class="btn btn-primary" style="flex:1;justify-content:center" data-close>Done</button></div>`,
+    roomDetail:`<h4>Room 312</h4><p>Floor 3 · second from the lift</p>
+      <div class="frw"><span class="k">Type</span><div class="segctrl" data-seg><button>Single</button><button class="on">Double</button><button>Triple</button></div></div>
+      <div class="frw"><span class="k">Package</span><div class="efield"><span class="val">Deluxe Double · ₹12,000</span></div></div>
+      <div class="frw" style="border:none"><span class="k">Status</span><span class="pill pill-ok">✓ Mapped</span></div>
+      <div class="sactions"><button class="btn btn-primary" style="flex:1;justify-content:center" data-close>Save room</button></div>`,
+    rooms:`<h4>All rooms · Floor 5</h4><p>Tap rooms to select, or set them all at once.</p>
+      <div class="cells" style="margin-bottom:18px">${[C,C,C,D,D,X,T,C,C,D].map(c=>`<div class="cell" style="background:${c}"></div>`).join('')}<div class="cell" style="border:1px dashed var(--line-2)"></div></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" data-close>Done</button>`,
+    editfloor:`<h4>Edit · Floor 3</h4><p>Rename, set the room count, or change the mix.</p>
+      <div class="frw"><span class="k">Floor name</span><div class="efield"><input value="3rd Floor"/></div></div>
+      <div class="frw"><span class="k">Rooms</span><div class="ministep"><div class="b">−</div><div class="v">16</div><div class="b p">+</div></div></div>
+      <div class="frw" style="border:none"><span class="k">Default type</span><div class="segctrl" data-seg><button class="on">Single</button><button>Double</button><button>Mixed</button></div></div>
+      <div class="sactions"><button class="btn btn-primary" style="flex:1;justify-content:center" data-close>Save floor</button><span class="danger" data-close>Delete</span></div>`,
+    editpackage:`<h4>Edit · Standard Single</h4><p>Set the terms for this package.</p>
+      <div class="frw"><span class="k">Monthly rent</span><div class="efield"><input value="₹8,500"/></div></div>
+      <div class="frw"><span class="k">Deposit</span><div class="efield"><input value="₹16,000"/></div></div>
+      <div class="frw"><span class="k">Food</span><div class="segctrl" data-seg><button class="on">Included</button><button>Optional</button><button>None</button></div></div>
+      <div class="frw" style="border:none"><span class="k">AC</span><div class="tgl on" data-tgl></div></div>
+      <div class="sactions"><button class="btn btn-primary" style="flex:1;justify-content:center" data-close>Save package</button></div>`,
+    remove:`<h4>Remove Floor 3?</h4><p>16 rooms and their mappings on this floor will be removed. This can't be undone.</p>
+      <div class="sactions"><button class="btn btn-secondary" style="flex:1;justify-content:center" data-close>Keep it</button><button class="btn" style="flex:1;justify-content:center;background:var(--err);color:#fff" data-close>Remove floor</button></div>`,
+  };
+  const openS=(k)=>{ sbody.innerHTML=SHEETS[k]||SHEETS.rooms; scrim.classList.add('open'); sheet.classList.add('open'); wire(sbody); };
+  const closeS=()=>{ scrim.classList.remove('open'); sheet.classList.remove('open'); };
+  document.querySelectorAll('[data-sheet]').forEach(b=>b.addEventListener('click',()=>openS(b.getAttribute('data-sheet'))));
+  scrim.addEventListener('click',closeS);
+  sheet.addEventListener('click',e=>{ const sb=e.target.closest('[data-sheet]'); if(sb){openS(sb.getAttribute('data-sheet'));return;} if(e.target.closest('[data-close]')) closeS(); });
+
+  // ---- wire interactive bits (also for freshly-injected sheet content) ----
+  function wire(root){
+    root.querySelectorAll('[data-seg]:not([data-wired])').forEach(s=>{s.setAttribute('data-wired','1');s.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{s.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');}));});
+    root.querySelectorAll('[data-tgl]:not([data-wired])').forEach(t=>{t.setAttribute('data-wired','1');t.addEventListener('click',()=>t.classList.toggle('on'));});
+    root.querySelectorAll('.ministep:not([data-wired])').forEach(m=>{m.setAttribute('data-wired','1');const v=m.querySelector('.v');m.querySelectorAll('.b').forEach((b,i)=>b.addEventListener('click',()=>{let n=+v.textContent+(i?1:-1);v.textContent=Math.max(0,n);}));});
+  }
+  wire(document);
+  // edit-in-place toggle
+  document.querySelectorAll('[data-ef]').forEach(f=>f.addEventListener('click',()=>{ if(f.classList.contains('editing'))return; const t=f.querySelector('.val').textContent; f.classList.add('editing'); f.innerHTML=`<input value="${t}"/><div class="mini ok-b">✓</div>`; const inp=f.querySelector('input');inp.focus(); f.querySelector('.ok-b').addEventListener('click',e=>{e.stopPropagation(); f.classList.remove('editing'); f.innerHTML=`<span class="val">${inp.value}</span><svg class="pen" width="13" height="13" viewBox="0 0 24 24"><path d="M4 20h4L18 10l-4-4L4 16z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/></svg>`;}); }));
+  // floor-row expansion
+  document.querySelectorAll('[data-frow]').forEach(r=>r.querySelector('.fh').addEventListener('click',()=>r.classList.toggle('open')));
+  // room cell pick
+  document.querySelectorAll('.frow .rc').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('pick')));
+
+  // ---- thinking composer: cycle domain-grounded verbs ----
+  const WORDS=["Reading your message","Checking your progress","Structuring the floors","Drawing Floor 3","Mapping the rooms","Pricing the packages","Saving your work"];
+  [document.getElementById('sw'),document.getElementById('sw2')].forEach((sw,idx)=>{ if(!sw)return; let wi=2+idx*2; setInterval(()=>{ sw.classList.add('out'); setTimeout(()=>{ wi=(wi+1)%WORDS.length; sw.textContent=WORDS[wi]; sw.classList.remove('out'); },260); },2100+idx*350); });
+})();
+</script>
+</body>
+</html>

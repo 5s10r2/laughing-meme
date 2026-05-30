@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Massing — Barcode vs Portrait (scale test)</title>
+<style>
+  :root{ --bg:#0C0810; --surface:#161221; --border:rgba(255,255,255,.08); --ink:#F0E6EA; --ink2:#A89CA0; --ink3:#6B6065;
+         --lp-indigo:#4B45D6; --lp-indigo-soft:#6E68E8; --lp-ease:cubic-bezier(0.23,1,0.32,1); --err:#EF4444; --ok:#4ADE80; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:26px;padding:32px 18px 64px}
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+  header{text-align:center;max-width:640px}
+  header .kick{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink3)}
+  header h1{font-size:21px;font-weight:600;margin-top:8px}
+  header p{font-size:14px;color:var(--ink2);margin-top:6px}
+  .controls{display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:center;background:var(--surface);
+            border:1px solid var(--border);border-radius:18px;padding:16px 20px}
+  .controls label{display:flex;align-items:center;gap:8px;font-size:14px}
+  .controls input[type=range]{width:180px;accent-color:var(--lp-indigo)}
+  .controls .val{font-family:ui-monospace,monospace;width:26px;text-align:right}
+  button{font:inherit;font-size:13px;color:var(--ink);background:#1E1A2B;border:1px solid var(--border);
+         border-radius:10px;padding:7px 13px;cursor:pointer}
+  button:active{transform:scale(.97)}
+  .row{display:flex;flex-wrap:wrap;gap:34px;justify-content:center;align-items:flex-start}
+  figure{display:flex;flex-direction:column;align-items:center;gap:10px}
+  figcaption{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+  .cap-a{color:var(--err)} .cap-b{color:var(--ok)}
+  .frame{width:360px;max-width:90vw;background:var(--surface);border:1px solid var(--border);border-radius:26px;padding:16px}
+
+  /* ===== studio (mirrors globals.css .lp-*) ===== */
+  .lp-studio{position:relative;border-radius:24px;overflow:hidden;
+    background:radial-gradient(120% 90% at 50% 0%,#211F2A,#14131A 70%);
+    box-shadow:0 1px 2px rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.05);padding:15px 16px 13px}
+  .lp-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:22px 22px;
+    -webkit-mask-image:radial-gradient(80% 70% at 50% 40%,#000,transparent 80%);
+    mask-image:radial-gradient(80% 70% at 50% 40%,#000,transparent 80%)}
+  .lp-sheen{position:absolute;top:0;bottom:0;width:80px;
+    background:linear-gradient(100deg,transparent,rgba(150,145,236,.16),transparent);filter:blur(4px);
+    transform:translateX(-120px);opacity:0;z-index:3;pointer-events:none}
+  .lp-studio[data-generating="true"] .lp-sheen{opacity:1;animation:lpSweep 3.6s ease-in-out infinite}
+  @keyframes lpSweep{0%{transform:translateX(-120px)}55%,100%{transform:translateX(420px)}}
+  .lp-shead{position:relative;z-index:4;display:flex;justify-content:space-between;align-items:flex-start}
+  .lp-ti{font-weight:600;font-size:17px;color:#F4F1EA;letter-spacing:-.01em}
+  .lp-meta{font-family:ui-monospace,monospace;font-size:10px;color:#A7A2C4;letter-spacing:.04em;margin-top:3px}
+  .lp-live{font-family:ui-monospace,monospace;font-size:10px;color:#9C97EC;display:flex;align-items:center;gap:5px}
+  .lp-live i{width:6px;height:6px;border-radius:50%;background:var(--lp-indigo-soft);box-shadow:0 0 8px var(--lp-indigo-soft)}
+  .lp-studio[data-generating="true"] .lp-live i{animation:lpLiveDot 1.4s ease-in-out infinite}
+  @keyframes lpLiveDot{0%,100%{opacity:1}50%{opacity:.35}}
+  .lp-massing{position:relative;z-index:2;display:block;width:100%;height:auto}
+  .lp-foot{position:relative;z-index:4;display:flex;gap:13px;margin-top:4px}
+  .lp-foot .lp-kv b{font-size:20px;font-weight:600;color:#F4F1EA;line-height:1}
+  .lp-foot .lp-kv span{display:block;font-family:ui-monospace,monospace;font-size:9px;letter-spacing:.08em;
+    text-transform:uppercase;color:#8E89AE;margin-top:4px}
+  .lp-glow{opacity:.32;transform-origin:center}
+  .lp-studio[data-generating="true"] .lp-glow{animation:lpGlowPulse 2.6s ease-in-out infinite}
+  @keyframes lpGlowPulse{0%,100%{opacity:.35}50%{opacity:.7}}
+  .lp-massing .lp-floor{opacity:1}
+  .lp-massing.lp-build .lp-floor{opacity:0;transform:translateY(12px);
+    animation:lpFloorRise .46s var(--lp-ease) forwards;animation-delay:calc(var(--i)*var(--stag,40ms) + 120ms)}
+  @keyframes lpFloorRise{to{opacity:1;transform:translateY(0)}}
+  @media (prefers-reduced-motion: reduce){
+    .lp-massing.lp-build .lp-floor{opacity:1;transform:none;animation:none}
+    .lp-studio[data-generating="true"] .lp-sheen{opacity:0;animation:none}
+    .lp-studio[data-generating="true"] .lp-glow,.lp-studio[data-generating="true"] .lp-live i{animation:none}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="kick mono">Spike · Massing scalability</div>
+    <h1 id="title">Barcode vs Portrait — same building, two strategies</h1>
+    <p>Drag toward 18+ and watch <b style="color:var(--err)">A</b> collapse into a barcode while <b style="color:var(--ok)">B</b> stays a legible building.</p>
+  </header>
+
+  <div class="controls">
+    <label>Floors
+      <input id="floors" type="range" min="1" max="24" value="18" />
+      <span class="val mono" id="floorsVal">18</span>
+    </label>
+    <label><input id="gen" type="checkbox" /> generating</label>
+    <button id="replay">Replay draw-in</button>
+  </div>
+
+  <div class="row">
+    <figure>
+      <figcaption class="cap-a">A · Literal (fixed canvas) — the failure</figcaption>
+      <div class="frame"><div id="studioA"></div></div>
+    </figure>
+    <figure>
+      <figcaption class="cap-b">B · Portrait (clamp + grow + drop ticks) — recommended</figcaption>
+      <div class="frame"><div id="studioB"></div></div>
+    </figure>
+  </div>
+
+<script>
+const NS="http://www.w3.org/2000/svg";
+const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+// ---- geometry constants (mirror MassingModel.tsx exactly) ----
+const HW=62, HH=30, MAX_TH=17, LEGIBILITY_TH=10, TICK_MIN_TH=13, BASE_Y=30, LITERAL_BUDGET=136, BOTTOM_PAD=50;
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+
+function buildBlock(svg,{cx,baseY,floors,th,accentTop,showTicks}){
+  for(let k=floors-1;k>=0;k--){
+    const o=k*th, isTop=k===0, top=baseY+o;
+    const back=[cx,top], right=[cx+HW,top+HH], front=[cx,top+2*HH], left=[cx-HW,top+HH];
+    const frontB=[cx,top+2*HH+th], rightB=[cx+HW,top+HH+th], leftB=[cx-HW,top+HH+th];
+    const stagger=floors-1-k, accent=isTop&&accentTop;
+    const g=el("g",{class:"lp-floor",style:`--i:${stagger}`});
+    g.appendChild(el("polygon",{points:`${left} ${front} ${frontB} ${leftB}`,fill:accent?"#8E88E4":"url(#lpLft)",stroke:accent?"#5650D8":"#9C8E73","stroke-width":accent?1.1:1,"stroke-linejoin":"round"}));
+    g.appendChild(el("polygon",{points:`${front} ${right} ${rightB} ${frontB}`,fill:accent?"#7B75DE":"url(#lpRgt)",stroke:accent?"#5650D8":"#9C8E73","stroke-width":accent?1.1:1,"stroke-linejoin":"round"}));
+    if(isTop) g.appendChild(el("polygon",{points:`${back} ${right} ${front} ${left}`,fill:accentTop?"url(#lpTopA)":"url(#lpTop)",stroke:accentTop?"#5650D8":"#9C8E73","stroke-width":1,"stroke-linejoin":"round"}));
+    if(showTicks){const tg=el("g",{stroke:accent?"#bdb8f2":"#8a7c61","stroke-width":0.7,opacity:0.5});
+      for(let w=0;w<3;w++){const fx=cx+22+w*16, fy=top+HH+4+w*3.2; tg.appendChild(el("line",{x1:fx,y1:fy,x2:fx,y2:fy+th-2}));}
+      g.appendChild(tg);}
+    svg.appendChild(g);
+  }
+}
+
+const DEFS=`<defs>
+  <linearGradient id="lpTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0EADD"/><stop offset="1" stop-color="#E2D9C7"/></linearGradient>
+  <linearGradient id="lpLft" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D8CDB6"/><stop offset="1" stop-color="#CABEA3"/></linearGradient>
+  <linearGradient id="lpRgt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#BCAE92"/><stop offset="1" stop-color="#A89A7C"/></linearGradient>
+  <linearGradient id="lpTopA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9C5F2"/><stop offset="1" stop-color="#A9A3E8"/></linearGradient>
+  <radialGradient id="lpGl" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#6E68E8" stop-opacity=".5"/><stop offset="1" stop-color="#6E68E8" stop-opacity="0"/></radialGradient>
+  <filter id="lpSoft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>
+</defs>`;
+
+function studio(mount, {variant, floors, generating}){
+  const cx=160;
+  let th, showTicks, viewH;
+  if(variant==="literal"){ th=LITERAL_BUDGET/floors; showTicks=true; viewH=320; }
+  else { th=clamp(LITERAL_BUDGET/floors,LEGIBILITY_TH,MAX_TH); showTicks=th>=TICK_MIN_TH;
+         viewH=Math.max(320, BASE_Y+(floors-1)*th+2*HH+th+BOTTOM_PAD); }
+  const baseY=BASE_Y;
+  const stackBottom=baseY+(floors-1)*th+2*HH+th;
+  const shadowCy=Math.min(viewH-14, stackBottom+6);
+  const glowCy=baseY+((floors-1)*th)/2+HH;
+  const stag=Math.min(40, Math.round(500/Math.max(1,floors)));  // capped stagger budget
+
+  const rooms=floors*14;
+  mount.innerHTML=`
+    <div class="lp-studio" data-generating="${generating}">
+      <div class="lp-grid"></div><div class="lp-sheen"></div>
+      <div class="lp-shead">
+        <div><div class="lp-ti">Sunrise Residency</div><div class="lp-meta">HSR LAYOUT · ${floors} FLOORS</div></div>
+        <div class="lp-live"><i></i>${generating?"BUILDING":"READY"}</div>
+      </div>
+      <svg class="lp-massing lp-build" viewBox="0 0 320 ${Math.round(viewH)}" fill="none" style="--stag:${stag}ms">${DEFS}
+        <ellipse class="lp-glow" cx="${cx}" cy="${glowCy}" rx="95" ry="70" fill="url(#lpGl)"/>
+        <ellipse cx="${cx}" cy="${shadowCy}" rx="74" ry="17" fill="#000" opacity=".30" filter="url(#lpSoft)"/>
+        <text x="${cx}" y="${Math.round(shadowCy+16)}" font-family="ui-monospace,monospace" font-size="9" fill="#9C97C4" text-anchor="middle">BLOCK A · ${floors}F</text>
+      </svg>
+      <div class="lp-foot">
+        <div class="lp-kv"><b>${floors}</b><span>Floors</span></div>
+        <div class="lp-kv"><b>~${rooms}</b><span>Rooms</span></div>
+        <div class="lp-kv"><b>4</b><span>Types</span></div>
+      </div>
+    </div>`;
+  const svg=mount.querySelector("svg");
+  // insert floors before the label text so stacking order is correct
+  const label=svg.querySelector("text");
+  const frag=document.createDocumentFragment();
+  buildBlock(frag, {cx,baseY,floors,th,accentTop:true,showTicks});
+  svg.insertBefore(frag, label);
+}
+
+const floorsEl=document.getElementById("floors"), floorsVal=document.getElementById("floorsVal"),
+      genEl=document.getElementById("gen"), A=document.getElementById("studioA"), B=document.getElementById("studioB"),
+      title=document.getElementById("title");
+function render(){
+  const floors=+floorsEl.value, generating=genEl.checked;
+  floorsVal.textContent=floors;
+  title.textContent=`Barcode vs Portrait — same ${floors}-floor building, two strategies`;
+  studio(A,{variant:"literal",floors,generating});
+  studio(B,{variant:"portrait",floors,generating});
+}
+floorsEl.addEventListener("input",render);
+genEl.addEventListener("change",render);
+document.getElementById("replay").addEventListener("click",render);
+render();
+</script>
+</body>
+</html>

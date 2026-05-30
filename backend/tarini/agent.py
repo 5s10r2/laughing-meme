@@ -37,6 +37,7 @@ from tarini.adapters.inmemory_repository import InMemoryPropertyRepository
 from tarini.adapters.supabase_repository import SupabasePropertyRepository
 from tarini.application.command_service import CommandService
 from tarini.tools.agent_tools import TOOL_DEFINITIONS_V2, execute_agent_tool
+from tarini.blueprint import blueprint_props, is_blueprint_component
 from tarini.ui_adapter import to_legacy_session_snapshot
 
 logger = logging.getLogger(__name__)
@@ -471,6 +472,17 @@ async def _stream_chat_v2(
                 props = tool_block.input.get("props", {})
                 error = validate_emit_ui(component, props)
                 if not error:
+                    # Blueprint components are projected from the model (the source of
+                    # truth) — never trust Claude-authored props for them.
+                    if is_blueprint_component(component):
+                        try:
+                            model = (await svc.get_model(session_id)).get("model", {})
+                            props = blueprint_props(component, model) or props
+                        except Exception:
+                            logger.exception(
+                                "[stream_chat_v2] blueprint projection failed for %s (session %s)",
+                                component, session_id,
+                            )
                     yield {
                         "type": "component",
                         "name": component,

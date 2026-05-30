@@ -33,7 +33,7 @@ async def _apply(s, *commands, **kw):
 # --------------------------------------------------------------------------- definitions
 def test_tool_definitions_shape():
     names = {t["name"] for t in TOOL_DEFINITIONS_V2}
-    assert names == {"get_model", "apply_commands"}
+    assert names == {"get_model", "apply_commands", "emit_ui"}
     apply_def = next(t for t in TOOL_DEFINITIONS_V2 if t["name"] == "apply_commands")
     # the command vocabulary is embedded in the description (the contract A4 teaches)
     assert "CreatePackage" in apply_def["description"]

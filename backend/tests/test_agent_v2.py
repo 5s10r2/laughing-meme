@@ -207,6 +207,70 @@ async def test_v2_persists_through_command_service(new_experience, monkeypatch):
     assert model["model"]["name"] == "Galaxy"
 
 
+async def test_v2_blueprint_emit_props_come_from_the_model_not_claude(new_experience, monkeypatch):
+    """When Claude emits a blueprint component, the backend overrides its props with the
+    projection from the saved model — even if Claude sends garbage props."""
+    rounds = [
+        {  # round 0: build a 2-floor property
+            "deltas": [],
+            "final": _FinalMessage(
+                content=[_ToolUseBlock("tu1", "apply_commands", {"commands": [
+                    {"op": "SetProperty", "name": "Sunrise PG", "type": "pg", "location": "HSR"},
+                    {"op": "AddFloors", "count": 2, "start_index": 1},
+                ]})],
+                stop_reason="tool_use",
+            ),
+        },
+        {  # round 1: emit the massing model with deliberately wrong props
+            "deltas": [],
+            "final": _FinalMessage(
+                content=[_ToolUseBlock("tu2", "emit_ui", {
+                    "component": "MassingModel",
+                    "props": {"propertyName": "WRONG", "blocks": [{"label": "Garbage", "floors": 99}]},
+                })],
+                stop_reason="tool_use",
+            ),
+        },
+        {"deltas": [_ContentBlockDelta("here it is")],
+         "final": _FinalMessage(content=[_TextBlock("here it is")], stop_reason="end_turn")},
+    ]
+    monkeypatch.setattr(agent, "_get_anthropic_client", lambda: _FakeClient(rounds))
+
+    events = await _collect("s4", "show me the building", [])
+    comp = next(e for e in events if e["type"] == "component")
+    assert comp["name"] == "MassingModel"
+    # props are the projection of the saved model, NOT Claude's garbage
+    assert comp["props"]["propertyName"] == "Sunrise PG"
+    assert comp["props"]["blocks"] == [{"label": "Main", "floors": 2, "accentTop": True}]
+    stats = {s["label"]: s["value"] for s in comp["props"]["stats"]}
+    assert stats["Floors"] == 2
+    # backend stays colourless — frontend maps category → palette
+    assert "color" not in str(comp["props"])
+
+
+async def test_v2_non_blueprint_emit_keeps_claude_props(new_experience, monkeypatch):
+    """Legacy cards aren't backend-projected — their Claude-authored props pass through."""
+    rounds = [
+        {
+            "deltas": [],
+            "final": _FinalMessage(
+                content=[_ToolUseBlock("tu1", "emit_ui", {
+                    "component": "WelcomeHero", "props": {"headline": "Hi there"},
+                })],
+                stop_reason="tool_use",
+            ),
+        },
+        {"deltas": [_ContentBlockDelta("ok")],
+         "final": _FinalMessage(content=[_TextBlock("ok")], stop_reason="end_turn")},
+    ]
+    monkeypatch.setattr(agent, "_get_anthropic_client", lambda: _FakeClient(rounds))
+
+    events = await _collect("s5", "hi", [])
+    comp = next(e for e in events if e["type"] == "component")
+    assert comp["name"] == "WelcomeHero"
+    assert comp["props"] == {"headline": "Hi there"}
+
+
 async def test_v2_uses_v2_tools_and_v2_prompt(new_experience, monkeypatch):
     rounds = [{"deltas": [_ContentBlockDelta("hi")],
                "final": _FinalMessage(content=[_TextBlock("hi")], stop_reason="end_turn")}]
@@ -215,7 +279,7 @@ async def test_v2_uses_v2_tools_and_v2_prompt(new_experience, monkeypatch):
     await _collect("s3", "hello", [])
     sent = _Messages.last_kwargs
     tool_names = {t["name"] for t in sent["tools"]}
-    assert tool_names == {"get_model", "apply_commands"}
+    assert tool_names == {"get_model", "apply_commands", "emit_ui"}
     # system is [cached core, live block] — two blocks, core cached
     assert isinstance(sent["system"], list) and len(sent["system"]) == 2
     assert sent["system"][0]["cache_control"] == {"type": "ephemeral"}

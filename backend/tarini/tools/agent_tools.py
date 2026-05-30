@@ -33,7 +33,11 @@ from tarini.tools.ui import validate_emit_ui, emit_ui_result
 # Command names, for the apply_commands schema enum (auto-synced with the domain).
 from tarini.application.command_codec import COMMAND_TYPES
 
+# Blueprint component names, for the emit_ui schema enum (auto-synced with the registry).
+from tarini.blueprint import BLUEPRINT_COMPONENTS
+
 _COMMAND_NAMES = sorted(COMMAND_TYPES)
+_BLUEPRINT_NAMES = sorted(BLUEPRINT_COMPONENTS)
 
 
 def _err(code: str, message: str, **extra) -> str:
@@ -98,6 +102,42 @@ TOOL_DEFINITIONS_V2 = [
                 },
             },
             "required": ["commands"],
+        },
+    },
+    {
+        "name": "emit_ui",
+        "description": (
+            "Render a Living Blueprint visual in the chat. These are the primary way to "
+            "show the property taking shape — prefer them over describing structure in "
+            "prose.\n\n"
+            "Props are filled automatically from the saved model, so you do NOT author the "
+            "data — pass an empty props object ({}). Call get_model first so the saved data "
+            "is current, then emit the component whose moment has arrived (you may emit more "
+            "than one in a turn):\n"
+            "- MassingModel — the signature isometric building. Show it after floors are "
+            "added or changed, so the user sees their property take shape.\n"
+            "- FloorLedger — a top-down list of every floor with its room mix. Show it when "
+            "reviewing or editing structure room-by-room.\n"
+            "- BlueprintMapping — per-floor room→package assignment. Show it during the "
+            "mapping step.\n"
+            "- UnmappedWarning — floors with rooms not yet on a package. Show it when rooms "
+            "remain unmapped before publishing."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "component": {
+                    "type": "string",
+                    "enum": _BLUEPRINT_NAMES,
+                    "description": "Which blueprint component to render.",
+                },
+                "props": {
+                    "type": "object",
+                    "additionalProperties": True,
+                    "description": "Leave empty ({}). The backend fills props from the model.",
+                },
+            },
+            "required": ["component"],
         },
     },
 ]

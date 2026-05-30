@@ -32,6 +32,11 @@ AVAILABLE_COMPONENTS = {
     "VerificationSummary",
     "PendingItemsList",
     "CompletionCelebration",
+    # Living Blueprint (v2) — props are projected from the model, not Claude-authored.
+    "MassingModel",
+    "FloorLedger",
+    "BlueprintMapping",
+    "UnmappedWarning",
 }
 
 

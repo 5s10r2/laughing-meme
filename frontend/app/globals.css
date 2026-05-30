@@ -153,3 +153,246 @@ body {
     min-width: 44px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   LIVING BLUEPRINT — Theme scope (warm paper + indigo)
+   Additive: overrides the design-token SOURCES within `.lp-theme` only, so the
+   existing Tailwind utilities (bg-bg-surface, text-content, …) flip to warm
+   paper inside this scope while the live dark app is untouched. Wrap a page or
+   the chat shell in `.lp-theme` to adopt the Living Blueprint look.
+   ═══════════════════════════════════════════════════════════ */
+
+.lp-theme {
+  /* Backgrounds — warm paper */
+  --bg-deep:     #ECE6D9;  /* page behind cards */
+  --bg-surface:  #FCFAF5;  /* card surface */
+  --bg-elevated: #F3F0E8;  /* raised / chip fill */
+  --bg-subtle:   #EFEADF;
+
+  /* Accent — electric indigo (the AI signature) */
+  --accent-600: #3A34B0;
+  --accent-500: #4B45D6;
+  --accent-400: #6E68E8;
+  --accent-300: #C9C5F2;
+
+  /* Text — warm near-black */
+  --text-primary:   #191712;
+  --text-secondary: #575148;
+  --text-tertiary:  #736A5B;  /* darkened from #928B7D → ~4.9:1 on warm paper (AA);
+                                 tertiary is still used as small label TEXT, so it
+                                 must clear AA, not just read as "muted" */
+  --text-on-accent: #FFFFFF;
+
+  /* Borders & glass */
+  --border-default: rgba(25, 23, 18, 0.10);
+  --border-strong:  rgba(25, 23, 18, 0.18);
+  --border-accent:  rgba(75, 69, 214, 0.30);
+  --glass-bg:       rgba(25, 23, 18, 0.03);
+  --glass-border:   rgba(25, 23, 18, 0.08);
+
+  /* Semantic — calmer, paper-appropriate */
+  --success: #1E8A5F; --success-surface: rgba(30, 138, 95, 0.10);
+  --warning: #B0791F; --warning-surface: rgba(176, 121, 31, 0.10);
+  --error:   #C0492E; --error-surface:   rgba(192, 73, 46, 0.10);
+  --info:    #4B45D6; --info-surface:    rgba(75, 69, 214, 0.10);
+
+  /* Categorical room-type / package colours (consumed directly via var()) */
+  --t-single: #4B45D6;  /* indigo  */
+  --t-double: #5E7C6B;  /* forest  */
+  --t-deluxe: #B07A3A;  /* ochre   */
+  --t-triple: #64708A;  /* slate   */
+  /* token scope only — consumers apply bg/text utilities (which now resolve
+     warm here). Do NOT set background/color on .lp-theme itself, or it would
+     clobber bg-bg-surface on elements that also carry the class (e.g. sheets). */
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIVING BLUEPRINT — Massing model (self-contained display case)
+   The "studio" is a dark canvas regardless of page theme. Motion is
+   EVENT-DRIVEN: the building draws once on first paint; the sheen and
+   glow animate only while [data-working="true"], then settle.
+   ═══════════════════════════════════════════════════════════ */
+
+.lp-studio {
+  --lp-indigo:       #4B45D6;
+  --lp-indigo-soft:  #6E68E8;
+  --lp-ease:         cubic-bezier(0.23, 1, 0.32, 1);  /* Emil strong ease-out */
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 0%, #211F2A, #14131A 70%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.05);
+  padding: 15px 16px 13px;
+}
+
+.lp-studio .lp-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(80% 70% at 50% 40%, #000, transparent 80%);
+  mask-image: radial-gradient(80% 70% at 50% 40%, #000, transparent 80%);
+}
+
+/* Sheen: parked off-canvas, static, until generation begins */
+.lp-studio .lp-sheen {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  background: linear-gradient(100deg, transparent, rgba(150,145,236,.16), transparent);
+  filter: blur(4px);
+  transform: translateX(-120px);
+  will-change: transform;
+  opacity: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.lp-studio[data-working="true"] .lp-sheen {
+  opacity: 1;
+  animation: lpSweep 3.6s ease-in-out infinite;
+}
+@keyframes lpSweep {
+  0%        { transform: translateX(-120px); }
+  55%, 100% { transform: translateX(420px); }
+}
+
+.lp-studio .lp-shead {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.lp-studio .lp-shead .lp-ti {
+  font-weight: 600;
+  font-size: 17px;
+  color: #F4F1EA;
+  letter-spacing: -0.01em;
+}
+.lp-studio .lp-shead .lp-meta {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 10px;
+  color: #A7A2C4;
+  letter-spacing: 0.04em;
+  margin-top: 3px;
+}
+.lp-studio .lp-shead .lp-live {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 10px;
+  color: #9C97EC;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.lp-studio .lp-shead .lp-live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lp-indigo-soft);
+  box-shadow: 0 0 8px var(--lp-indigo-soft);
+}
+.lp-studio[data-working="true"] .lp-shead .lp-live i {
+  animation: lpLiveDot 1.4s ease-in-out infinite;
+}
+@keyframes lpLiveDot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+.lp-massing {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.lp-studio .lp-foot {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  gap: 13px;
+  margin-top: 4px;
+}
+.lp-studio .lp-foot .lp-kv b {
+  font-size: 20px;
+  font-weight: 600;
+  color: #F4F1EA;
+  line-height: 1;
+}
+.lp-studio .lp-foot .lp-kv span {
+  display: block;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8E89AE;
+  margin-top: 4px;
+}
+
+/* Glow under the building: static low, breathes only while generating */
+.lp-massing .lp-glow { opacity: 0.32; transform-origin: center; }
+.lp-studio[data-working="true"] .lp-massing .lp-glow {
+  animation: lpGlowPulse 2.6s ease-in-out infinite;
+}
+@keyframes lpGlowPulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.7; }
+}
+
+/* Floor entrance + per-floor position deltas are owned by framer-motion
+   (AnimatePresence + motion.g springs) in MassingModel.tsx — not CSS — so an
+   edit mid-animation retargets with preserved velocity. */
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-studio[data-working="true"] .lp-sheen,
+  .lp-studio[data-working="true"] .lp-massing .lp-glow,
+  .lp-studio[data-working="true"] .lp-shead .lp-live i {
+    animation: none;
+  }
+  .lp-studio[data-working="true"] .lp-sheen { opacity: 0; }
+}
+
+/* error: calm, not alarming — desaturate the building, quiet warning chip */
+.lp-studio[data-state="error"] .lp-massing {
+  filter: grayscale(0.7) opacity(0.5);
+  transition: filter 0.3s ease;
+}
+.lp-studio .lp-live.is-error {
+  color: #FBBF24; /* warning amber, not error red */
+  cursor: pointer;
+  /* button reset (the error chip is a real <button> for keyboard operability) */
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.lp-studio .lp-live.is-error:focus-visible {
+  outline: 2px solid #FBBF24;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.lp-studio .lp-live.is-error i {
+  background: #FBBF24;
+  box-shadow: none;
+  animation: none;
+}
+/* idle: faint, awaiting data */
+.lp-idle {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  color: #6E6A82;
+  font-size: 13px;
+  text-align: center;
+  padding: 0 24px;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/cn";
@@ -11,27 +11,78 @@ interface BottomSheetProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  /** merged onto the panel — e.g. "lp-theme" to re-establish a theme scope the
+   *  portal would otherwise escape (it renders into document.body) */
+  className?: string;
 }
 
-export function BottomSheet({ open, onClose, title, children }: BottomSheetProps) {
-  // Close on Escape key
+export function BottomSheet({ open, onClose, title, children, className }: BottomSheetProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+
+  const focusablesIn = (panel: HTMLElement) =>
+    Array.from(
+      panel.querySelectorAll<HTMLElement>(
+        'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+      )
+    );
+
+  // Close on Escape; trap Tab within the panel.
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key === "Tab" && panelRef.current) {
+        const f = focusablesIn(panelRef.current);
+        if (f.length === 0) {
+          e.preventDefault();
+          panelRef.current.focus();
+          return;
+        }
+        const first = f[0];
+        const last = f[f.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey && (active === first || active === panelRef.current)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     },
     [onClose]
   );
 
+  // Key listener + scroll lock while open.
   useEffect(() => {
-    if (open) {
-      document.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
-    }
+    if (!open) return;
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
   }, [open, handleKeyDown]);
+
+  // Focus management (deps: [open] only, so re-renders don't re-steal focus):
+  // move focus into the panel on open, restore it to the trigger on close.
+  useEffect(() => {
+    if (!open) return;
+    triggerRef.current = (document.activeElement as HTMLElement) ?? null;
+    const raf = requestAnimationFrame(() => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const f = focusablesIn(panel);
+      (f[0] ?? panel).focus();
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      triggerRef.current?.focus?.();
+    };
+  }, [open]);
 
   const content = (
     <AnimatePresence>
@@ -49,6 +100,11 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
 
           {/* Mobile: bottom sheet / Desktop: centered modal */}
           <motion.div
+            ref={panelRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
             initial={{ y: "100%", opacity: 0.8 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
@@ -62,7 +118,8 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
               "md:bottom-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2",
               "md:max-h-[80vh] md:w-full md:max-w-lg md:rounded-2xl",
               "bg-bg-surface border border-border shadow-2xl",
-              "flex flex-col"
+              "flex flex-col",
+              className
             )}
           >
             {/* Drag handle (mobile only) */}

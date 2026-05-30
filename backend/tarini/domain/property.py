@@ -195,7 +195,10 @@ class Property:
             labels = [f"Floor {cmd.start_index + i}" for i in range(cmd.count)]
         else:
             raise InvariantViolation("AddFloors needs `labels` or `count`")
-        next_index = (max((f.index for f in self.floors), default=-1)) + 1
+        # On an empty property, honour start_index so the floor's index matches the
+        # number shown in its label ("Floor 1" → index 1 → rooms named "1-01"). When
+        # appending to existing floors, continue the sequence from the current max.
+        next_index = (max((f.index for f in self.floors), default=cmd.start_index - 1)) + 1
         for i, label in enumerate(labels):
             self.floors.append(
                 Floor(id=self._id_gen("flr"), block_id=block_id, index=next_index + i, label=label)

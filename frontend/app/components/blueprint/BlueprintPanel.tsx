@@ -134,6 +134,8 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   // singular unit noun (room / flat / bed / unit) — backend-projected; "room" for the
   // legacy shape that doesn't send it, so the panel reads right on either backend.
   const unitNoun = String(bp.MassingModel?.unitNoun ?? bp.FloorLedger?.unitNoun ?? "room");
+  // recursive-tree backend ⇒ the model carries a root_id; direct edits must emit tree commands.
+  const treeMode = !!(data?.model && "root_id" in (data.model as Record<string, unknown>));
   const counts = data?.completeness?.counts ?? {};
   // structure exists if the model reports floors (flat Property shape) OR rentable units
   // (recursive tree shape) — keeps the panel shape-agnostic across both backends.
@@ -211,6 +213,7 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
                   packages={mapping?.packages}
                   floors={mapping?.floors}
                   unitNoun={unitNoun}
+                  treeMode={treeMode}
                   onApplyCommands={applyCommands}
                 />
               )}

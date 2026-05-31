@@ -40,6 +40,8 @@ interface MappingRowProps {
   packages: MappingPackage[];
   /** singular noun for the unit (room / flat / bed / unit); backend-projected */
   unitNoun?: string;
+  /** true when the backend is the recursive Space tree → emit MapOffering, not MapRooms */
+  treeMode?: boolean;
   onSendMessage?: (text: string) => void;
   /** Direct-edit mode (Blueprint panel): emit a typed command applied instantly
    *  via the command layer. When absent, falls back to a chat intent (onSendMessage). */
@@ -56,7 +58,7 @@ const PKG_PALETTE = [
 ];
 const UNMAPPED_COLOR = "var(--border-strong)";
 
-export function MappingRow({ floorLabel, units, packages, unitNoun = "room", onSendMessage, onApplyCommands }: MappingRowProps) {
+export function MappingRow({ floorLabel, units, packages, unitNoun = "room", treeMode = false, onSendMessage, onApplyCommands }: MappingRowProps) {
   const [selected, setSelected] = useState<Set<string | number>>(new Set());
 
   // A room is "mapped" only if its packageId resolves to a real package; a
@@ -143,7 +145,14 @@ export function MappingRow({ floorLabel, units, packages, unitNoun = "room", onS
     if (chosen.length === 0) return;
     if (onApplyCommands) {
       // Direct edit — applied instantly via the command layer, no chat round-trip.
-      onApplyCommands([{ op: "MapRooms", room_ids: chosen.map((u) => u.id), package_id: pkg.id }]);
+      // The recursive-tree backend speaks MapOffering(space_ids, offering_id); the flat
+      // Property backend speaks MapRooms(room_ids, package_id). Emit to match the active model.
+      const ids = chosen.map((u) => u.id);
+      onApplyCommands(
+        treeMode
+          ? [{ op: "MapOffering", space_ids: ids, offering_id: pkg.id }]
+          : [{ op: "MapRooms", room_ids: ids, package_id: pkg.id }]
+      );
     } else {
       onSendMessage?.(`Assign ${chosen.map((u) => u.name).join(", ")} on ${floorLabel} to ${pkg.name}`);
     }

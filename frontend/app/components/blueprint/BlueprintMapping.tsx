@@ -13,6 +13,8 @@ interface BlueprintMappingProps {
   floors?: BlueprintMappingFloor[];
   /** singular noun for the unit (room / flat / bed / unit); backend-projected */
   unitNoun?: string;
+  /** true when the backend is the recursive Space tree → rows emit MapOffering, not MapRooms */
+  treeMode?: boolean;
   onSendMessage?: (text: string) => void;
   /** Direct-edit mode (Blueprint panel) — forwarded to each row. */
   onApplyCommands?: (commands: Record<string, unknown>[]) => void;
@@ -27,6 +29,7 @@ export function BlueprintMapping({
   packages = [],
   floors = [],
   unitNoun = "room",
+  treeMode = false,
   onSendMessage,
   onApplyCommands,
 }: BlueprintMappingProps) {
@@ -41,6 +44,7 @@ export function BlueprintMapping({
             units={floor.units}
             packages={packages}
             unitNoun={unitNoun}
+            treeMode={treeMode}
             onSendMessage={onSendMessage}
             onApplyCommands={onApplyCommands}
           />

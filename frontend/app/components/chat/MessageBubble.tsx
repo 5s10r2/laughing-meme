@@ -19,6 +19,23 @@ interface MessageBubbleProps {
  * For user messages, renders a simple text bubble.
  */
 export function MessageBubble({ message, sendMessage }: MessageBubbleProps) {
+  // "event" — a system note (e.g. a direct Blueprint edit): centered, muted, no avatar/bubble.
+  if (message.role === "event") {
+    const text = message.parts
+      .filter((p) => p.type === "text")
+      .map((p) => (p.type === "text" ? p.text : ""))
+      .join("");
+    if (!text) return null;
+    return (
+      <div className="flex justify-center">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-bg-subtle px-3 py-1 text-[11px] text-content-tertiary">
+          <span aria-hidden="true">✏️</span>
+          {text}
+        </span>
+      </div>
+    );
+  }
+
   const isTarini = message.role === "tarini";
   const hasContent = message.parts.length > 0 && message.parts.some(
     (p) => (p.type === "text" && p.text) || p.type === "component" || p.type === "tool_activity"

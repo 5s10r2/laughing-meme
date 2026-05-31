@@ -31,6 +31,8 @@ interface BlueprintPanelProps {
   sendMessage?: (text: string) => void;
   /** bump to force a refetch (e.g. after Tarini changes the model while open) */
   refreshKey?: number;
+  /** notify the chat that a direct Blueprint edit succeeded (for a toast + transcript note) */
+  onEdit?: (summary: string) => void;
 }
 
 /**
@@ -42,7 +44,7 @@ interface BlueprintPanelProps {
  * Stage 1: read-only (massing + per-floor ledger with drill-down). Direct editing
  * (mapping/rename via the command endpoint) lands in Stage 2.
  */
-export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshKey }: BlueprintPanelProps) {
+export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshKey, onEdit }: BlueprintPanelProps) {
   const [data, setData] = useState<ModelResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -79,7 +81,7 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   // snapshot so the panel updates in place. A version conflict (Tarini edited
   // concurrently) just refetches so the next attempt is against current state.
   const applyCommands = useCallback(
-    async (commands: Record<string, unknown>[]) => {
+    async (commands: Record<string, unknown>[], summary?: string) => {
       if (!sessionId) return;
       try {
         const res = await fetch("/api/commands", {
@@ -94,11 +96,13 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
           return;
         }
         setData((await res.json()) as ModelResponse);
+        // Talk and touch are the same: leave a trace of the tap in the conversation.
+        if (summary) onEdit?.(summary);
       } catch {
         await load();
       }
     },
-    [sessionId, data?.version, load]
+    [sessionId, data?.version, load, onEdit]
   );
 
   // Massing floor tap → jump to that floor's detail row. The massing reports a

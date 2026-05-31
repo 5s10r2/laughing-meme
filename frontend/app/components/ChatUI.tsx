@@ -43,6 +43,8 @@ export default function ChatUI() {
   const [blueprintOpen, setBlueprintOpen] = useState(false);
   // Bumped on every state_snapshot so an open Blueprint refetches the live model.
   const [modelRev, setModelRev] = useState(0);
+  // Transient confirmation for a direct Blueprint edit (auto-dismisses).
+  const [toast, setToast] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { updateFromSnapshot, updateStage } = useOnboardingState();
@@ -341,6 +343,24 @@ export default function ChatUI() {
     sendMessage(value);
   }
 
+  // A direct Blueprint edit succeeded → leave a trace in the conversation (a centered
+  // "event" note) and a transient toast. No LLM round-trip; Tarini re-reads the model on
+  // its next turn (get_model), so "talk and touch are the same".
+  const handleBlueprintEdit = useCallback((summary: string) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: `evt_${Date.now()}_${Math.round(prev.length)}`, role: "event", parts: [{ type: "text", text: summary }] },
+    ]);
+    setToast(summary);
+  }, []);
+
+  // Auto-dismiss the toast.
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -400,7 +420,21 @@ export default function ChatUI() {
         sessionId={sessionId}
         sendMessage={sendMessage}
         refreshKey={modelRev}
+        onEdit={handleBlueprintEdit}
       />
+
+      {/* Toast — transient confirmation of a direct Blueprint edit */}
+      {toast && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4">
+          <div
+            role="status"
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-content px-4 py-2 text-sm font-medium text-bg-deep shadow-lg"
+          >
+            <span aria-hidden="true">✓</span>
+            {toast}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

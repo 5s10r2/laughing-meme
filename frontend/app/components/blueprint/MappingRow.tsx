@@ -44,8 +44,9 @@ interface MappingRowProps {
   treeMode?: boolean;
   onSendMessage?: (text: string) => void;
   /** Direct-edit mode (Blueprint panel): emit a typed command applied instantly
-   *  via the command layer. When absent, falls back to a chat intent (onSendMessage). */
-  onApplyCommands?: (commands: Record<string, unknown>[]) => void;
+   *  via the command layer. `summary` is a human note for the chat transcript/toast.
+   *  When absent, falls back to a chat intent (onSendMessage). */
+  onApplyCommands?: (commands: Record<string, unknown>[], summary?: string) => void;
 }
 
 const PKG_PALETTE = [
@@ -148,10 +149,12 @@ export function MappingRow({ floorLabel, units, packages, unitNoun = "room", tre
       // The recursive-tree backend speaks MapOffering(space_ids, offering_id); the flat
       // Property backend speaks MapRooms(room_ids, package_id). Emit to match the active model.
       const ids = chosen.map((u) => u.id);
+      const summary = `Mapped ${chosen.map((u) => u.name).join(", ")} → ${pkg.name}`;
       onApplyCommands(
         treeMode
           ? [{ op: "MapOffering", space_ids: ids, offering_id: pkg.id }]
-          : [{ op: "MapRooms", room_ids: ids, package_id: pkg.id }]
+          : [{ op: "MapRooms", room_ids: ids, package_id: pkg.id }],
+        summary
       );
     } else {
       onSendMessage?.(`Assign ${chosen.map((u) => u.name).join(", ")} on ${floorLabel} to ${pkg.name}`);

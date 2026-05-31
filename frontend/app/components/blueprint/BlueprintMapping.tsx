@@ -17,7 +17,7 @@ interface BlueprintMappingProps {
   treeMode?: boolean;
   onSendMessage?: (text: string) => void;
   /** Direct-edit mode (Blueprint panel) — forwarded to each row. */
-  onApplyCommands?: (commands: Record<string, unknown>[]) => void;
+  onApplyCommands?: (commands: Record<string, unknown>[], summary?: string) => void;
 }
 
 /**

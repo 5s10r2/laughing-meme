@@ -147,7 +147,9 @@ export type MessagePart = TextPart | ComponentPart | ToolActivityPart;
 
 export interface Message {
   id: string;
-  role: "user" | "tarini";
+  // "event" = a non-conversational system note (e.g. a direct Blueprint edit), rendered
+  // as a centered muted line — neither a user nor a Tarini bubble.
+  role: "user" | "tarini" | "event";
   parts: MessagePart[];
   streaming?: boolean;
 }

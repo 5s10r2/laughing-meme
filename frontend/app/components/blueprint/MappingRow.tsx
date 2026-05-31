@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { cn } from "../../lib/cn";
 import { CARD } from "../ui/primitives";
 import { FloorComposition, type CompositionSegment } from "./FloorComposition";
@@ -62,6 +62,21 @@ const UNMAPPED_COLOR = "var(--border-strong)";
 export function MappingRow({ floorLabel, units, packages, unitNoun = "room", treeMode = false, onSendMessage, onApplyCommands }: MappingRowProps) {
   const [selected, setSelected] = useState<Set<string | number>>(new Set());
 
+  // The live selection, with ids whose unit re-projected away (LLM-fed) dropped.
+  // Deriving during render replaces a reconciling effect + its extra render pass;
+  // writes still target `selected`, so stale ids simply never surface in reads.
+  const validSelected = useMemo(() => {
+    const ids = new Set(units.map((u) => u.id));
+    let allPresent = true;
+    for (const id of selected) {
+      if (!ids.has(id)) { allPresent = false; break; }
+    }
+    if (allPresent) return selected;
+    const next = new Set<string | number>();
+    for (const id of selected) if (ids.has(id)) next.add(id);
+    return next;
+  }, [selected, units]);
+
   // A room is "mapped" only if its packageId resolves to a real package; a
   // dangling reference counts as unmapped (not silently impersonating pkg #0).
   const pkgIndex = useMemo(() => {
@@ -108,19 +123,6 @@ export function MappingRow({ floorLabel, units, packages, unitNoun = "room", tre
     return segs;
   }, [packages, units, total, mappedCount, pkgColor]);
 
-  // Reconcile selection when units re-project (LLM-fed): drop ids no longer present.
-  useEffect(() => {
-    setSelected((prev) => {
-      let changed = false;
-      const next = new Set<string | number>();
-      for (const id of prev) {
-        if (units.some((u) => u.id === id)) next.add(id);
-        else changed = true;
-      }
-      return changed ? next : prev;
-    });
-  }, [units]);
-
   const toggle = useCallback((id: string | number) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -142,7 +144,7 @@ export function MappingRow({ floorLabel, units, packages, unitNoun = "room", tre
   const clear = useCallback(() => setSelected(new Set()), []);
 
   function assign(pkg: MappingPackage) {
-    const chosen = units.filter((u) => selected.has(u.id));
+    const chosen = units.filter((u) => validSelected.has(u.id));
     if (chosen.length === 0) return;
     if (onApplyCommands) {
       // Direct edit — applied instantly via the command layer, no chat round-trip.
@@ -168,7 +170,7 @@ export function MappingRow({ floorLabel, units, packages, unitNoun = "room", tre
       <div className="flex items-baseline justify-between mb-3">
         <p className="text-sm font-semibold text-content">{floorLabel}</p>
         <span className="text-[11px] font-mono text-content-secondary">
-          {selected.size > 0 ? `${selected.size} selected` : `${mappedCount}/${total} mapped`}
+          {validSelected.size > 0 ? `${validSelected.size} selected` : `${mappedCount}/${total} mapped`}
         </span>
       </div>
 
@@ -188,7 +190,7 @@ export function MappingRow({ floorLabel, units, packages, unitNoun = "room", tre
               {cap(t)}
             </QuickChip>
           ))}
-        {selected.size > 0 && <QuickChip onClick={clear}>Clear</QuickChip>}
+        {validSelected.size > 0 && <QuickChip onClick={clear}>Clear</QuickChip>}
       </div>
 
       {/* room chips — selectable */}
@@ -201,7 +203,7 @@ export function MappingRow({ floorLabel, units, packages, unitNoun = "room", tre
               label={u.name}
               ariaLabel={`${cap(unitNoun)} ${u.name}, ${mapped ? `assigned ${packages[pkgIndex.get(u.packageId!)!].name}` : "unmapped"}`}
               dotColor={mapped ? pkgColor(u.packageId!) : null}
-              selected={selected.has(u.id)}
+              selected={validSelected.has(u.id)}
               dashed={!mapped}
               onClick={() => toggle(u.id)}
             />
@@ -210,11 +212,11 @@ export function MappingRow({ floorLabel, units, packages, unitNoun = "room", tre
       </div>
 
       {/* package picker — appears when rooms are selected */}
-      {selected.size > 0 && (
+      {validSelected.size > 0 && (
         <div className="mt-4 pt-3 border-t border-border">
           {/* Tapping a room reveals what it is + its current package. */}
-          {selected.size === 1 && (() => {
-            const u = units.find((x) => selected.has(x.id));
+          {validSelected.size === 1 && (() => {
+            const u = units.find((x) => validSelected.has(x.id));
             if (!u) return null;
             const i = u.packageId ? pkgIndex.get(u.packageId) : undefined;
             const current = i !== undefined ? packages[i].name : null;
@@ -230,7 +232,7 @@ export function MappingRow({ floorLabel, units, packages, unitNoun = "room", tre
             );
           })()}
           <p className="text-[11px] text-content-tertiary mb-2">
-            Assign {selected.size} {plural(unitNoun, selected.size)} to:
+            Assign {validSelected.size} {plural(unitNoun, validSelected.size)} to:
           </p>
           <div className="flex flex-wrap gap-1.5">
             {packages.map((p) => (

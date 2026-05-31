@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { FloorTray, type LedgerFloor } from "./FloorTray";
 import { FloorDetailSheet } from "./FloorDetailSheet";
 
@@ -36,31 +36,29 @@ export function FloorLedger({ floors, activeId, unitNoun = "room", onSendMessage
   const [openId, setOpenId] = useState<string | number | null>(
     activeId ?? floors[0]?.id ?? null
   );
-  const prevActiveId = useRef(activeId);
+  const [prevActiveId, setPrevActiveId] = useState(activeId);
 
   // the floor whose full drill-down sheet is open (null = closed)
   const [detailId, setDetailId] = useState<string | number | null>(null);
   const detailFloor = detailId != null ? floors.find((f) => f.id === detailId) ?? null : null;
 
-  // Reconcile the open floor with post-mount prop changes (this is an LLM-fed
-  // surface): follow a changed `activeId`, and recover if the open floor was
-  // removed — while respecting an explicit collapse-all (openId === null).
-  useEffect(() => {
-    if (activeId !== prevActiveId.current) {
-      prevActiveId.current = activeId;
-      if (activeId != null) {
-        setOpenId(activeId);
-        return;
-      }
-    }
-    setOpenId((cur) =>
-      cur !== null && !floors.some((f) => f.id === cur)
-        ? (activeId ?? floors[0]?.id ?? null)
-        : cur
-    );
-  }, [activeId, floors]);
+  // Follow a changed `activeId` (this is an LLM-fed surface): latch it as the
+  // open floor when the parent moves attention. Adjusting state during render —
+  // the React-recommended replacement for a reconciling effect — converges
+  // because prevActiveId catches up in the same pass.
+  if (activeId !== prevActiveId) {
+    setPrevActiveId(activeId);
+    if (activeId != null) setOpenId(activeId);
+  }
 
   if (!floors.length) return null;
+
+  // Recover if the open floor was removed, derived during render — while
+  // respecting an explicit collapse-all (openId === null stays closed).
+  const effectiveOpenId =
+    openId !== null && !floors.some((f) => f.id === openId)
+      ? (activeId ?? floors[0]?.id ?? null)
+      : openId;
 
   return (
     // Self-scope .lp-theme: this ledger renders FloorComposition's categorical
@@ -73,9 +71,9 @@ export function FloorLedger({ floors, activeId, unitNoun = "room", onSendMessage
         <div key={floor.id} data-floor-id={String(floor.id)}>
           <FloorTray
             floor={floor}
-            expanded={openId === floor.id}
+            expanded={effectiveOpenId === floor.id}
             unitNoun={unitNoun}
-            onToggle={() => setOpenId((prev) => (prev === floor.id ? null : floor.id))}
+            onToggle={() => setOpenId(effectiveOpenId === floor.id ? null : floor.id)}
             onOpen={() => setDetailId(floor.id)}
           />
         </div>

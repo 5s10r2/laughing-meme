@@ -51,11 +51,11 @@ function FloorDetailBody({
   onSendMessage?: (text: string) => void;
   onEditUnit?: (unit: FloorUnit) => void;
 }) {
-  const units = floor.units ?? [];
   const empty = floor.rooms === 0;
 
   // group rooms by category, preserving first-seen order
   const groups = useMemo(() => {
+    const units = floor.units ?? [];
     const map = new Map<string, FloorUnit[]>();
     for (const u of units) {
       const list = map.get(u.category) ?? [];
@@ -63,7 +63,7 @@ function FloorDetailBody({
       map.set(u.category, list);
     }
     return [...map.entries()].map(([category, rooms]) => ({ category, rooms }));
-  }, [units]);
+  }, [floor.units]);
 
   if (empty) {
     return (

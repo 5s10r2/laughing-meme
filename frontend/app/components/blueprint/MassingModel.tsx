@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 /**
@@ -188,14 +188,15 @@ export function MassingModel({
   // Replaying the full staggered entrance is desired only when (re)entering
   // `generating`; bumping genEpoch remounts the floors so the entrance plays.
   // During `updating` the epoch is stable so floors persist and only deltas move.
+  // Tracking the previous state in state and bumping the epoch during render —
+  // the React-recommended replacement for a reconciling effect — converges
+  // because prevState catches up in the same pass.
   const [genEpoch, setGenEpoch] = useState(0);
-  const prevState = useRef<MassingState>(state);
-  useEffect(() => {
-    if (state === "generating" && prevState.current !== "generating") {
-      setGenEpoch((e) => e + 1);
-    }
-    prevState.current = state;
-  }, [state]);
+  const [prevState, setPrevState] = useState<MassingState>(state);
+  if (state !== prevState) {
+    setPrevState(state);
+    if (state === "generating") setGenEpoch((e) => e + 1);
+  }
 
   const isWorking = state === "generating" || state === "updating";
   const isError = state === "error";

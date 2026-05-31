@@ -75,11 +75,6 @@ export function MappingSuggestionCard({
     return [];
   }
 
-  const totalRooms = suggestions.reduce(
-    (sum, s) => sum + getAssignments(s).reduce((a, b) => a + (b.unitCount || 0), 0),
-    0
-  );
-
   // ── Flat list mode (1-2 floors) ──
   if (suggestions.length < REVIEW_THRESHOLD) {
     return (
@@ -95,7 +90,6 @@ export function MappingSuggestionCard({
   return (
     <FloorByFloorReview
       suggestions={suggestions}
-      totalRooms={totalRooms}
       getAssignments={getAssignments}
       onSendMessage={onSendMessage}
     />
@@ -169,12 +163,10 @@ function FlatSuggestionView({
 
 function FloorByFloorReview({
   suggestions,
-  totalRooms,
   getAssignments,
   onSendMessage,
 }: {
   suggestions: MappingSuggestion[];
-  totalRooms: number;
   getAssignments: (s: MappingSuggestion) => FloorAssignment[];
   onSendMessage?: (text: string) => void;
 }) {

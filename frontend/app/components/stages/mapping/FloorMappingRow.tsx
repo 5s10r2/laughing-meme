@@ -4,9 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { cn } from "../../../lib/cn";
 import { humanizeCategory, getPackageColor } from "../../../lib/property-utils";
 import { BottomSheet } from "../../ui/BottomSheet";
-import {
-  CARD, BTN_PRIMARY,
-} from "../../ui/primitives";
+import { CARD } from "../../ui/primitives";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface UnitChip {

@@ -36,6 +36,7 @@ from tarini.tools.ui import validate_emit_ui
 from tarini.adapters.inmemory_repository import InMemoryPropertyRepository
 from tarini.adapters.inmemory_tree_repository import InMemoryTreeRepository
 from tarini.adapters.supabase_repository import SupabasePropertyRepository
+from tarini.adapters.supabase_tree_repository import SupabaseTreeRepository
 from tarini.application.command_service import CommandService
 from tarini.application.tree_command_service import TreeCommandService
 from tarini.flags import use_tree_model
@@ -396,7 +397,11 @@ def _get_command_service():
     global _command_service, _tree_command_service
     if use_tree_model():
         if _tree_command_service is None:
-            _tree_command_service = TreeCommandService(InMemoryTreeRepository())
+            if getattr(db, "_USE_MEMORY", True):
+                tree_repo = InMemoryTreeRepository()
+            else:
+                tree_repo = SupabaseTreeRepository(db._get_client())
+            _tree_command_service = TreeCommandService(tree_repo)
         return _tree_command_service
     if _command_service is None:
         if getattr(db, "_USE_MEMORY", True):

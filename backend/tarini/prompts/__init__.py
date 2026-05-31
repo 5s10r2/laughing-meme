@@ -24,12 +24,18 @@ def load_system_prompt_v2() -> str:
     Correctness lives in the command layer, not here; this prompt only guides judgment.
     Per-turn state is NOT baked in (that would break prompt caching) — it is appended
     separately via render_live_context() after the cache breakpoint.
+
+    Returns the recursive-tree variant when USE_TREE_MODEL is on (the agent must speak the
+    tree command vocabulary), else the flat Property variant. Both are stable + cacheable.
     """
-    return _SYSTEM_PROMPT_V2
+    from tarini.flags import use_tree_model
+
+    return _SYSTEM_PROMPT_V2_TREE if use_tree_model() else _SYSTEM_PROMPT_V2
 
 
 _SYSTEM_PROMPT = _read("system_prompt.md")
 _SYSTEM_PROMPT_V2 = _read("system_prompt_v2.md")
+_SYSTEM_PROMPT_V2_TREE = _read("system_prompt_v2_tree.md")
 
 
 _FACET_GLYPH = {"complete": "✓", "partial": "◐", "empty": "✗"}

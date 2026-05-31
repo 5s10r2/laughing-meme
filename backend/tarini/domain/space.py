@@ -286,13 +286,21 @@ class SpaceTree:
                 raise InvariantViolation("AddSpaces needs at least one label or count >= 1")
             _check_sharing(command.sharing)
             _check_config(command.config)
+            parent = self.get(command.parent_id)  # NotFound if missing (also validated in add)
             attrs: dict = {}
             if command.sharing is not None:
                 attrs["sharing"] = command.sharing
                 attrs["capacity"] = capacity_for(command.sharing)  # None for dorm → set explicitly
             if command.config is not None:
                 attrs["config"] = command.config
-            return [self.add(command.parent_id, command.kind, label, **attrs) for label in labels]
+            # Correct-by-default: a sellable unit is rentable the moment it exists; adding
+            # children turns its parent from a sellable leaf into a container.
+            if command.kind in RENTABLE_KINDS:
+                attrs["rentable"] = True
+            created = [self.add(command.parent_id, command.kind, label, **attrs) for label in labels]
+            if parent.rentable:
+                parent.rentable = False
+            return created
 
         if isinstance(command, sc.RenameSpace):
             self.get(command.space_id).label = command.label

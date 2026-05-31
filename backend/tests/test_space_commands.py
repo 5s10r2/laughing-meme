@@ -204,6 +204,23 @@ def test_add_spaces_rejects_nonpositive_count():
         t.apply(sc.AddSpaces(parent_id=t.root().id, kind="room", count=0))
 
 
+def test_sellable_units_are_rentable_by_default():
+    t = _tree()
+    f = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="floor", labels=["G"]))[0]
+    assert f.rentable is False  # a floor is a container, never auto-sellable
+    rooms = t.apply(sc.AddSpaces(parent_id=f.id, kind="room", count=2, sharing="double"))
+    assert all(r.rentable is True for r in rooms)  # rooms sellable by default
+
+
+def test_adding_children_demotes_a_unit_to_container():
+    t = _tree()
+    flat = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="flat", labels=["A1"]))[0]
+    assert t.get(flat.id).rentable is True  # whole-flat is sellable
+    rooms = t.apply(sc.AddSpaces(parent_id=flat.id, kind="room", count=2))  # rooms-in-a-flat
+    assert t.get(flat.id).rentable is False  # the flat is now a container
+    assert all(r.rentable is True for r in rooms)  # the rooms are the sellable leaves
+
+
 def test_set_property_updates_meta_and_root_label():
     t = _tree()
     t.apply(sc.SetProperty(name="Sunrise PG", type="pg", location="HSR", gender="male",

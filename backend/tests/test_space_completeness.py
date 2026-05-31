@@ -64,12 +64,11 @@ def test_property_facet_partial_then_complete():
     assert compute_completeness(t)["facets"]["property"] == "complete"
 
 
-def test_structure_partial_when_rentable_unmarked():
+def test_structure_partial_with_only_containers():
     t = _named_tree()
-    f = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="floor", labels=["G"]))[0]
-    t.apply(sc.AddSpaces(parent_id=f.id, kind="room", count=2))  # not marked rentable
+    t.apply(sc.AddSpaces(parent_id=t.root().id, kind="floor", labels=["G"]))  # a floor, no units
     c = compute_completeness(t)
-    assert c["facets"]["structure"] == "partial"  # nodes exist, nothing sellable yet
+    assert c["facets"]["structure"] == "partial"  # structure exists, nothing sellable yet
 
 
 def test_mapping_partial_then_complete():

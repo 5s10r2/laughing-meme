@@ -193,6 +193,20 @@ def test_live_context_reads_meta_and_tree_counts():
     assert "Sunrise PG" in text and "units" in text and "offerings" in text
 
 
+def test_package_panel_emits_full_listing_terms():
+    t = SpaceTree.new("Terms PG", id_gen=_seq_gen())
+    off = t.apply(sc.CreateOffering(
+        name="AC Single", price=12000, billing_basis="per_bed", billing_period="monthly",
+        attrs={"sharing": "single", "ac": True, "deposit_months": 2, "notice_days": 30,
+               "lock_in_months": 6, "min_stay": 3, "services": ["housekeeping", "wifi"]},
+    ))
+    pk = ta.package_panel_props(t)["packages"][0]
+    assert pk["depositMonths"] == 2 and pk["noticeDays"] == 30
+    assert pk["lockInMonths"] == 6 and pk["minStay"] == 3
+    assert pk["billingBasis"] == "per_bed" and pk["billingPeriod"] == "monthly"
+    assert pk["services"] == ["housekeeping", "wifi"]
+
+
 def test_package_panel_pg():
     p = ta.package_panel_props(_pg())["packages"]
     assert len(p) == 1

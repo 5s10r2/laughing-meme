@@ -164,9 +164,14 @@ def package_panel_props(tree: SpaceTree) -> dict:
             mapped_count[u.offering_id] = mapped_count.get(u.offering_id, 0) + 1
     packages = [
         {
-            "id": o.id, "name": o.name, "sharing": o.sharing, "ac": o.ac,
-            "food": o.food or "none", "furnishing": o.furnishing, "rent": o.price,
-            "amenities": list(o.amenities), "roomCount": mapped_count.get(o.id, 0),
+            "id": o.id, "name": o.name, "sharing": o.sharing, "config": o.config,
+            "ac": o.ac, "food": o.food or "none", "furnishing": o.furnishing,
+            "rent": o.price, "billingBasis": o.billing_basis, "billingPeriod": o.billing_period,
+            "amenities": list(o.amenities), "services": list(o.services),
+            # listing terms a real Indian rental needs (None when unset → UI hides the row)
+            "depositMonths": o.deposit_months, "depositAmount": o.deposit_amount,
+            "lockInMonths": o.lock_in_months, "noticeDays": o.notice_days, "minStay": o.min_stay,
+            "roomCount": mapped_count.get(o.id, 0),
         }
         for o in tree.offerings.values() if o.active
     ]

@@ -139,7 +139,14 @@ Before saving an active offering, settle the **essentials** — the first questi
 the **sharing** (PG) or **config** (flat), **AC** (ac true/false), **food** (none / included /
 optional), **furnishing** (unfurnished / semi_furnished / fully_furnished), and **rent** (`price`)
 with the right **`billing_basis`** (per_bed for PG sharing, per_unit for flats/serviced). Set
-`billing_period` when it isn't monthly (serviced stays may be weekly/daily). Capture other
+`billing_period` when it isn't monthly (serviced stays may be weekly/daily).
+
+**The money terms (India-critical — a listing is incomplete without them):** once rent is set,
+ask for the **security deposit** (`deposit_months`, e.g. 2 = two months' rent, or `deposit_amount`
+for a flat figure) and the **notice period** (`notice_days`, e.g. 30). Capture **lock-in**
+(`lock_in_months`) and **minimum stay** (`min_stay` months — common for serviced) when mentioned.
+These ride in the same `CreateOffering`/`UpdateOffering` `attrs`. Don't hard-block publish on
+them, but always *ask once* — operators forget, tenants always ask. Capture other
 amenities/services if mentioned; never block on them. **Every categorical value comes from the
 fixed catalog — never invent one;** if the owner says something off-list, map it to the closest
 catalog value or ask.

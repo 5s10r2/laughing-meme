@@ -12,9 +12,11 @@ import { BlueprintPanel } from "./blueprint/BlueprintPanel";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-// Mirrors the backend USE_NEW_EXPERIENCE flag. When on, the shell wears the warm
-// Living Blueprint palette (.lp-theme re-scopes the design tokens); when off, the
-// default dark theme is preserved byte-for-byte. Set both flags together.
+// Build-time constant — evaluated once at module load from the NEXT_PUBLIC_ env var
+// baked into the bundle at build time. Not reactive: changing it at runtime has no
+// effect. Mirrors the backend USE_NEW_EXPERIENCE flag; set both together.
+// When on: shell wears the warm Living Blueprint palette (.lp-theme token scope).
+// When off: default dark theme is preserved byte-for-byte.
 const USE_NEW_EXPERIENCE = ["1", "true", "yes", "on"].includes(
   (process.env.NEXT_PUBLIC_USE_NEW_EXPERIENCE ?? "").trim().toLowerCase()
 );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "./components/blueprint/lp-system.css";
 import { OnboardingStateProvider } from "./context/OnboardingStateContext";
 
 const inter = Inter({

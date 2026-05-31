@@ -1,4 +1,4 @@
-import { typeColor } from "../components/blueprint/tokens";
+import { typeColor, buildCategoryColors } from "../components/blueprint/tokens";
 
 type Props = Record<string, unknown>;
 type Adapter = (props: Props) => Props;
@@ -328,23 +328,36 @@ const ADAPTERS: Record<string, Adapter> = {
     state: pickString(props, ["state"], "settled"),
   }),
 
-  FloorLedger: (props) => ({
-    ...props,
-    floors: (pickArray(props, ["floors"]) ?? []).map((raw) => {
-      const floor = asRecord(raw);
-      const segments = (arrayFrom(floor.segments) ?? []).map((rawSegment) => {
-        const segment = asRecord(rawSegment);
-        const key = pickString(segment, ["key", "category"], "room") as string;
-        return {
-          key,
-          label: pickString(segment, ["label"], key) as string,
-          count: pickNumber(segment, ["count"]),
-          color: pickString(segment, ["color"]) ?? typeColor(key),
-        };
-      });
-      return { ...floor, segments };
-    }),
-  }),
+  FloorLedger: (props) => {
+    const floorsRaw = pickArray(props, ["floors"]) ?? [];
+    // One colour map across ALL floors → a category reads the same colour everywhere,
+    // and two categories on one floor never collide (the old single-fallback bug).
+    const allCategories: string[] = [];
+    for (const raw of floorsRaw) {
+      for (const seg of arrayFrom(asRecord(raw).segments) ?? []) {
+        const key = pickString(asRecord(seg), ["key", "category"], "room") as string;
+        if (!allCategories.includes(key)) allCategories.push(key);
+      }
+    }
+    const colorFor = buildCategoryColors(allCategories);
+    return {
+      ...props,
+      floors: floorsRaw.map((raw) => {
+        const floor = asRecord(raw);
+        const segments = (arrayFrom(floor.segments) ?? []).map((rawSegment) => {
+          const segment = asRecord(rawSegment);
+          const key = pickString(segment, ["key", "category"], "room") as string;
+          return {
+            key,
+            label: pickString(segment, ["label"], key) as string,
+            count: pickNumber(segment, ["count"]),
+            color: pickString(segment, ["color"]) ?? colorFor.get(key) ?? typeColor(key),
+          };
+        });
+        return { ...floor, segments };
+      }),
+    };
+  },
 
   CompletionCelebration: (props) => {
     const stats = asRecord(props.stats);

@@ -38,6 +38,9 @@ interface MassingModelProps {
   meta?: string;
   stats?: { label: string; value: number | string }[];
   state?: MassingState;
+  /** Whether the property is actually publishable. When false, the status badge
+   *  reads "IN PROGRESS" instead of a misleading "READY". Defaults to true. */
+  ready?: boolean;
   onSendMessage?: (text: string) => void;
   /** When set, each floor is tappable and reports its ground-relative index
    *  (0 = ground). The Blueprint uses it to jump to that floor's detail row.
@@ -167,6 +170,7 @@ export function MassingModel({
   meta,
   stats,
   state = "settled",
+  ready = true,
   onSendMessage,
   onFloorClick,
 }: MassingModelProps) {
@@ -259,9 +263,11 @@ export function MassingModel({
             {LIVE_LABEL.error}
           </button>
         ) : (
-          <div className="lp-live">
+          <div className="lp-live" data-ready={ready}>
             <i />
-            {LIVE_LABEL[state]}
+            {ready === false && (state === "settled" || state === "idle")
+              ? "IN PROGRESS"
+              : LIVE_LABEL[state]}
           </div>
         )}
       </div>

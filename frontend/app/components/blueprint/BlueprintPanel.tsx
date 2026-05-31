@@ -8,23 +8,18 @@ import { MassingModel } from "./MassingModel";
 import { FloorLedger } from "./FloorLedger";
 import type { MappingPackage } from "./MappingRow";
 import { adaptComponentProps } from "../../lib/component-adapters";
+import { cn } from "../../lib/cn";
 
 type Props = Record<string, unknown>;
 
 interface ModelResponse {
   blueprint?: Record<string, Props>;
-  completeness?: { counts?: Record<string, number> };
+  completeness?: { counts?: Record<string, number>; publishable?: boolean };
   version?: number;
   model?: { floors?: { id: string | number; index: number }[] };
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-2 text-[11px] font-mono uppercase tracking-wide text-content-tertiary">
-      {children}
-    </p>
-  );
-}
+type BlueprintTab = "packages" | "rooms";
 
 interface BlueprintPanelProps {
   open: boolean;
@@ -51,6 +46,11 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   const [error, setError] = useState(false);
   // The floor the massing tap is directing attention to (expands its ledger row).
   const [activeFloorId, setActiveFloorId] = useState<string | number | undefined>(undefined);
+  // Jump-nav: which section is shown (Packages vs Rooms). Avoids the long scroll.
+  const [tab, setTab] = useState<BlueprintTab>("packages");
+  // Re-triggerable scroll signal (set by a massing floor tap; applied post-render).
+  const [scrollFloorId, setScrollFloorId] = useState<string | number | null>(null);
+  const [scrollNonce, setScrollNonce] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -108,20 +108,29 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
     (groundIndex: number) => {
       const sorted = [...(data?.model?.floors ?? [])].sort((a, b) => a.index - b.index);
       const floor = sorted[groundIndex];
-      if (!floor || !listRef.current) return;
+      if (!floor) return;
+      setTab("rooms"); // the floor rows live under Rooms
       setActiveFloorId(floor.id); // expand this floor's ledger row
-      const row = listRef.current.querySelector<HTMLElement>(`[data-floor-id="${floor.id}"]`);
-      if (!row) return;
-      row.scrollIntoView({ behavior: "smooth", block: "center" });
-      row.classList.remove("lp-flash");
-      void row.offsetWidth; // restart the animation if re-tapped
-      row.classList.add("lp-flash");
+      setScrollFloorId(floor.id);
+      setScrollNonce((n) => n + 1); // apply the scroll after the tab/section renders
     },
     [data?.model?.floors]
   );
 
+  // Scroll + flash the target floor row AFTER the tab switch has rendered it.
+  useEffect(() => {
+    if (scrollNonce === 0 || scrollFloorId == null || !listRef.current) return;
+    const row = listRef.current.querySelector<HTMLElement>(`[data-floor-id="${scrollFloorId}"]`);
+    if (!row) return;
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    row.classList.remove("lp-flash");
+    void row.offsetWidth; // restart the animation if re-tapped
+    row.classList.add("lp-flash");
+  }, [scrollNonce, scrollFloorId]);
+
   const bp = data?.blueprint ?? {};
   const floors = data?.completeness?.counts?.floors ?? 0;
+  const publishable = data?.completeness?.publishable ?? false;
   const mapping = bp.BlueprintMapping as
     | { packages?: MappingPackage[]; floors?: BlueprintMappingFloor[] }
     | undefined;
@@ -140,45 +149,64 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
       </p>
     );
   } else {
+    const ledger = bp.FloorLedger && (
+      <FloorLedger
+        {...(adaptComponentProps("FloorLedger", bp.FloorLedger) as unknown as React.ComponentProps<typeof FloorLedger>)}
+        activeId={activeFloorId}
+        onSendMessage={sendMessage}
+      />
+    );
+
     body = (
-      <div className="space-y-5" ref={listRef}>
+      <div className="space-y-4" ref={listRef}>
         {bp.MassingModel && (
           <MassingModel
             {...(bp.MassingModel as React.ComponentProps<typeof MassingModel>)}
             state="settled"
+            ready={publishable}
             onFloorClick={jumpToFloor}
           />
         )}
         {bp.UnmappedWarning && renderRegisteredComponent("UnmappedWarning", bp.UnmappedWarning, sendMessage)}
 
-        {/* Packages — the details (rent / AC / food / furnishing) that were missing. */}
-        {hasPackages && bp.PackagePanel && (
-          <section>
-            <SectionLabel>Packages</SectionLabel>
-            {renderRegisteredComponent("PackagePanel", bp.PackagePanel, sendMessage)}
-          </section>
-        )}
+        {hasPackages ? (
+          <>
+            {/* Jump-nav: tap to switch sections — no scrolling to find them. */}
+            <div className="sticky top-0 z-10 -mx-1 bg-bg-surface px-1 py-1">
+              <div className="flex gap-1 rounded-xl border border-border bg-bg-elevated p-1">
+                {(["packages", "rooms"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTab(t)}
+                    className={cn(
+                      "flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer",
+                      tab === t
+                        ? "bg-bg-surface text-content shadow-sm"
+                        : "text-content-secondary hover:text-content"
+                    )}
+                  >
+                    {t === "packages" ? "Packages" : "Rooms"}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Mapping is the active task once packages exist → editable, in place.
-            Before that, show the structure ledger (with drill-down). */}
-        <section>
-          <SectionLabel>{hasPackages ? "Mapping" : "Floors"}</SectionLabel>
-          {hasPackages ? (
-            <BlueprintMapping
-              packages={mapping?.packages}
-              floors={mapping?.floors}
-              onApplyCommands={applyCommands}
-            />
-          ) : (
-            bp.FloorLedger && (
-              <FloorLedger
-                {...(adaptComponentProps("FloorLedger", bp.FloorLedger) as unknown as React.ComponentProps<typeof FloorLedger>)}
-                activeId={activeFloorId}
-                onSendMessage={sendMessage}
-              />
-            )
-          )}
-        </section>
+            {tab === "packages"
+              ? bp.PackagePanel &&
+                renderRegisteredComponent("PackagePanel", bp.PackagePanel, sendMessage)
+              : (
+                <BlueprintMapping
+                  packages={mapping?.packages}
+                  floors={mapping?.floors}
+                  onApplyCommands={applyCommands}
+                />
+              )}
+          </>
+        ) : (
+          // No packages yet → just the structure ledger (with drill-down).
+          ledger
+        )}
       </div>
     );
   }

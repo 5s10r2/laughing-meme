@@ -409,3 +409,6 @@ body {
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 .lp-flash { border-radius: 16px; animation: lpFloorFlash 1.1s ease-out; }
+
+/* Status dot turns amber when the property isn't publishable yet (IN PROGRESS). */
+.lp-studio .lp-live[data-ready="false"] i { background: #D98C5F; }

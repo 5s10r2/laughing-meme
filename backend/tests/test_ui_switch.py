@@ -8,12 +8,8 @@ cannot render components — a clean fallback to text-only, in BOTH backend path
 """
 from __future__ import annotations
 
-from tarini.agent import (
-    _chat_only_suffix,
-    _select_tools,
-    _ui_components_enabled,
-    _use_new_experience,
-)
+from tarini.agent import _chat_only_suffix, _select_tools
+from tarini.flags import ui_components_enabled as _ui_components_enabled, use_new_experience as _use_new_experience
 from tarini.tools import TOOL_DEFINITIONS
 from tarini.tools.agent_tools import TOOL_DEFINITIONS_V2
 

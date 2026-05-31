@@ -12,6 +12,7 @@ import pytest
 import tarini.agent as agent
 from tarini.adapters.inmemory_repository import InMemoryPropertyRepository
 from tarini.application.command_service import CommandService
+from tarini.flags import use_new_experience
 
 
 # =========================================================================== fakes
@@ -110,15 +111,15 @@ async def _collect(session_id, message, history):
 # =========================================================================== flag + mapper
 def test_use_new_experience_defaults_off(monkeypatch):
     monkeypatch.delenv("USE_NEW_EXPERIENCE", raising=False)
-    assert agent._use_new_experience() is False
+    assert use_new_experience() is False
 
 
 def test_use_new_experience_truthy_values(monkeypatch):
     for v in ("true", "1", "yes", "on", "TRUE"):
         monkeypatch.setenv("USE_NEW_EXPERIENCE", v)
-        assert agent._use_new_experience() is True
+        assert use_new_experience() is True
     monkeypatch.setenv("USE_NEW_EXPERIENCE", "false")
-    assert agent._use_new_experience() is False
+    assert use_new_experience() is False
 
 
 def test_snapshot_event_from_model_result():

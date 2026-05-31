@@ -39,7 +39,7 @@ from tarini.adapters.supabase_repository import SupabasePropertyRepository
 from tarini.adapters.supabase_tree_repository import SupabaseTreeRepository
 from tarini.application.command_service import CommandService
 from tarini.application.tree_command_service import TreeCommandService
-from tarini.flags import use_tree_model
+from tarini.flags import ui_components_enabled, use_new_experience, use_tree_model
 from tarini.tools.agent_tools import TOOL_DEFINITIONS_V2, TOOL_DEFINITIONS_V2_TREE, execute_agent_tool
 from tarini.blueprint import blueprint_props, is_blueprint_component
 from tarini import tree_adapter
@@ -137,7 +137,7 @@ async def stream_chat(
         component, state_snapshot, done, etc.)
     """
     # Redesigned backend, gated. When off (default) the legacy path below runs unchanged.
-    if _use_new_experience():
+    if use_new_experience():
         async for event in _stream_chat_v2(session_id, user_message, history):
             yield event
         return
@@ -346,20 +346,10 @@ _command_service: CommandService | None = None
 _tree_command_service: TreeCommandService | None = None
 
 
-def _use_new_experience() -> bool:
-    return os.environ.get("USE_NEW_EXPERIENCE", "").strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _ui_components_enabled() -> bool:
-    """The generative-UI switch. Default ON (the rich experience is the product);
-    set ENABLE_UI_COMPONENTS=0/false/no/off for a pure-text AI chat."""
-    return os.environ.get("ENABLE_UI_COMPONENTS", "1").strip().lower() not in {"0", "false", "no", "off"}
-
-
 def _select_tools(tools: list[dict]) -> list[dict]:
     """Drop emit_ui when UI components are disabled, so the model can only reply in
     text. Pure (never mutates the input) + env-driven so it can flip per request."""
-    if _ui_components_enabled():
+    if ui_components_enabled():
         return list(tools)
     return [t for t in tools if t.get("name") != "emit_ui"]
 
@@ -374,7 +364,7 @@ _CHAT_ONLY_NOTE = (
 def _chat_only_suffix() -> str:
     """A system-prompt suffix (only when UI is disabled) so the model knows to
     stay text-only and won't narrate components it cannot render."""
-    return "" if _ui_components_enabled() else _CHAT_ONLY_NOTE
+    return "" if ui_components_enabled() else _CHAT_ONLY_NOTE
 
 
 def opening_prompt() -> str:
@@ -383,7 +373,7 @@ def opening_prompt() -> str:
     The legacy prompt tells the model to call get_state; the v2 prompt tells it to call
     get_model — sending the wrong one makes the model reach for a tool that isn't wired in.
     """
-    return INITIAL_PROMPT_V2 if _use_new_experience() else INITIAL_PROMPT
+    return INITIAL_PROMPT_V2 if use_new_experience() else INITIAL_PROMPT
 
 
 def _get_command_service():
@@ -397,14 +387,14 @@ def _get_command_service():
     global _command_service, _tree_command_service
     if use_tree_model():
         if _tree_command_service is None:
-            if getattr(db, "_USE_MEMORY", True):
+            if db.use_memory_db():
                 tree_repo = InMemoryTreeRepository()
             else:
                 tree_repo = SupabaseTreeRepository(db._get_client())
             _tree_command_service = TreeCommandService(tree_repo)
         return _tree_command_service
     if _command_service is None:
-        if getattr(db, "_USE_MEMORY", True):
+        if db.use_memory_db():
             repo = InMemoryPropertyRepository()
         else:
             repo = SupabasePropertyRepository(db._get_client())

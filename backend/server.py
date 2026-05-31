@@ -29,7 +29,8 @@ from pydantic import BaseModel, Field
 
 load_dotenv(override=True)
 
-from tarini.agent import _get_command_service, _use_new_experience, opening_prompt
+from tarini.agent import _get_command_service, opening_prompt
+from tarini.flags import use_new_experience
 from tarini.application.command_codec import (
     CommandDecodeError,
     decode_commands,
@@ -56,7 +57,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info(
         "Tarini server starting up (experience=%s)",
-        "new" if _use_new_experience() else "legacy",
+        "new" if use_new_experience() else "legacy",
     )
     await db.init_client()
     session_manager.start_eviction_task()

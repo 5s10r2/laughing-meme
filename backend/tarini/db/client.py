@@ -23,6 +23,11 @@ _USE_MEMORY = False
 _mem_sessions: dict[str, dict] = {}
 
 
+def use_memory_db() -> bool:
+    """True when using the in-memory fallback (Supabase not configured or unreachable)."""
+    return _USE_MEMORY
+
+
 # ---------------------------------------------------------------------------
 # Supabase client (optional)
 # ---------------------------------------------------------------------------

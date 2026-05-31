@@ -130,7 +130,10 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   }, [scrollNonce, scrollFloorId]);
 
   const bp = data?.blueprint ?? {};
-  const floors = data?.completeness?.counts?.floors ?? 0;
+  const counts = data?.completeness?.counts ?? {};
+  // structure exists if the model reports floors (flat Property shape) OR rentable units
+  // (recursive tree shape) — keeps the panel shape-agnostic across both backends.
+  const hasStructure = (counts.floors ?? 0) > 0 || (counts.rentable ?? 0) > 0;
   const publishable = data?.completeness?.publishable ?? false;
   const openItems = data?.completeness?.open_items ?? [];
   const mapping = bp.BlueprintMapping as
@@ -143,10 +146,10 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
     body = <p className="py-10 text-center text-sm text-content-tertiary">Loading your building…</p>;
   } else if (error) {
     body = <p className="py-10 text-center text-sm text-content-tertiary">Couldn’t load the blueprint. Try reopening it.</p>;
-  } else if (floors === 0) {
+  } else if (!hasStructure) {
     body = (
       <p className="py-10 text-center text-sm text-content-tertiary">
-        Nothing to show yet — tell Tarini about your floors and rooms, and your building will take
+        Nothing to show yet — tell Tarini about your floors and units, and your building will take
         shape here.
       </p>
     );

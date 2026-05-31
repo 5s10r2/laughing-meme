@@ -95,6 +95,34 @@ export default function ChatUI() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, quickReplies]);
 
+  // ── Recover from a dead session ───────────────────────────────────────────
+
+  /**
+   * The stored session no longer exists on the backend (restarted / TTL-evicted).
+   * Its data is gone anyway, so silently start a fresh session rather than dead-ending
+   * on "Backend unavailable". The sessionId change re-triggers the opening greeting.
+   */
+  const recoverSession = useCallback(async () => {
+    abortControllerRef.current?.abort();
+    localStorage.removeItem("tarini_session_id");
+    setQuickReplies(null);
+    setMessages([]);
+    setSessionId(null);
+    try {
+      const sid = await createSession();
+      localStorage.setItem("tarini_session_id", sid);
+      setSessionId(sid);
+    } catch {
+      setMessages([
+        {
+          id: uid(),
+          role: "tarini",
+          parts: [{ type: "text", text: "I couldn't reconnect. Please refresh to try again." }],
+        },
+      ]);
+    }
+  }, []);
+
   // ── Process SSE events into message parts ─────────────────────────────────
 
   /**
@@ -164,6 +192,11 @@ export default function ChatUI() {
           break;
 
         case "error":
+          // Dead session → silently recreate it instead of showing an error.
+          if (event.code === "session_not_found") {
+            recoverSession();
+            break;
+          }
           updateStream((m) => ({
             ...m,
             parts: [...m.parts, { type: "text", text: event.message || "Something went wrong." } satisfies MessagePart],
@@ -176,7 +209,7 @@ export default function ChatUI() {
           break;
       }
     },
-    [updateFromSnapshot, updateStage]
+    [updateFromSnapshot, updateStage, recoverSession]
   );
 
   // ── Send message ──────────────────────────────────────────────────────────

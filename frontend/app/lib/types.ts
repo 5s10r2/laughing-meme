@@ -101,6 +101,8 @@ export interface SSEDoneEvent {
 export interface SSEErrorEvent {
   type: "error";
   message: string;
+  /** machine-readable cause; "session_not_found" → client should recreate the session */
+  code?: string;
 }
 
 export interface SSEThinkingEvent {

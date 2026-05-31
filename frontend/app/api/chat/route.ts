@@ -13,9 +13,9 @@ function backendHeaders(): Record<string, string> {
   return h;
 }
 
-function sseError(message: string, status = 200) {
+function sseError(message: string, status = 200, code?: string) {
   return new Response(
-    `data: ${JSON.stringify({ type: "error", message })}\n\n`,
+    `data: ${JSON.stringify({ type: "error", message, ...(code ? { code } : {}) })}\n\n`,
     {
       status,
       headers: {
@@ -61,6 +61,11 @@ export async function POST(request: NextRequest) {
 
   if (res.status === 401 || res.status === 403) {
     return sseError("Authentication failed — the server API key is misconfigured.");
+  }
+  // Session gone (e.g. backend restarted / TTL-evicted) — tell the client to recreate it
+  // rather than mislabelling it as an outage.
+  if (res.status === 404) {
+    return sseError("Session expired — starting a fresh one.", 200, "session_not_found");
   }
   if (!res.ok || !res.body) {
     return sseError("Backend unavailable.");

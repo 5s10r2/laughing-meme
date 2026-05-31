@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { renderRegisteredComponent } from "../../lib/component-registry";
+import { BlueprintMapping, type BlueprintMappingFloor } from "./BlueprintMapping";
+import type { MappingPackage } from "./MappingRow";
 
 type Props = Record<string, unknown>;
 
 interface ModelResponse {
   blueprint?: Record<string, Props>;
   completeness?: { counts?: Record<string, number> };
+  version?: number;
 }
 
 interface BlueprintPanelProps {
@@ -55,8 +58,40 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
     if (open) load();
   }, [open, load, refreshKey]);
 
+  // Direct edit — apply through the command layer (no LLM) and swap in the fresh
+  // snapshot so the panel updates in place. A version conflict (Tarini edited
+  // concurrently) just refetches so the next attempt is against current state.
+  const applyCommands = useCallback(
+    async (commands: Record<string, unknown>[]) => {
+      if (!sessionId) return;
+      try {
+        const res = await fetch("/api/commands", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId, commands, expected_version: data?.version }),
+        });
+        if (res.status === 409) {
+          await load();
+          return;
+        }
+        if (!res.ok) {
+          setError(true);
+          return;
+        }
+        setData((await res.json()) as ModelResponse);
+      } catch {
+        setError(true);
+      }
+    },
+    [sessionId, data?.version, load]
+  );
+
   const bp = data?.blueprint ?? {};
   const floors = data?.completeness?.counts?.floors ?? 0;
+  const mapping = bp.BlueprintMapping as
+    | { packages?: MappingPackage[]; floors?: BlueprintMappingFloor[] }
+    | undefined;
+  const hasPackages = !!mapping?.packages && mapping.packages.length > 0;
 
   let body: React.ReactNode;
   if (loading && !data) {
@@ -75,7 +110,17 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
       <div className="space-y-4">
         {bp.MassingModel && renderRegisteredComponent("MassingModel", bp.MassingModel, sendMessage)}
         {bp.UnmappedWarning && renderRegisteredComponent("UnmappedWarning", bp.UnmappedWarning, sendMessage)}
-        {bp.FloorLedger && renderRegisteredComponent("FloorLedger", bp.FloorLedger, sendMessage)}
+        {/* Mapping is the active task once packages exist → editable, in place.
+            Before that, show the structure ledger (with drill-down). */}
+        {hasPackages ? (
+          <BlueprintMapping
+            packages={mapping?.packages}
+            floors={mapping?.floors}
+            onApplyCommands={applyCommands}
+          />
+        ) : (
+          bp.FloorLedger && renderRegisteredComponent("FloorLedger", bp.FloorLedger, sendMessage)
+        )}
       </div>
     );
   }

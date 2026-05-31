@@ -39,6 +39,9 @@ interface MappingRowProps {
   units: MappingUnit[];
   packages: MappingPackage[];
   onSendMessage?: (text: string) => void;
+  /** Direct-edit mode (Blueprint panel): emit a typed command applied instantly
+   *  via the command layer. When absent, falls back to a chat intent (onSendMessage). */
+  onApplyCommands?: (commands: Record<string, unknown>[]) => void;
 }
 
 const PKG_PALETTE = [
@@ -51,7 +54,7 @@ const PKG_PALETTE = [
 ];
 const UNMAPPED_COLOR = "var(--border-strong)";
 
-export function MappingRow({ floorLabel, units, packages, onSendMessage }: MappingRowProps) {
+export function MappingRow({ floorLabel, units, packages, onSendMessage, onApplyCommands }: MappingRowProps) {
   const [selected, setSelected] = useState<Set<string | number>>(new Set());
 
   // A room is "mapped" only if its packageId resolves to a real package; a
@@ -134,9 +137,14 @@ export function MappingRow({ floorLabel, units, packages, onSendMessage }: Mappi
   const clear = useCallback(() => setSelected(new Set()), []);
 
   function assign(pkg: MappingPackage) {
-    const names = units.filter((u) => selected.has(u.id)).map((u) => u.name);
-    if (names.length === 0) return;
-    onSendMessage?.(`Assign ${names.join(", ")} on ${floorLabel} to ${pkg.name}`);
+    const chosen = units.filter((u) => selected.has(u.id));
+    if (chosen.length === 0) return;
+    if (onApplyCommands) {
+      // Direct edit — applied instantly via the command layer, no chat round-trip.
+      onApplyCommands([{ op: "MapRooms", room_ids: chosen.map((u) => u.id), package_id: pkg.id }]);
+    } else {
+      onSendMessage?.(`Assign ${chosen.map((u) => u.name).join(", ")} on ${floorLabel} to ${pkg.name}`);
+    }
     clear();
   }
 

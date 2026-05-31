@@ -12,6 +12,8 @@ interface BlueprintMappingProps {
   packages?: MappingPackage[];
   floors?: BlueprintMappingFloor[];
   onSendMessage?: (text: string) => void;
+  /** Direct-edit mode (Blueprint panel) — forwarded to each row. */
+  onApplyCommands?: (commands: Record<string, unknown>[]) => void;
 }
 
 /**
@@ -23,6 +25,7 @@ export function BlueprintMapping({
   packages = [],
   floors = [],
   onSendMessage,
+  onApplyCommands,
 }: BlueprintMappingProps) {
   if (floors.length === 0) return null;
   return (
@@ -34,6 +37,7 @@ export function BlueprintMapping({
           units={floor.units}
           packages={packages}
           onSendMessage={onSendMessage}
+          onApplyCommands={onApplyCommands}
         />
       ))}
     </div>

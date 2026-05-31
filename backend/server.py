@@ -30,8 +30,11 @@ from pydantic import BaseModel, Field
 load_dotenv(override=True)
 
 from tarini.agent import _get_command_service, _use_new_experience, opening_prompt
+from tarini.application.command_codec import CommandDecodeError, decode_commands
+from tarini.application.errors import Conflict
 from tarini.blueprint import BLUEPRINT_COMPONENTS, blueprint_props
 from tarini.db import client as db
+from tarini.domain.errors import InvariantViolation, NotFound, PublishBlocked
 from tarini.session_manager import session_manager
 
 logging.basicConfig(level=logging.INFO)
@@ -116,6 +119,22 @@ def _sanitize(text: str) -> str:
 class ChatRequest(BaseModel):
     message: str = Field("", max_length=8000)
     initial: bool = False
+
+
+class CommandsRequest(BaseModel):
+    """A batch of typed commands applied directly to the model (Blueprint edits)."""
+    commands: list[dict] = Field(..., min_length=1)
+    expected_version: int | None = None
+    idempotency_key: str | None = None
+
+
+def _with_blueprint(snapshot: dict) -> dict:
+    """Attach the per-component blueprint projections to a CommandService snapshot —
+    the same shapes emit_ui sends, so the panel renders/updates with the existing
+    frontend components."""
+    model = snapshot.get("model", {})
+    snapshot["blueprint"] = {name: blueprint_props(name, model) for name in BLUEPRINT_COMPONENTS}
+    return snapshot
 
 
 # ---------------------------------------------------------------------------
@@ -223,10 +242,39 @@ async def get_model(session_id: str, _: None = Depends(require_auth)):
     session = await db.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    snapshot = await _get_command_service().get_model(session_id)
-    model = snapshot.get("model", {})
-    snapshot["blueprint"] = {name: blueprint_props(name, model) for name in BLUEPRINT_COMPONENTS}
-    return snapshot
+    return _with_blueprint(await _get_command_service().get_model(session_id))
+
+
+@app.post("/sessions/{session_id}/commands")
+async def apply_commands(session_id: str, body: CommandsRequest, _: None = Depends(require_auth)):
+    """Direct model edits from the Blueprint — applied through CommandService (no LLM),
+    so the UI is a co-writer of the single source of truth. Returns the updated snapshot
+    + blueprint projections for in-place re-render. Every failure is a clean HTTP status,
+    never a leaked exception."""
+    session = await db.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    try:
+        commands = decode_commands(body.commands)
+    except CommandDecodeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    try:
+        snapshot = await _get_command_service().apply(
+            session_id,
+            commands,
+            expected_version=body.expected_version,
+            idempotency_key=body.idempotency_key,
+        )
+    except Conflict as e:
+        # stale version — the client should refetch and retry, not clobber.
+        raise HTTPException(status_code=409, detail=str(e))
+    except (PublishBlocked, NotFound, InvariantViolation) as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except (TypeError, ValueError) as e:
+        # defense in depth — the codec validates types, so this shouldn't fire; if it
+        # ever does, it's a malformed payload, not a server fault. Never leak a 500.
+        raise HTTPException(status_code=400, detail=f"invalid command payload: {e}")
+    return _with_blueprint(snapshot)
 
 
 @app.post("/sessions/{session_id}/chat")

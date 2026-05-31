@@ -302,8 +302,8 @@ export default function ChatUI() {
 
   return (
     <div className={`flex flex-col h-screen bg-bg-deep text-content${USE_NEW_EXPERIENCE ? " lp-theme" : ""}`}>
-      {/* Header with stage progress bar */}
-      <ChatHeader onNewSession={handleNewSession} isStreaming={isStreaming} />
+      {/* Header — legacy stage rail hidden in the new experience */}
+      <ChatHeader onNewSession={handleNewSession} isStreaming={isStreaming} showStageProgress={!USE_NEW_EXPERIENCE} />
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">

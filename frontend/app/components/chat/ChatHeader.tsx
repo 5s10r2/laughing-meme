@@ -5,9 +5,12 @@ import { StageProgressBar } from "../ui/StageProgressBar";
 interface ChatHeaderProps {
   onNewSession: () => void;
   isStreaming: boolean;
+  /** Legacy linear stage rail. Off in the Living Blueprint experience, where the
+   *  massing model is the progress portrait and onboarding is non-linear. */
+  showStageProgress?: boolean;
 }
 
-export function ChatHeader({ onNewSession, isStreaming }: ChatHeaderProps) {
+export function ChatHeader({ onNewSession, isStreaming, showStageProgress = true }: ChatHeaderProps) {
   return (
     <header className="border-b border-border">
       <div className="flex items-center justify-between px-6 py-3">
@@ -32,10 +35,12 @@ export function ChatHeader({ onNewSession, isStreaming }: ChatHeaderProps) {
           New session
         </button>
       </div>
-      {/* Stage progress bar */}
-      <div className="px-6 pb-3">
-        <StageProgressBar />
-      </div>
+      {/* Stage progress bar — legacy only */}
+      {showStageProgress && (
+        <div className="px-6 pb-3">
+          <StageProgressBar />
+        </div>
+      )}
     </header>
   );
 }

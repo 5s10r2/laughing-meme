@@ -7,6 +7,9 @@ import { MassingModel } from "./MassingModel";
 import { FloorLedger } from "./FloorLedger";
 import { PackagePanel, type PackageDetail } from "./PackagePanel";
 import { OfferingEditSheet } from "./OfferingEditSheet";
+import { FloorDetailSheet } from "./FloorDetailSheet";
+import { UnitEditSheet } from "./UnitEditSheet";
+import type { LedgerFloor, FloorUnit } from "./FloorTray";
 import { PublishChecklist } from "./PublishChecklist";
 import type { MappingPackage } from "./MappingRow";
 import { adaptComponentProps } from "../../lib/component-adapters";
@@ -55,6 +58,9 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   const [tab, setTab] = useState<BlueprintTab>("packages");
   // The offering whose edit sheet is open (null = closed).
   const [editingOfferingId, setEditingOfferingId] = useState<string | null>(null);
+  // Floor drill (ground-relative index from a massing tap) + the unit whose edit sheet is open.
+  const [drillGroundIndex, setDrillGroundIndex] = useState<number | null>(null);
+  const [editingUnit, setEditingUnit] = useState<FloorUnit | null>(null);
   // Re-triggerable scroll signal (set by a massing floor tap; applied post-render).
   const [scrollFloorId, setScrollFloorId] = useState<string | number | null>(null);
   const [scrollNonce, setScrollNonce] = useState(0);
@@ -113,13 +119,16 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   // model's floors (sorted ascending), then scroll + flash the matching row.
   const jumpToFloor = useCallback(
     (groundIndex: number) => {
+      // Tap a floor in the model → drill into its units (rename / mark unavailable). Works for
+      // the recursive tree (resolved from the projected ledger). Also keep the legacy scroll for
+      // the flat backend, which carries model.floors.
+      setDrillGroundIndex(groundIndex);
       const sorted = [...(data?.model?.floors ?? [])].sort((a, b) => a.index - b.index);
       const floor = sorted[groundIndex];
       if (!floor) return;
-      setTab("rooms"); // the floor rows live under Rooms
-      setActiveFloorId(floor.id); // expand this floor's ledger row
+      setActiveFloorId(floor.id);
       setScrollFloorId(floor.id);
-      setScrollNonce((n) => n + 1); // apply the scroll after the tab/section renders
+      setScrollNonce((n) => n + 1);
     },
     [data?.model?.floors]
   );
@@ -152,6 +161,12 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
     | undefined;
   const hasPackages = !!mapping?.packages && mapping.packages.length > 0;
 
+  // Adapted ledger floors (colour-injected) — reused by the ledger view and the floor drill.
+  const adaptedLedger = bp.FloorLedger ? adaptComponentProps("FloorLedger", bp.FloorLedger) : null;
+  const adaptedFloors = (adaptedLedger?.floors as LedgerFloor[] | undefined) ?? [];
+  // Massing tap gives a ground-relative index (0 = ground); ledger floors are top-down.
+  const drillFloor = drillGroundIndex != null ? ([...adaptedFloors].reverse()[drillGroundIndex] ?? null) : null;
+
   let body: React.ReactNode;
   if (loading && !data) {
     body = <p className="py-10 text-center text-sm text-content-tertiary">Loading your building…</p>;
@@ -165,9 +180,9 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
       </p>
     );
   } else {
-    const ledger = bp.FloorLedger && (
+    const ledger = adaptedLedger && (
       <FloorLedger
-        {...(adaptComponentProps("FloorLedger", bp.FloorLedger) as unknown as React.ComponentProps<typeof FloorLedger>)}
+        {...(adaptedLedger as unknown as React.ComponentProps<typeof FloorLedger>)}
         activeId={activeFloorId}
         onSendMessage={sendMessage}
       />
@@ -248,6 +263,23 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
         offering={editingOffering}
         open={!!editingOffering}
         onClose={() => setEditingOfferingId(null)}
+        onApply={applyCommands}
+      />
+
+      {/* Floor drill (from a massing floor tap) → tap a unit to edit it. */}
+      <FloorDetailSheet
+        floor={drillFloor}
+        open={!!drillFloor}
+        unitNoun={unitNoun}
+        onClose={() => setDrillGroundIndex(null)}
+        onSendMessage={sendMessage}
+        onEditUnit={treeMode ? (u) => setEditingUnit(u) : undefined}
+      />
+      <UnitEditSheet
+        unit={editingUnit}
+        unitNoun={unitNoun}
+        open={!!editingUnit}
+        onClose={() => setEditingUnit(null)}
         onApply={applyCommands}
       />
     </>

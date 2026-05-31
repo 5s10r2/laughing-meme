@@ -27,13 +27,15 @@ interface FloorDetailSheetProps {
   unitNoun?: string;
   onClose: () => void;
   onSendMessage?: (text: string) => void;
+  /** direct-edit mode: tapping a unit opens its edit sheet instead of sending a chat intent */
+  onEditUnit?: (unit: FloorUnit) => void;
 }
 
-export function FloorDetailSheet({ floor, open, unitNoun = "room", onClose, onSendMessage }: FloorDetailSheetProps) {
+export function FloorDetailSheet({ floor, open, unitNoun = "room", onClose, onSendMessage, onEditUnit }: FloorDetailSheetProps) {
   const title = floor ? `${floor.name}${floor.sub ? ` · ${floor.sub}` : ""}` : undefined;
   return (
     <BottomSheet open={open} onClose={onClose} title={title} className="lp-theme">
-      {floor && <FloorDetailBody floor={floor} unitNoun={unitNoun} onSendMessage={onSendMessage} />}
+      {floor && <FloorDetailBody floor={floor} unitNoun={unitNoun} onSendMessage={onSendMessage} onEditUnit={onEditUnit} />}
     </BottomSheet>
   );
 }
@@ -42,10 +44,12 @@ function FloorDetailBody({
   floor,
   unitNoun = "room",
   onSendMessage,
+  onEditUnit,
 }: {
   floor: LedgerFloor;
   unitNoun?: string;
   onSendMessage?: (text: string) => void;
+  onEditUnit?: (unit: FloorUnit) => void;
 }) {
   const units = floor.units ?? [];
   const empty = floor.rooms === 0;
@@ -106,7 +110,11 @@ function FloorDetailBody({
                     label={u.name}
                     ariaLabel={`${cap(category)} ${unitNoun} ${u.name}`}
                     dotColor={typeColor(category)}
-                    onClick={() => onSendMessage?.(`Edit ${unitNoun} ${u.name} on ${floor.name}`)}
+                    onClick={() =>
+                      onEditUnit
+                        ? onEditUnit(u)
+                        : onSendMessage?.(`Edit ${unitNoun} ${u.name} on ${floor.name}`)
+                    }
                   />
                 ))}
               </div>

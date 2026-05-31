@@ -25,7 +25,12 @@ class TreeCommandService:
         self._idempotency: dict[tuple[str, str], dict] = {}
 
     async def get_model(self, session_id: str) -> dict:
-        tree = await self._repo.load(session_id) or SpaceTree.new("")
+        tree = await self._repo.load(session_id)
+        if tree is None:
+            # Unlike the flat model, the tree needs a stable root id to add under, so a new
+            # session is initialised + persisted on first read (the agent always reads first).
+            tree = SpaceTree.new("")
+            await self._repo.save(session_id, tree, expected_version=None)
         return self._snapshot(tree, warnings=[])
 
     async def apply(

@@ -117,8 +117,6 @@ _TOOL_DESCRIPTIONS = {
 }
 
 
-
-
 async def stream_chat(
     session_id: str,
     user_message: str,
@@ -156,9 +154,6 @@ async def stream_chat(
             "[stream_chat] round %d for session %s (%d messages, %d sent to API)",
             _round, session_id, len(history), len(api_history),
         )
-
-        # Stream the API response
-        tool_use_blocks = []
 
         try:
             async with asyncio.timeout(_STREAM_TIMEOUT):
@@ -611,7 +606,7 @@ def _log_usage(session_id: str, round_num: int, message) -> None:
         cache_read = getattr(usage, "cache_read_input_tokens", 0)
         cache_write = getattr(usage, "cache_creation_input_tokens", 0)
         logger.info(
-            "[stream_chat] tokens session=%s round=%d | "
+            "[agent] tokens session=%s round=%d | "
             "input=%d cache_read=%d cache_write=%d output=%d",
             session_id, round_num,
             usage.input_tokens,

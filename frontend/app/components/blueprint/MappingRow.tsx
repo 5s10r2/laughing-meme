@@ -198,6 +198,23 @@ export function MappingRow({ floorLabel, units, packages, onSendMessage, onApply
       {/* package picker — appears when rooms are selected */}
       {selected.size > 0 && (
         <div className="mt-4 pt-3 border-t border-border">
+          {/* Tapping a room reveals what it is + its current package. */}
+          {selected.size === 1 && (() => {
+            const u = units.find((x) => selected.has(x.id));
+            if (!u) return null;
+            const i = u.packageId ? pkgIndex.get(u.packageId) : undefined;
+            const current = i !== undefined ? packages[i].name : null;
+            return (
+              <p className="text-xs text-content-secondary mb-2">
+                <span className="font-semibold text-content">{u.name}</span>
+                {" · "}{cap(u.category)}
+                {" · "}
+                <span className={current ? "text-content-secondary" : "text-content-tertiary"}>
+                  {current ? `currently ${current}` : "unmapped"}
+                </span>
+              </p>
+            );
+          })()}
           <p className="text-[11px] text-content-tertiary mb-2">
             Assign {selected.size} room{selected.size !== 1 ? "s" : ""} to:
           </p>

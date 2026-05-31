@@ -39,6 +39,7 @@ from tarini.application.errors import Conflict
 from tarini.blueprint import BLUEPRINT_COMPONENTS, blueprint_props
 from tarini.flags import use_tree_model
 from tarini import tree_adapter
+from tarini.funnel_stats import compute_funnel
 from tarini.db import client as db
 from tarini.domain.errors import InvariantViolation, NotFound, PublishBlocked
 from tarini.session_manager import session_manager
@@ -97,6 +98,8 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 _API_KEY = os.environ.get("TARINI_API_KEY", "").strip()
+# A shared secret for the read-only funnel dashboard. Unset ⇒ the endpoint is disabled (404).
+_FUNNEL_TOKEN = os.environ.get("FUNNEL_TOKEN", "").strip()
 _bearer = HTTPBearer(auto_error=False)
 
 
@@ -284,6 +287,19 @@ async def apply_commands(session_id: str, body: CommandsRequest, _: None = Depen
         # ever does, it's a malformed payload, not a server fault. Never leak a 500.
         raise HTTPException(status_code=400, detail=f"invalid command payload: {e}")
     return _with_blueprint(snapshot)
+
+
+@app.get("/admin/funnel")
+async def admin_funnel(token: str = ""):
+    """Read-only onboarding funnel, derived from stored snapshots. Gated by FUNNEL_TOKEN
+    (a shared secret) since the prod API has no per-user auth; disabled (404) if unset."""
+    if not _FUNNEL_TOKEN:
+        raise HTTPException(status_code=404, detail="Not found")
+    if token != _FUNNEL_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    snapshots = await db.all_property_snapshots()
+    total = await db.count_sessions()
+    return compute_funnel(snapshots, total)
 
 
 @app.post("/sessions/{session_id}/chat")

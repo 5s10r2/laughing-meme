@@ -186,6 +186,32 @@ async def get_session(session_id: str) -> dict | None:
     return await _with_retry("get_session", _fetch)
 
 
+async def count_sessions() -> int:
+    """Total sessions ever started — the top of the onboarding funnel."""
+    if _USE_MEMORY:
+        return len(_mem_sessions)
+
+    async def _q():
+        c = _get_client()
+        result = await c.table("sessions").select("id", count="exact").limit(1).execute()
+        return result.count or 0
+
+    return await _with_retry("count_sessions", _q)
+
+
+async def all_property_snapshots() -> list[dict]:
+    """Every persisted snapshot (tree or legacy) — used to derive the funnel. Read-only."""
+    if _USE_MEMORY:
+        return []
+
+    async def _q():
+        c = _get_client()
+        result = await c.table("property_snapshots").select("snapshot").execute()
+        return [r["snapshot"] for r in (result.data or []) if r.get("snapshot")]
+
+    return await _with_retry("all_property_snapshots", _q)
+
+
 async def load_messages(session_id: str) -> list:
     if _USE_MEMORY:
         s = _mem_sessions.get(session_id)

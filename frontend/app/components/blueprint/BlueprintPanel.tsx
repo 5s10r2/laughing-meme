@@ -6,6 +6,7 @@ import { renderRegisteredComponent } from "../../lib/component-registry";
 import { BlueprintMapping, type BlueprintMappingFloor } from "./BlueprintMapping";
 import { MassingModel } from "./MassingModel";
 import { FloorLedger } from "./FloorLedger";
+import { PublishChecklist } from "./PublishChecklist";
 import type { MappingPackage } from "./MappingRow";
 import { adaptComponentProps } from "../../lib/component-adapters";
 import { cn } from "../../lib/cn";
@@ -14,7 +15,7 @@ type Props = Record<string, unknown>;
 
 interface ModelResponse {
   blueprint?: Record<string, Props>;
-  completeness?: { counts?: Record<string, number>; publishable?: boolean };
+  completeness?: { counts?: Record<string, number>; publishable?: boolean; open_items?: string[] };
   version?: number;
   model?: { floors?: { id: string | number; index: number }[] };
 }
@@ -131,6 +132,7 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   const bp = data?.blueprint ?? {};
   const floors = data?.completeness?.counts?.floors ?? 0;
   const publishable = data?.completeness?.publishable ?? false;
+  const openItems = data?.completeness?.open_items ?? [];
   const mapping = bp.BlueprintMapping as
     | { packages?: MappingPackage[]; floors?: BlueprintMappingFloor[] }
     | undefined;
@@ -167,7 +169,9 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
             onFloorClick={jumpToFloor}
           />
         )}
-        {bp.UnmappedWarning && renderRegisteredComponent("UnmappedWarning", bp.UnmappedWarning, sendMessage)}
+
+        {/* Honest "what's left" — subsumes the old single-purpose unmapped warning. */}
+        <PublishChecklist items={openItems} publishable={publishable} />
 
         {hasPackages ? (
           <>

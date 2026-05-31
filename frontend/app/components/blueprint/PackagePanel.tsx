@@ -85,6 +85,13 @@ export function PackagePanel({ packages = [], onEdit }: PackagePanelProps) {
               </div>
             )}
 
+            {/* Amenities — secondary to the core attributes, so a lighter, borderless treatment. */}
+            {pkg.amenities && pkg.amenities.length > 0 && (
+              <p className="mt-2 text-[11px] text-content-tertiary">
+                {pkg.amenities.join(" · ")}
+              </p>
+            )}
+
             <div className="mt-2 flex items-center justify-between">
               <span className="text-[11px] font-mono text-content-tertiary">
                 {rooms} room{rooms !== 1 ? "s" : ""} mapped

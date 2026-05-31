@@ -29,6 +29,24 @@ def normalize_gender(value: str | None) -> str | None:
     return v  # pass through anything already canonical / unknown
 
 
+_TYPE_LABELS = {
+    "pg": "PG", "hostel": "Hostel", "coliving": "Co-living",
+    "flat": "Flat", "studio": "Studio", "rk": "RK", "mixed": "Mixed",
+}
+_GENDER_LABELS = {"male": "Men's", "female": "Women's", "coed": "Co-ed"}
+
+
+def _type_label(t: str | None) -> str | None:
+    if not t:
+        return None
+    return _TYPE_LABELS.get(t.strip().lower(), t.strip().title())
+
+
+def _gender_label(g: str | None) -> str | None:
+    norm = normalize_gender(g)
+    return _GENDER_LABELS.get(norm) if norm else None
+
+
 _FACET_ORDER = (
     ("property", "intro"),
     ("structure", "structure"),
@@ -211,13 +229,13 @@ def massing_props(model: dict) -> dict:
     if not blocks and floors:
         blocks = [{"label": "Main", "floors": len(floors), "accentTop": True}]
     categories = {_category(r) for r in rooms}
-    location = model.get("location")
-    meta_parts: list[str] = []
-    if location:
-        meta_parts.append(location)
-    meta_parts.append(f"{len(blocks)} block{'s' if len(blocks) != 1 else ''}")
+    # Compose the property identity into one readable line: "Men's PG · HSR, Bangalore"
+    # (gender + type, naturally labelled, + location). Owner is a quiet caption.
+    kind = " ".join(b for b in (_gender_label(model.get("gender")), _type_label(model.get("type"))) if b)
+    meta_parts = [p for p in (kind or None, model.get("location")) if p]
     return {
         "propertyName": model.get("name") or "Your property",
+        "owner": model.get("owner_name"),
         "meta": " · ".join(meta_parts),
         "blocks": blocks,
         "stats": [

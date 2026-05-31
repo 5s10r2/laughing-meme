@@ -36,6 +36,8 @@ interface MassingModelProps {
   blocks?: unknown;
   propertyName?: string;
   meta?: string;
+  /** the operator's name — shown as a quiet caption under the property name */
+  owner?: string;
   stats?: { label: string; value: number | string }[];
   state?: MassingState;
   /** Whether the property is actually publishable. When false, the status badge
@@ -168,6 +170,7 @@ export function MassingModel({
   blocks: rawBlocks,
   propertyName = "Your property",
   meta,
+  owner,
   stats,
   state = "settled",
   ready = true,
@@ -252,6 +255,7 @@ export function MassingModel({
         <div>
           <div className="lp-ti">{propertyName}</div>
           {meta && <div className="lp-meta">{meta}</div>}
+          {owner && <div className="lp-owner">Managed by {owner}</div>}
         </div>
         {isError ? (
           <button

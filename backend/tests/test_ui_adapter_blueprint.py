@@ -42,7 +42,19 @@ async def test_massing_props_blocks_and_stats():
     assert stats["Floors"] == 2
     assert stats["Rooms"] == 3
     assert stats["Types"] == 2  # single, double
-    assert isinstance(out["meta"], str) and "HSR" in out["meta"]
+    # meta composes type + location ("PG · HSR"); owner present as a field (None here)
+    assert "HSR" in out["meta"] and "PG" in out["meta"]
+    assert out["owner"] is None
+
+
+async def test_massing_props_meta_includes_gender_and_owner():
+    svc = CommandService(InMemoryPropertyRepository())
+    await svc.apply("s", [c.SetProperty(
+        owner_name="Ramesh", name="Sunrise PG", type="pg", location="HSR", gender="male",
+    )])
+    out = massing_props((await svc.get_model("s"))["model"])
+    assert out["meta"] == "Men's PG · HSR"   # gender + type + location, labelled
+    assert out["owner"] == "Ramesh"
 
 
 async def test_massing_props_empty_model():

@@ -412,3 +412,12 @@ body {
 
 /* Status dot turns amber when the property isn't publishable yet (IN PROGRESS). */
 .lp-studio .lp-live[data-ready="false"] i { background: #D98C5F; }
+
+/* Operator name — a quiet caption under the property name/meta. */
+.lp-studio .lp-owner {
+  margin-top: 3px;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: #6E6A82;
+}

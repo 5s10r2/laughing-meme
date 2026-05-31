@@ -11,6 +11,8 @@ export interface BlueprintMappingFloor {
 interface BlueprintMappingProps {
   packages?: MappingPackage[];
   floors?: BlueprintMappingFloor[];
+  /** singular noun for the unit (room / flat / bed / unit); backend-projected */
+  unitNoun?: string;
   onSendMessage?: (text: string) => void;
   /** Direct-edit mode (Blueprint panel) — forwarded to each row. */
   onApplyCommands?: (commands: Record<string, unknown>[]) => void;
@@ -24,6 +26,7 @@ interface BlueprintMappingProps {
 export function BlueprintMapping({
   packages = [],
   floors = [],
+  unitNoun = "room",
   onSendMessage,
   onApplyCommands,
 }: BlueprintMappingProps) {
@@ -37,6 +40,7 @@ export function BlueprintMapping({
             floorLabel={floor.floorLabel}
             units={floor.units}
             packages={packages}
+            unitNoun={unitNoun}
             onSendMessage={onSendMessage}
             onApplyCommands={onApplyCommands}
           />

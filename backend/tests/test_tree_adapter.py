@@ -135,6 +135,20 @@ def test_unmapped_treats_inactive_offering_as_unmapped():
 
 
 # --------------------------------------------------------------------------- package panel
+def test_unit_noun_adapts_to_rentable_kind():
+    # PG (rooms) → "room"; flat-building (flats) → "flat" — across every projection
+    pg = _pg()
+    assert ta.massing_props(pg)["unitNoun"] == "room"
+    assert ta.floor_ledger_props(pg)["unitNoun"] == "room"
+    assert ta.mapping_props(pg)["unitNoun"] == "room"
+    assert ta.unmapped_props(pg)["unitNoun"] == "room"
+    assert ta.package_panel_props(pg)["unitNoun"] == "room"
+    t, _, _ = _flats()
+    assert ta.massing_props(t)["unitNoun"] == "flat"
+    assert ta.floor_ledger_props(t)["unitNoun"] == "flat"
+    assert ta.package_panel_props(t)["unitNoun"] == "flat"
+
+
 def test_blueprint_registry_projects_from_model_dict():
     model = _pg().to_dict()
     massing = ta.tree_blueprint_props("MassingModel", model)

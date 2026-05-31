@@ -2,6 +2,7 @@
 
 import { AlertTriangle } from "lucide-react";
 import { RoomChip } from "./RoomChip";
+import { cap, plural } from "./tokens";
 
 /**
  * UnmappedWarning — the property-level safety net (design system §5.4 / §8).
@@ -19,10 +20,12 @@ export interface UnmappedFloor {
 
 interface UnmappedWarningProps {
   floors: UnmappedFloor[];
+  /** singular noun for the unit (room / flat / bed / unit); backend-projected */
+  unitNoun?: string;
   onSendMessage?: (text: string) => void;
 }
 
-export function UnmappedWarning({ floors, onSendMessage }: UnmappedWarningProps) {
+export function UnmappedWarning({ floors, unitNoun = "room", onSendMessage }: UnmappedWarningProps) {
   const withUnmapped = floors.filter((f) => f.units.length > 0);
   const total = withUnmapped.reduce((sum, f) => sum + f.units.length, 0);
   if (total === 0) return null; // all assigned → nothing to warn about
@@ -33,7 +36,7 @@ export function UnmappedWarning({ floors, onSendMessage }: UnmappedWarningProps)
         <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" aria-hidden="true" />
         <div className="min-w-0">
           <p className="text-sm font-semibold text-content">
-            {total} room{total !== 1 ? "s" : ""} still need a package
+            {total} {plural(unitNoun, total)} still need a package
           </p>
           <p className="text-[11px] text-content-secondary mt-0.5">
             Assign these before going live — nothing is dropped.
@@ -52,10 +55,10 @@ export function UnmappedWarning({ floors, onSendMessage }: UnmappedWarningProps)
                 <RoomChip
                   key={u.id}
                   label={u.name}
-                  ariaLabel={`Room ${u.name} on ${f.floorLabel}, unmapped`}
+                  ariaLabel={`${cap(unitNoun)} ${u.name} on ${f.floorLabel}, unmapped`}
                   dotColor={null}
                   dashed
-                  onClick={() => onSendMessage?.(`Assign room ${u.name} on ${f.floorLabel}`)}
+                  onClick={() => onSendMessage?.(`Assign ${unitNoun} ${u.name} on ${f.floorLabel}`)}
                 />
               ))}
             </div>
@@ -66,7 +69,7 @@ export function UnmappedWarning({ floors, onSendMessage }: UnmappedWarningProps)
       <button
         type="button"
         onClick={() =>
-          onSendMessage?.(`Help me assign the ${total} unmapped room${total !== 1 ? "s" : ""}`)
+          onSendMessage?.(`Help me assign the ${total} unmapped ${plural(unitNoun, total)}`)
         }
         className="mt-3.5 w-full inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-accent text-white text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity active:scale-[0.99]"
       >

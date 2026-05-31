@@ -3,6 +3,7 @@
 import { ChevronDown } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { FloorComposition, type CompositionSegment } from "./FloorComposition";
+import { plural } from "./tokens";
 
 /**
  * FloorTray — one floor in the FloorLedger.
@@ -39,11 +40,13 @@ export interface LedgerFloor {
 interface FloorTrayProps {
   floor: LedgerFloor;
   expanded: boolean;
+  /** singular noun for the unit (room / flat / bed / unit); backend-projected */
+  unitNoun?: string;
   onToggle: () => void;
   onOpen?: () => void;
 }
 
-export function FloorTray({ floor, expanded, onToggle, onOpen }: FloorTrayProps) {
+export function FloorTray({ floor, expanded, unitNoun = "room", onToggle, onOpen }: FloorTrayProps) {
   // `rooms` and `segments` are assumed consistent (segments sum to rooms) — that
   // invariant is enforced upstream by the emit_ui adapter, not re-checked here.
   const empty = floor.rooms === 0;
@@ -51,7 +54,7 @@ export function FloorTray({ floor, expanded, onToggle, onOpen }: FloorTrayProps)
     ? "empty"
     : floor.mapped
       ? `${floor.rooms} · ✓ mapped`
-      : `${floor.rooms} room${floor.rooms !== 1 ? "s" : ""}`;
+      : `${floor.rooms} ${plural(unitNoun, floor.rooms)}`;
 
   return (
     <div
@@ -101,7 +104,7 @@ export function FloorTray({ floor, expanded, onToggle, onOpen }: FloorTrayProps)
         )}
         {empty && expanded && (
           <p className="mt-2 text-[11px] text-content-tertiary">
-            No rooms yet — tell me how many and what types.
+            No {plural(unitNoun, 2)} yet — tell me how many and what types.
           </p>
         )}
       </button>

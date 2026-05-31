@@ -5,7 +5,7 @@ import { cn } from "../../lib/cn";
 import { CARD } from "../ui/primitives";
 import { FloorComposition, type CompositionSegment } from "./FloorComposition";
 import { RoomChip } from "./RoomChip";
-import { cap } from "./tokens";
+import { cap, plural } from "./tokens";
 
 /**
  * MappingRow — assign packages to a floor's rooms (design system §5.4).
@@ -38,6 +38,8 @@ interface MappingRowProps {
   floorLabel: string;
   units: MappingUnit[];
   packages: MappingPackage[];
+  /** singular noun for the unit (room / flat / bed / unit); backend-projected */
+  unitNoun?: string;
   onSendMessage?: (text: string) => void;
   /** Direct-edit mode (Blueprint panel): emit a typed command applied instantly
    *  via the command layer. When absent, falls back to a chat intent (onSendMessage). */
@@ -54,7 +56,7 @@ const PKG_PALETTE = [
 ];
 const UNMAPPED_COLOR = "var(--border-strong)";
 
-export function MappingRow({ floorLabel, units, packages, onSendMessage, onApplyCommands }: MappingRowProps) {
+export function MappingRow({ floorLabel, units, packages, unitNoun = "room", onSendMessage, onApplyCommands }: MappingRowProps) {
   const [selected, setSelected] = useState<Set<string | number>>(new Set());
 
   // A room is "mapped" only if its packageId resolves to a real package; a
@@ -185,7 +187,7 @@ export function MappingRow({ floorLabel, units, packages, onSendMessage, onApply
             <RoomChip
               key={u.id}
               label={u.name}
-              ariaLabel={`Room ${u.name}, ${mapped ? `assigned ${packages[pkgIndex.get(u.packageId!)!].name}` : "unmapped"}`}
+              ariaLabel={`${cap(unitNoun)} ${u.name}, ${mapped ? `assigned ${packages[pkgIndex.get(u.packageId!)!].name}` : "unmapped"}`}
               dotColor={mapped ? pkgColor(u.packageId!) : null}
               selected={selected.has(u.id)}
               dashed={!mapped}
@@ -216,7 +218,7 @@ export function MappingRow({ floorLabel, units, packages, onSendMessage, onApply
             );
           })()}
           <p className="text-[11px] text-content-tertiary mb-2">
-            Assign {selected.size} room{selected.size !== 1 ? "s" : ""} to:
+            Assign {selected.size} {plural(unitNoun, selected.size)} to:
           </p>
           <div className="flex flex-wrap gap-1.5">
             {packages.map((p) => (

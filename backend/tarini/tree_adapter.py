@@ -17,6 +17,14 @@ from .domain.space import SpaceTree
 from .ui_adapter import _gender_label, _name_range, _type_label
 
 _UNIT_LABEL = {"room": "Rooms", "flat": "Flats", "bed": "Beds"}
+_UNIT_NOUN = {"room": "room", "flat": "flat", "bed": "bed"}
+
+
+def _unit_noun(tree: SpaceTree) -> str:
+    """Singular noun for the sellable unit, from the (uniform) rentable kind — so the UI
+    says 'flat'/'bed' not always 'room'. Mixed or empty → the neutral 'unit'."""
+    kinds = {u.kind for u in _all_rentable(tree)}
+    return _UNIT_NOUN.get(next(iter(kinds)), "unit") if len(kinds) == 1 else "unit"
 
 
 def _active(node) -> bool:
@@ -99,6 +107,7 @@ def massing_props(tree: SpaceTree) -> dict:
         "owner": tree.meta.get("owner_name"),
         "meta": " · ".join(meta_parts),
         "blocks": blocks,
+        "unitNoun": _unit_noun(tree),
         "stats": [
             {"label": "Floors", "value": len(floors)},
             {"label": unit_label, "value": len(rentable)},
@@ -120,7 +129,7 @@ def floor_ledger_props(tree: SpaceTree) -> dict:
             "mapped": bool(units) and all(_is_mapped(tree, u) for u in units),
             "units": [{"id": u.id, "name": u.label, "category": _unit_type(u)} for u in units],
         })
-    return {"floors": out}
+    return {"floors": out, "unitNoun": _unit_noun(tree)}
 
 
 def mapping_props(tree: SpaceTree) -> dict:
@@ -136,7 +145,7 @@ def mapping_props(tree: SpaceTree) -> dict:
             "units": [{"id": u.id, "name": u.label, "category": _unit_type(u),
                        "packageId": u.offering_id} for u in units],
         })
-    return {"packages": packages, "floors": floors}
+    return {"packages": packages, "floors": floors, "unitNoun": _unit_noun(tree)}
 
 
 def unmapped_props(tree: SpaceTree) -> dict:
@@ -145,7 +154,7 @@ def unmapped_props(tree: SpaceTree) -> dict:
         unm = [u for u in _rentable_under(tree, f.id) if not _is_mapped(tree, u)]
         if unm:
             out.append({"floorLabel": f.label, "units": _unit_names(unm)})
-    return {"floors": out}
+    return {"floors": out, "unitNoun": _unit_noun(tree)}
 
 
 def package_panel_props(tree: SpaceTree) -> dict:
@@ -161,7 +170,7 @@ def package_panel_props(tree: SpaceTree) -> dict:
         }
         for o in tree.offerings.values() if o.active
     ]
-    return {"packages": packages}
+    return {"packages": packages, "unitNoun": _unit_noun(tree)}
 
 
 # =========================================================================== #

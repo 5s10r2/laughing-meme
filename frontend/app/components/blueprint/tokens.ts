@@ -46,3 +46,6 @@ export function buildCategoryColors(categories: string[]): Map<string, string> {
 
 /** Capitalize a normalised category/label key (e.g. "single" → "Single"). */
 export const cap = (s: string): string => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+/** Pluralize a unit noun by count (room→rooms, flat→flats, bed→beds, unit→units). */
+export const plural = (noun: string, n: number): string => `${noun}${n === 1 ? "" : "s"}`;

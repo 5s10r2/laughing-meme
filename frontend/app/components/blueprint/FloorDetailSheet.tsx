@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { FloorComposition } from "./FloorComposition";
 import { RoomChip } from "./RoomChip";
-import { typeColor, cap } from "./tokens";
+import { typeColor, cap, plural } from "./tokens";
 import type { LedgerFloor, FloorUnit } from "./FloorTray";
 
 /**
@@ -23,24 +23,28 @@ import type { LedgerFloor, FloorUnit } from "./FloorTray";
 interface FloorDetailSheetProps {
   floor: LedgerFloor | null;
   open: boolean;
+  /** singular noun for the unit (room / flat / bed / unit); backend-projected */
+  unitNoun?: string;
   onClose: () => void;
   onSendMessage?: (text: string) => void;
 }
 
-export function FloorDetailSheet({ floor, open, onClose, onSendMessage }: FloorDetailSheetProps) {
+export function FloorDetailSheet({ floor, open, unitNoun = "room", onClose, onSendMessage }: FloorDetailSheetProps) {
   const title = floor ? `${floor.name}${floor.sub ? ` · ${floor.sub}` : ""}` : undefined;
   return (
     <BottomSheet open={open} onClose={onClose} title={title} className="lp-theme">
-      {floor && <FloorDetailBody floor={floor} onSendMessage={onSendMessage} />}
+      {floor && <FloorDetailBody floor={floor} unitNoun={unitNoun} onSendMessage={onSendMessage} />}
     </BottomSheet>
   );
 }
 
 function FloorDetailBody({
   floor,
+  unitNoun = "room",
   onSendMessage,
 }: {
   floor: LedgerFloor;
+  unitNoun?: string;
   onSendMessage?: (text: string) => void;
 }) {
   const units = floor.units ?? [];
@@ -60,13 +64,13 @@ function FloorDetailBody({
   if (empty) {
     return (
       <div className="py-6 text-center">
-        <p className="text-sm text-content-secondary">No rooms on this floor yet.</p>
+        <p className="text-sm text-content-secondary">No {plural(unitNoun, 2)} on this floor yet.</p>
         <button
           type="button"
-          onClick={() => onSendMessage?.(`Add rooms to ${floor.name}`)}
+          onClick={() => onSendMessage?.(`Add ${plural(unitNoun, 2)} to ${floor.name}`)}
           className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent text-white text-sm font-medium cursor-pointer hover:opacity-90 transition-opacity"
         >
-          Tell Tarini how many rooms
+          Tell Tarini how many {plural(unitNoun, 2)}
         </button>
       </div>
     );
@@ -78,7 +82,7 @@ function FloorDetailBody({
       <div>
         <div className="flex items-baseline justify-between mb-2">
           <span className="text-xs font-mono text-content-secondary">
-            {floor.rooms} room{floor.rooms !== 1 ? "s" : ""}
+            {floor.rooms} {plural(unitNoun, floor.rooms)}
           </span>
           {floor.nameRange && (
             <span className="text-[11px] font-mono text-content-tertiary">named {floor.nameRange}</span>
@@ -100,24 +104,24 @@ function FloorDetailBody({
                   <RoomChip
                     key={u.id}
                     label={u.name}
-                    ariaLabel={`${cap(category)} room ${u.name}`}
+                    ariaLabel={`${cap(category)} ${unitNoun} ${u.name}`}
                     dotColor={typeColor(category)}
-                    onClick={() => onSendMessage?.(`Edit room ${u.name} on ${floor.name}`)}
+                    onClick={() => onSendMessage?.(`Edit ${unitNoun} ${u.name} on ${floor.name}`)}
                   />
                 ))}
               </div>
             </div>
           ))}
-          <p className="text-[11px] text-content-tertiary">Tap a room to rename it or change its type.</p>
+          <p className="text-[11px] text-content-tertiary">Tap a {unitNoun} to rename it or change its type.</p>
         </div>
       ) : (
-        // rooms counted but no per-unit list provided — keep the summary, prompt for detail
+        // units counted but no per-unit list provided — keep the summary, prompt for detail
         <button
           type="button"
-          onClick={() => onSendMessage?.(`Show me the rooms on ${floor.name}`)}
+          onClick={() => onSendMessage?.(`Show me the ${plural(unitNoun, 2)} on ${floor.name}`)}
           className="text-xs font-medium text-accent hover:underline cursor-pointer self-start"
         >
-          List the individual rooms →
+          List the individual {plural(unitNoun, 2)} →
         </button>
       )}
     </div>

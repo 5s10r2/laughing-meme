@@ -1,7 +1,7 @@
 "use client";
 
 import { CARD } from "../ui/primitives";
-import { cap } from "./tokens";
+import { cap, plural } from "./tokens";
 
 export interface PackageDetail {
   id: string;
@@ -17,6 +17,8 @@ export interface PackageDetail {
 
 interface PackagePanelProps {
   packages?: PackageDetail[];
+  /** singular noun for the mapped unit (room / flat / bed / unit); backend-projected */
+  unitNoun?: string;
   /** opens the edit sheet for a package (Stage 2.6 edit — wired next) */
   onEdit?: (id: string) => void;
 }
@@ -41,7 +43,7 @@ function foodLabel(food?: string): string | null {
   return food === "included" ? "Food incl." : "Food optional";
 }
 
-export function PackagePanel({ packages = [], onEdit }: PackagePanelProps) {
+export function PackagePanel({ packages = [], unitNoun = "room", onEdit }: PackagePanelProps) {
   if (packages.length === 0) return null;
   return (
     <div className="lp-theme space-y-2">
@@ -94,7 +96,7 @@ export function PackagePanel({ packages = [], onEdit }: PackagePanelProps) {
 
             <div className="mt-2 flex items-center justify-between">
               <span className="text-[11px] font-mono text-content-tertiary">
-                {rooms} room{rooms !== 1 ? "s" : ""} mapped
+                {rooms} {plural(unitNoun, rooms)} mapped
               </span>
               {onEdit && (
                 <button

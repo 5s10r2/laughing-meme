@@ -9,6 +9,7 @@ import { FloorLedger } from "./FloorLedger";
 import { PublishChecklist } from "./PublishChecklist";
 import type { MappingPackage } from "./MappingRow";
 import { adaptComponentProps } from "../../lib/component-adapters";
+import { cap, plural } from "./tokens";
 import { cn } from "../../lib/cn";
 
 type Props = Record<string, unknown>;
@@ -130,6 +131,9 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   }, [scrollNonce, scrollFloorId]);
 
   const bp = data?.blueprint ?? {};
+  // singular unit noun (room / flat / bed / unit) — backend-projected; "room" for the
+  // legacy shape that doesn't send it, so the panel reads right on either backend.
+  const unitNoun = String(bp.MassingModel?.unitNoun ?? bp.FloorLedger?.unitNoun ?? "room");
   const counts = data?.completeness?.counts ?? {};
   // structure exists if the model reports floors (flat Property shape) OR rentable units
   // (recursive tree shape) — keeps the panel shape-agnostic across both backends.
@@ -193,7 +197,7 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
                         : "text-content-secondary hover:text-content"
                     )}
                   >
-                    {t === "packages" ? "Packages" : "Rooms"}
+                    {t === "packages" ? "Packages" : cap(plural(unitNoun, 2))}
                   </button>
                 ))}
               </div>
@@ -206,6 +210,7 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
                 <BlueprintMapping
                   packages={mapping?.packages}
                   floors={mapping?.floors}
+                  unitNoun={unitNoun}
                   onApplyCommands={applyCommands}
                 />
               )}

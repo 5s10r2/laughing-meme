@@ -27,10 +27,12 @@ interface FloorLedgerProps {
   floors: LedgerFloor[];
   /** which floor is expanded by default, and the floor the parent is directing attention to */
   activeId?: string | number;
+  /** singular noun for the unit (room / flat / bed / unit); backend-projected */
+  unitNoun?: string;
   onSendMessage?: (text: string) => void;
 }
 
-export function FloorLedger({ floors, activeId, onSendMessage }: FloorLedgerProps) {
+export function FloorLedger({ floors, activeId, unitNoun = "room", onSendMessage }: FloorLedgerProps) {
   const [openId, setOpenId] = useState<string | number | null>(
     activeId ?? floors[0]?.id ?? null
   );
@@ -72,6 +74,7 @@ export function FloorLedger({ floors, activeId, onSendMessage }: FloorLedgerProp
           <FloorTray
             floor={floor}
             expanded={openId === floor.id}
+            unitNoun={unitNoun}
             onToggle={() => setOpenId((prev) => (prev === floor.id ? null : floor.id))}
             onOpen={() => setDetailId(floor.id)}
           />
@@ -81,6 +84,7 @@ export function FloorLedger({ floors, activeId, onSendMessage }: FloorLedgerProp
       <FloorDetailSheet
         floor={detailFloor}
         open={detailFloor !== null}
+        unitNoun={unitNoun}
         onClose={() => setDetailId(null)}
         onSendMessage={onSendMessage}
       />

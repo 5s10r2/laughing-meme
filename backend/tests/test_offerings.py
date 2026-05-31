@@ -107,6 +107,18 @@ def test_map_and_unmap_offering():
     assert t.get(ids[1]).offering_id == off.id
 
 
+def test_offering_does_not_alias_caller_list():
+    t, _ = _tree_with_rooms()
+    amenities = ["wifi"]
+    off = t.apply(sc.CreateOffering(name="X", price=1, attrs={"amenities": amenities}))
+    amenities.append("gym")  # mutate the caller's list afterwards
+    assert off.amenities == ["wifi"]  # aggregate kept its own copy
+    mine = ["geyser"]
+    t.apply(sc.UpdateOffering(offering_id=off.id, attrs={"amenities": mine}))
+    mine.append("parking")
+    assert t.offerings[off.id].amenities == ["geyser"]
+
+
 def test_map_rejects_unknown_offering_or_space():
     t, ids = _tree_with_rooms()
     with pytest.raises(NotFound):

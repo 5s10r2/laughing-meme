@@ -168,6 +168,42 @@ def test_move_appends_after_existing_with_gaps():
     assert [s.label for s in t.children(f2.id)] == ["2", "3", "X"]  # X appended last
 
 
+def test_add_and_set_reject_off_catalog_sharing_and_config():
+    t = _tree()
+    with pytest.raises(InvariantViolation):
+        t.apply(sc.AddSpaces(parent_id=t.root().id, kind="room", count=1, sharing="penthouse"))
+    with pytest.raises(InvariantViolation):
+        t.apply(sc.AddSpaces(parent_id=t.root().id, kind="flat", labels=["A"], config="99bhk"))
+    r = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="room", count=1))[0]
+    with pytest.raises(InvariantViolation):
+        t.apply(sc.SetSharing(space_ids=[r.id], sharing="nope"))
+    with pytest.raises(InvariantViolation):
+        t.apply(sc.SetConfig(space_ids=[r.id], config="nope"))
+    # catalog values still work
+    t.apply(sc.SetSharing(space_ids=[r.id], sharing="five_plus"))
+    assert t.get(r.id).sharing == "five_plus" and t.get(r.id).capacity is None
+
+
+def test_rentable_and_capacity_rejected_on_container_kinds():
+    t = _tree()
+    f = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="floor", labels=["G"]))[0]
+    with pytest.raises(InvariantViolation):
+        t.apply(sc.MarkRentable(space_ids=[t.root().id]))   # property is a container
+    with pytest.raises(InvariantViolation):
+        t.apply(sc.MarkRentable(space_ids=[f.id]))          # floor is a container
+    with pytest.raises(InvariantViolation):
+        t.apply(sc.SetCapacity(space_ids=[f.id], capacity=10))
+    r = t.apply(sc.AddSpaces(parent_id=f.id, kind="room", count=1))[0]
+    t.apply(sc.MarkRentable(space_ids=[r.id]))              # room is sellable — fine
+    assert t.get(r.id).rentable is True
+
+
+def test_add_spaces_rejects_nonpositive_count():
+    t = _tree()
+    with pytest.raises(InvariantViolation):
+        t.apply(sc.AddSpaces(parent_id=t.root().id, kind="room", count=0))
+
+
 def test_apply_rejects_unknown_command():
     t = _tree()
     with pytest.raises(InvariantViolation):

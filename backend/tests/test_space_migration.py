@@ -113,6 +113,25 @@ def test_from_legacy_multi_block_preserved():
     assert [f.label for f in t.children(bwing.id)] == ["G"]
 
 
+def test_from_legacy_dormitory_carries_explicit_legacy_count():
+    data = _legacy_pg()
+    data["rooms"] = [{"id": "r1", "floor_id": "fl1", "name": "Dorm", "category": "room",
+                      "sharing": "dormitory", "beds": 8, "package_id": None, "status": "active"}]
+    t = SpaceTree.from_legacy(data, id_gen=_seq_gen())
+    dorm = t.descendants(t.root().id)
+    dorm = [s for s in dorm if s.kind == "room"][0]
+    assert dorm.sharing == "dormitory" and dorm.capacity == 8
+
+
+def test_from_legacy_orphan_room_preserved_at_root():
+    data = _legacy_pg()
+    data["rooms"].append({"id": "r9", "floor_id": "ghost", "name": "Lost", "category": "room",
+                          "sharing": "single", "package_id": None, "status": "active"})
+    t = SpaceTree.from_legacy(data, id_gen=_seq_gen())
+    root_rooms = [s for s in t.children(t.root().id) if s.kind == "room"]
+    assert [r.label for r in root_rooms] == ["Lost"]  # attached to root, not dropped
+
+
 def test_from_legacy_empty_is_safe():
     t = SpaceTree.from_legacy({"name": "Bare"}, id_gen=_seq_gen())
     assert t.root().label == "Bare"

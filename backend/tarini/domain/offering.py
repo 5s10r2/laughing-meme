@@ -88,24 +88,29 @@ def validate_billing(billing_basis: str | None, billing_period: str | None) -> N
         raise InvariantViolation(f"unknown billing_period {billing_period!r}")
 
 
-def validate_attrs(attrs: dict) -> None:
-    """Reject unknown fields, bad enum values, out-of-catalog multi-values, and wrong
-    types. Booleans are NOT accepted where ints are expected (and vice-versa)."""
+def validate_attrs(attrs: dict) -> dict:
+    """Reject unknown fields, bad enum values, out-of-catalog multi-values, and wrong types
+    (bools are NOT ints and vice-versa). Returns a defensively-copied dict — list values are
+    cloned so the aggregate never aliases the caller's mutable objects."""
+    safe: dict = {}
     for key, value in attrs.items():
         if key not in ATTR_FIELDS:
             raise InvariantViolation(f"unknown offering field {key!r}")
         if key in _ENUM_FIELDS:
             if value is not None and value not in _ENUM_FIELDS[key]:
                 raise InvariantViolation(f"{key}={value!r} is not in the catalog")
+            safe[key] = value
         elif key in _MULTI_FIELDS:
             if not isinstance(value, list):
                 raise InvariantViolation(f"{key} must be a list")
             bad = set(value) - _MULTI_FIELDS[key]
             if bad:
                 raise InvariantViolation(f"{key} has values not in the catalog: {sorted(bad)}")
+            safe[key] = list(value)  # clone — no aliasing into the aggregate
         else:  # scalar
             expected = _SCALAR_FIELDS[key]
             if value is None:
+                safe[key] = None
                 continue
             if expected is bool:
                 if not isinstance(value, bool):
@@ -113,3 +118,5 @@ def validate_attrs(attrs: dict) -> None:
             else:  # int — reject bool (bool is an int subclass in python)
                 if isinstance(value, bool) or not isinstance(value, expected):
                     raise InvariantViolation(f"{key} must be an {expected.__name__}")
+            safe[key] = value
+    return safe

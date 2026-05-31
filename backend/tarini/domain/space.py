@@ -53,6 +53,24 @@ def capacity_for(sharing: str | None) -> int | None:
     return _SHARING_CAPACITY.get(sharing or "")
 
 
+# Only sellable units carry a price/availability; containers never do.
+RENTABLE_KINDS = frozenset({"flat", "room", "bed"})
+
+
+def _check_sharing(sharing: str | None) -> None:
+    from .offering import SHARINGS  # single source of truth for the catalog
+
+    if sharing is not None and sharing not in SHARINGS:
+        raise InvariantViolation(f"unknown sharing {sharing!r}")
+
+
+def _check_config(config: str | None) -> None:
+    from .offering import CONFIGS
+
+    if config is not None and config not in CONFIGS:
+        raise InvariantViolation(f"unknown config {config!r}")
+
+
 @dataclass
 class Space:
     id: str
@@ -170,18 +188,16 @@ class SpaceTree:
 
         # rooms
         for r in data.get("rooms", []):
-            parent = floor_node.get(r.get("floor_id"))
-            if parent is None:
-                continue  # orphan room (floor missing) — drop rather than corrupt the tree
+            # orphan room (floor missing) → attach to the property root rather than drop it
+            parent = floor_node.get(r.get("floor_id")) or tree.root_id
             node = tree.add(parent, "room", r.get("name") or "")
             node.status = r.get("status", "active")
             node.rentable = True  # every PG room is a sellable unit, mapped or not
             sharing = r.get("sharing")
             if sharing:
                 node.sharing = sharing
-                cap = capacity_for(sharing)
-                if cap is not None:
-                    node.capacity = cap
+                # derive from sharing; fall back to an explicit legacy count for dorms if present
+                node.capacity = capacity_for(sharing) or r.get("capacity") or r.get("beds")
             pid = r.get("package_id")
             if pid and pid in pkg_to_offering:
                 node.offering_id = pkg_to_offering[pid]
@@ -257,6 +273,10 @@ class SpaceTree:
 
         if isinstance(command, sc.AddSpaces):
             labels = command.labels or [str(i + 1) for i in range(command.count)]
+            if not labels:
+                raise InvariantViolation("AddSpaces needs at least one label or count >= 1")
+            _check_sharing(command.sharing)
+            _check_config(command.config)
             attrs: dict = {}
             if command.sharing is not None:
                 attrs["sharing"] = command.sharing
@@ -278,6 +298,7 @@ class SpaceTree:
             return None
 
         if isinstance(command, sc.SetSharing):
+            _check_sharing(command.sharing)
             for sid in command.space_ids:
                 node = self.get(sid)
                 node.sharing = command.sharing
@@ -285,18 +306,25 @@ class SpaceTree:
             return None
 
         if isinstance(command, sc.SetConfig):
+            _check_config(command.config)
             for sid in command.space_ids:
                 self.get(sid).config = command.config
             return None
 
         if isinstance(command, sc.SetCapacity):
             for sid in command.space_ids:
-                self.get(sid).capacity = command.capacity
+                node = self.get(sid)
+                if node.kind not in RENTABLE_KINDS:
+                    raise InvariantViolation(f"a {node.kind} cannot carry a capacity")
+                node.capacity = command.capacity
             return None
 
         if isinstance(command, sc.MarkRentable):
             for sid in command.space_ids:
-                self.get(sid).rentable = command.rentable
+                node = self.get(sid)
+                if command.rentable and node.kind not in RENTABLE_KINDS:
+                    raise InvariantViolation(f"a {node.kind} is a container, not a sellable unit")
+                node.rentable = command.rentable
             return None
 
         if isinstance(command, sc.MarkUnavailable):
@@ -308,9 +336,8 @@ class SpaceTree:
         if isinstance(command, sc.CreateOffering):
             from .offering import Offering, validate_attrs, validate_billing
 
-            attrs = command.attrs or {}
             validate_billing(command.billing_basis, command.billing_period)
-            validate_attrs(attrs)
+            attrs = validate_attrs(command.attrs or {})  # returns a copy — no aliasing
             off = Offering(
                 id=self._id_gen("off"),
                 name=command.name,
@@ -327,7 +354,7 @@ class SpaceTree:
 
             off = self.get_offering(command.offering_id)
             validate_billing(command.billing_basis, command.billing_period)
-            validate_attrs(command.attrs or {})
+            safe_attrs = validate_attrs(command.attrs or {})  # returns a copy — no aliasing
             if command.name is not None:
                 off.name = command.name
             if command.price is not None:
@@ -336,7 +363,7 @@ class SpaceTree:
                 off.billing_basis = command.billing_basis
             if command.billing_period is not None:
                 off.billing_period = command.billing_period
-            for key, value in (command.attrs or {}).items():
+            for key, value in safe_attrs.items():
                 setattr(off, key, value)
             return off
 

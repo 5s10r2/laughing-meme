@@ -135,6 +135,12 @@ def test_unmapped_treats_inactive_offering_as_unmapped():
 
 
 # --------------------------------------------------------------------------- package panel
+def test_type_label_humanizes_unknown_underscored_type():
+    from tarini.ui_adapter import _type_label
+    assert _type_label("apartment_building") == "Apartment Building"  # not "Apartment_Building"
+    assert _type_label("pg") == "PG"  # known catalog value unchanged
+
+
 def test_unit_noun_adapts_to_rentable_kind():
     # PG (rooms) → "room"; flat-building (flats) → "flat" — across every projection
     pg = _pg()

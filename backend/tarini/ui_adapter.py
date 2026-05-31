@@ -39,7 +39,7 @@ _GENDER_LABELS = {"male": "Men's", "female": "Women's", "coed": "Co-ed"}
 def _type_label(t: str | None) -> str | None:
     if not t:
         return None
-    return _TYPE_LABELS.get(t.strip().lower(), t.strip().title())
+    return _TYPE_LABELS.get(t.strip().lower(), t.strip().replace("_", " ").title())
 
 
 def _gender_label(g: str | None) -> str | None:

@@ -34,10 +34,14 @@ from tarini.tools.ui import validate_emit_ui
 
 # Redesigned-backend path (gated behind USE_NEW_EXPERIENCE) ------------------
 from tarini.adapters.inmemory_repository import InMemoryPropertyRepository
+from tarini.adapters.inmemory_tree_repository import InMemoryTreeRepository
 from tarini.adapters.supabase_repository import SupabasePropertyRepository
 from tarini.application.command_service import CommandService
-from tarini.tools.agent_tools import TOOL_DEFINITIONS_V2, execute_agent_tool
+from tarini.application.tree_command_service import TreeCommandService
+from tarini.flags import use_tree_model
+from tarini.tools.agent_tools import TOOL_DEFINITIONS_V2, TOOL_DEFINITIONS_V2_TREE, execute_agent_tool
 from tarini.blueprint import blueprint_props, is_blueprint_component
+from tarini import tree_adapter
 from tarini.ui_adapter import to_legacy_session_snapshot
 
 logger = logging.getLogger(__name__)
@@ -331,8 +335,9 @@ def _phase_verb(commands: list) -> str:
         return "Publishing your listing..."
     return "Saving your changes..."
 
-# Lazy singleton — survives across turns so the in-memory repo retains state.
+# Lazy singletons — survive across turns so the in-memory repos retain state.
 _command_service: CommandService | None = None
+_tree_command_service: TreeCommandService | None = None
 
 
 def _use_new_experience() -> bool:
@@ -375,14 +380,19 @@ def opening_prompt() -> str:
     return INITIAL_PROMPT_V2 if _use_new_experience() else INITIAL_PROMPT
 
 
-def _get_command_service() -> CommandService:
-    """Build (once) the CommandService for the new path.
+def _get_command_service():
+    """Build (once) the active command service for the new path.
 
-    Uses the Supabase-backed repository when the DB is live, else the in-memory repository
-    (mirrors the db client's own memory/Supabase choice). Singleton so the in-memory store
-    persists across turns within a process.
+    USE_TREE_MODEL on → the recursive-tree service (in-memory repo; tree persistence in
+    Supabase lands with migration 0003). Else the flat Property CommandService, using the
+    Supabase repo when the DB is live or the in-memory repo otherwise. Singleton so the
+    in-memory store persists across turns within a process.
     """
-    global _command_service
+    global _command_service, _tree_command_service
+    if use_tree_model():
+        if _tree_command_service is None:
+            _tree_command_service = TreeCommandService(InMemoryTreeRepository())
+        return _tree_command_service
     if _command_service is None:
         if getattr(db, "_USE_MEMORY", True):
             repo = InMemoryPropertyRepository()
@@ -394,10 +404,11 @@ def _get_command_service() -> CommandService:
 
 def _snapshot_event(result_data: dict) -> dict | None:
     """Map a tool result that carries a model (get_model / successful apply_commands) into a
-    legacy-shaped state_snapshot SSE event. Returns None for error results (no model)."""
+    state_snapshot SSE event. Returns None for error results (no model)."""
     if not isinstance(result_data, dict) or "model" not in result_data:
         return None
-    return {"type": "state_snapshot", **to_legacy_session_snapshot(result_data)}
+    project = tree_adapter.tree_session_snapshot if use_tree_model() else to_legacy_session_snapshot
+    return {"type": "state_snapshot", **project(result_data)}
 
 
 async def _stream_chat_v2(
@@ -418,7 +429,9 @@ async def _stream_chat_v2(
     # Live context (small, uncached) reflects state at the start of the turn; within the turn
     # the model gets fresh state from the apply_commands/get_model tool results it just received.
     try:
-        live_block = render_live_context(await svc.get_model(session_id))
+        snapshot = await svc.get_model(session_id)
+        live_block = (tree_adapter.tree_live_context(snapshot) if use_tree_model()
+                      else render_live_context(snapshot))
     except Exception:
         logger.exception("[stream_chat_v2] failed to render live context for %s", session_id)
         live_block = "## Current model (live)\n(Call get_model for the current state.)"
@@ -444,7 +457,8 @@ async def _stream_chat_v2(
                         {"type": "text", "text": live_block},
                     ],
                     messages=api_history,
-                    tools=_select_tools(TOOL_DEFINITIONS_V2),
+                    tools=_select_tools(TOOL_DEFINITIONS_V2_TREE if use_tree_model()
+                                        else TOOL_DEFINITIONS_V2),
                 ) as stream:
                     async for event in stream:
                         if event.type == "content_block_delta":
@@ -495,7 +509,9 @@ async def _stream_chat_v2(
                     if is_blueprint_component(component):
                         try:
                             model = (await svc.get_model(session_id)).get("model", {})
-                            props = blueprint_props(component, model) or props
+                            project = (tree_adapter.tree_blueprint_props if use_tree_model()
+                                       else blueprint_props)
+                            props = project(component, model) or props
                         except Exception:
                             logger.exception(
                                 "[stream_chat_v2] blueprint projection failed for %s (session %s)",

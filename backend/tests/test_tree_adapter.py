@@ -135,6 +135,44 @@ def test_unmapped_treats_inactive_offering_as_unmapped():
 
 
 # --------------------------------------------------------------------------- package panel
+def test_blueprint_registry_projects_from_model_dict():
+    model = _pg().to_dict()
+    massing = ta.tree_blueprint_props("MassingModel", model)
+    assert {s["label"]: s["value"] for s in massing["stats"]}["Rooms"] == 3
+    assert ta.tree_blueprint_props("QuickReplyChips", model) is None  # not a blueprint component
+    assert ta.is_blueprint_component("FloorLedger") is True
+
+
+def test_session_snapshot_shape_and_stage():
+    t, ids, off = _flats()
+    snap = {"model": t.to_dict(),
+            "completeness": __import__("tarini.domain.space_completeness",
+                                       fromlist=["compute_completeness"]).compute_completeness(t),
+            "version": 4}
+    out = ta.tree_session_snapshot(snap)
+    assert out["stateVersion"] == 4
+    assert out["state"]["property_name"] == "Great Heights"
+    assert out["state"]["property_type"] == "flat"
+    assert {u["name"] for u in out["state"]["units"]} == {"G1", "G2"}
+    # G2 unmapped → mapping not complete → stage stalls before verification
+    assert out["stage"] == "mapping"
+
+
+def test_derive_stage_uses_offerings_facet():
+    assert ta.tree_derive_stage({"property": "complete", "structure": "complete",
+                                 "offerings": "partial", "mapping": "empty"}) == "packages"
+    assert ta.tree_derive_stage({"property": "complete", "structure": "complete",
+                                 "offerings": "complete", "mapping": "complete"}) == "verification"
+
+
+def test_live_context_reads_meta_and_tree_counts():
+    snap = {"model": _pg().to_dict(),
+            "completeness": __import__("tarini.domain.space_completeness",
+                                       fromlist=["compute_completeness"]).compute_completeness(_pg())}
+    text = ta.tree_live_context(snap)
+    assert "Sunrise PG" in text and "units" in text and "offerings" in text
+
+
 def test_package_panel_pg():
     p = ta.package_panel_props(_pg())["packages"]
     assert len(p) == 1

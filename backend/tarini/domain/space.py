@@ -356,7 +356,7 @@ class SpaceTree:
 
             blockers = publish_open_items(self)
             if blockers:
-                raise PublishBlocked("; ".join(blockers))
+                raise PublishBlocked(blockers)  # carries open_items for the caller
             self.meta["published"] = True
             return None
 

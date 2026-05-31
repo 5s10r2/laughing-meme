@@ -162,3 +162,122 @@ def package_panel_props(tree: SpaceTree) -> dict:
         for o in tree.offerings.values() if o.active
     ]
     return {"packages": packages}
+
+
+# =========================================================================== #
+#  Blueprint registry + session-snapshot + live-context — the tree-path        #
+#  counterparts of blueprint.py / ui_adapter, taking a model DICT (tree.       #
+#  to_dict()) so they are drop-in for the server/agent (symmetric with the     #
+#  legacy projections).                                                        #
+# =========================================================================== #
+
+from .domain.space_completeness import compute_completeness  # noqa: E402
+
+_PROJECTIONS = {
+    "MassingModel": massing_props,
+    "FloorLedger": floor_ledger_props,
+    "BlueprintMapping": mapping_props,
+    "UnmappedWarning": unmapped_props,
+    "PackagePanel": package_panel_props,
+}
+BLUEPRINT_COMPONENTS = frozenset(_PROJECTIONS)
+
+
+def is_blueprint_component(component: str) -> bool:
+    return component in _PROJECTIONS
+
+
+def tree_blueprint_props(component: str, model: dict) -> dict | None:
+    """Project a blueprint component's props from a tree model dict (rebuilds the tree).
+    Returns None for non-blueprint components (caller falls back to Claude props)."""
+    projection = _PROJECTIONS.get(component)
+    return projection(SpaceTree.from_dict(model)) if projection else None
+
+
+# facet order for the legacy stage bar — same as ui_adapter but with the tree's `offerings`.
+_FACET_ORDER = (("property", "intro"), ("structure", "structure"),
+                ("offerings", "packages"), ("mapping", "mapping"))
+
+
+def tree_derive_stage(facets: dict) -> str:
+    for facet, stage in _FACET_ORDER:
+        if facets.get(facet) != "complete":
+            return stage
+    return "verification"
+
+
+def _legacy_state_from_tree(tree: SpaceTree) -> dict:
+    """A legacy OnboardingState-shaped projection (property identity + floors/units/packages)
+    so anything in the frontend still reading `state` keeps working. The Blueprint itself
+    refetches GET /model for the authoritative tree."""
+    floors_td = _floors_top_down(tree)
+    floor_index = {f.id: i for i, f in enumerate(reversed(floors_td))}
+    units = []
+    for f in floors_td:
+        for u in _rentable_under(tree, f.id):
+            units.append({
+                "id": u.id, "name": u.label, "floor_index": floor_index.get(f.id, 0),
+                "category": _unit_type(u), "sharing_type": u.sharing,
+                "package_id": u.offering_id, "active": _active(u),
+            })
+    return {
+        "user_name": tree.meta.get("owner_name"),
+        "property_name": tree.meta.get("name"),
+        "property_type": tree.meta.get("type"),
+        "property_location": tree.meta.get("location"),
+        "gender_preference": tree.meta.get("gender"),
+        "floors": [{"index": i, "label": f.label, "active": _active(f)}
+                   for i, f in enumerate(reversed(floors_td))],
+        "units": units,
+        "packages": package_panel_props(tree)["packages"],
+    }
+
+
+def tree_session_snapshot(snapshot: dict) -> dict:
+    """Build the frontend's state_snapshot payload from a TreeCommandService snapshot."""
+    tree = SpaceTree.from_dict(snapshot.get("model", {}))
+    facets = snapshot.get("completeness", {}).get("facets", {})
+    return {
+        "state": _legacy_state_from_tree(tree),
+        "stage": tree_derive_stage(facets),
+        "stateVersion": snapshot.get("version", 0),
+    }
+
+
+_FACET_GLYPH = {"complete": "✓", "partial": "◐", "empty": "○"}
+
+
+def tree_live_context(snapshot: dict) -> str:
+    """Compact per-turn live block for the prompt, tree-aware (reads meta + tree facets/counts)."""
+    model = snapshot.get("model", {})
+    meta = model.get("meta", {})
+    comp = snapshot.get("completeness", {})
+    facets = comp.get("facets", {})
+    counts = comp.get("counts", {})
+
+    name = meta.get("name")
+    if name:
+        bits = [b for b in (meta.get("type"), meta.get("location")) if b]
+        identity = f"{name}" + (f" ({', '.join(bits)})" if bits else "")
+    else:
+        identity = "new property — nothing captured yet"
+
+    facet_line = " · ".join(
+        f"{k} {_FACET_GLYPH.get(v, v)}"
+        for k, v in (("property", facets.get("property")), ("structure", facets.get("structure")),
+                     ("offerings", facets.get("offerings")), ("mapping", facets.get("mapping")))
+        if v is not None
+    )
+    lines = [
+        "## Current model (live)",
+        f"Property: {identity}",
+        f"Counts: {counts.get('rentable', 0)} units · {counts.get('rentable_mapped', 0)} mapped · "
+        f"{counts.get('offerings', 0)} offerings",
+    ]
+    if facet_line:
+        lines.append(f"Completeness: {facet_line}")
+    open_items = comp.get("open_items") or []
+    if open_items:
+        lines.append("Still open before publish:")
+        lines.extend(f"- {item}" for item in open_items)
+    return "\n".join(lines)

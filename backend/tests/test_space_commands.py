@@ -220,8 +220,9 @@ def test_publish_blocks_until_ready_then_succeeds():
     from tarini.domain.errors import PublishBlocked
 
     t = _tree()
-    with pytest.raises(PublishBlocked):
+    with pytest.raises(PublishBlocked) as exc:
         t.apply(sc.Publish())  # nothing set up yet
+    assert isinstance(exc.value.open_items, list) and len(exc.value.open_items) >= 3
     t.apply(sc.SetProperty(name="Sunrise PG", type="pg", location="HSR"))
     r = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="room", count=1, sharing="double"))[0]
     t.apply(sc.MarkRentable(space_ids=[r.id]))

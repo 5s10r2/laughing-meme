@@ -30,9 +30,15 @@ from pydantic import BaseModel, Field
 load_dotenv(override=True)
 
 from tarini.agent import _get_command_service, _use_new_experience, opening_prompt
-from tarini.application.command_codec import CommandDecodeError, decode_commands
+from tarini.application.command_codec import (
+    CommandDecodeError,
+    decode_commands,
+    decode_space_commands,
+)
 from tarini.application.errors import Conflict
 from tarini.blueprint import BLUEPRINT_COMPONENTS, blueprint_props
+from tarini.flags import use_tree_model
+from tarini import tree_adapter
 from tarini.db import client as db
 from tarini.domain.errors import InvariantViolation, NotFound, PublishBlocked
 from tarini.session_manager import session_manager
@@ -133,7 +139,9 @@ def _with_blueprint(snapshot: dict) -> dict:
     the same shapes emit_ui sends, so the panel renders/updates with the existing
     frontend components."""
     model = snapshot.get("model", {})
-    snapshot["blueprint"] = {name: blueprint_props(name, model) for name in BLUEPRINT_COMPONENTS}
+    project = tree_adapter.tree_blueprint_props if use_tree_model() else blueprint_props
+    components = tree_adapter.BLUEPRINT_COMPONENTS if use_tree_model() else BLUEPRINT_COMPONENTS
+    snapshot["blueprint"] = {name: project(name, model) for name in components}
     return snapshot
 
 
@@ -255,7 +263,8 @@ async def apply_commands(session_id: str, body: CommandsRequest, _: None = Depen
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     try:
-        commands = decode_commands(body.commands)
+        decode = decode_space_commands if use_tree_model() else decode_commands
+        commands = decode(body.commands)
     except CommandDecodeError as e:
         raise HTTPException(status_code=400, detail=str(e))
     try:

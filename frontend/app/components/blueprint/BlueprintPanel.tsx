@@ -87,17 +87,15 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ session_id: sessionId, commands, expected_version: data?.version }),
         });
-        if (res.status === 409) {
-          await load();
-          return;
-        }
         if (!res.ok) {
-          setError(true);
+          // A rejected edit (stale version 409, bad command 4xx, etc.) must NOT blank the
+          // whole panel — re-sync to current state so the view stays live and the user can retry.
+          await load();
           return;
         }
         setData((await res.json()) as ModelResponse);
       } catch {
-        setError(true);
+        await load();
       }
     },
     [sessionId, data?.version, load]

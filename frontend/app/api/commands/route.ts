@@ -3,6 +3,9 @@ import { NextRequest } from "next/server";
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 const API_KEY = process.env.TARINI_API_KEY;
 
+// Wait out a Render free-tier cold start rather than timing out the proxy function.
+export const maxDuration = 60;
+
 /**
  * Proxy for direct Blueprint edits.
  * POST /api/commands { session_id, commands, expected_version?, idempotency_key? }

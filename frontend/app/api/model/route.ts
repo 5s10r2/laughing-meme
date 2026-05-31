@@ -3,6 +3,10 @@ import { NextRequest } from "next/server";
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 const API_KEY = process.env.TARINI_API_KEY;
 
+// Allow the proxy to wait out a Render free-tier cold start (~50s) rather than the function
+// timing out and the panel showing "Couldn't load". Vercel caps this per plan; 60 is safe.
+export const maxDuration = 60;
+
 /**
  * Proxy for the live read-model endpoint backing the Blueprint panel.
  * GET /api/model?session_id=… → backend GET /sessions/:id/model

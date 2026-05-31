@@ -157,11 +157,34 @@ TOOL_DEFINITIONS_V2 = [
 
 
 def _tree_tool_definitions() -> list[dict]:
-    """The v2 tools advertising the recursive-tree command vocabulary. get_model + emit_ui are
-    identical to the flat path; only apply_commands' catalog + op-enum change, so the agent
-    emits AddSpaces/CreateOffering/SetProperty/… instead of AddFloors/CreatePackage/…."""
+    """The v2 tools advertising the recursive-tree command vocabulary. get_model is identical to
+    the flat path; apply_commands' catalog + op-enum change (AddSpaces/CreateOffering/… instead of
+    AddFloors/CreatePackage/…); and emit_ui is narrowed to QuickReplyChips only — the building,
+    floors, and unit→offering mapping live in the on-demand Blueprint panel (rendered from the live
+    model, updating in place), NOT as inline transcript cards that fan per-floor and re-stack on
+    every change. The chat stays a conversation; the Blueprint is the surface."""
     defs = copy.deepcopy(TOOL_DEFINITIONS_V2)
     for t in defs:
+        if t["name"] == "emit_ui":
+            t["description"] = (
+                "Render a QuickReplyChips component in the chat for low-friction tap-able choices "
+                "(gender, yes/no, accept a suggestion). YOU author its options: pass props "
+                '{"options": [{"label": "Men", "value": "Men"}, ...]} (2–5 short choices). Always '
+                "ask the question in words too.\n\n"
+                "Do NOT use this to render the building, floor list, or mapping — those live in the "
+                "Blueprint panel (the operator opens it with the Blueprint button), which reads the "
+                "live model and updates in place. Inline blueprint cards stack into redundant "
+                "duplicates, so they are not available here. Instead, just tell the operator in "
+                "words to open the Blueprint to see the building or do the mapping."
+            )
+            t["input_schema"]["properties"]["component"]["enum"] = ["QuickReplyChips"]
+            t["input_schema"]["properties"]["component"]["description"] = (
+                "Only QuickReplyChips — the building/floors/mapping live in the Blueprint panel."
+            )
+            t["input_schema"]["properties"]["props"]["description"] = (
+                'QuickReplyChips: pass {"options": [{"label","value"}]} (2–5 short choices).'
+            )
+            continue
         if t["name"] != "apply_commands":
             continue
         t["description"] = (

@@ -18,6 +18,14 @@ interface ModelResponse {
   model?: { floors?: { id: string | number; index: number }[] };
 }
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-2 text-[11px] font-mono uppercase tracking-wide text-content-tertiary">
+      {children}
+    </p>
+  );
+}
+
 interface BlueprintPanelProps {
   open: boolean;
   onClose: () => void;
@@ -133,7 +141,7 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
     );
   } else {
     body = (
-      <div className="space-y-4" ref={listRef}>
+      <div className="space-y-5" ref={listRef}>
         {bp.MassingModel && (
           <MassingModel
             {...(bp.MassingModel as React.ComponentProps<typeof MassingModel>)}
@@ -142,23 +150,35 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
           />
         )}
         {bp.UnmappedWarning && renderRegisteredComponent("UnmappedWarning", bp.UnmappedWarning, sendMessage)}
+
+        {/* Packages — the details (rent / AC / food / furnishing) that were missing. */}
+        {hasPackages && bp.PackagePanel && (
+          <section>
+            <SectionLabel>Packages</SectionLabel>
+            {renderRegisteredComponent("PackagePanel", bp.PackagePanel, sendMessage)}
+          </section>
+        )}
+
         {/* Mapping is the active task once packages exist → editable, in place.
             Before that, show the structure ledger (with drill-down). */}
-        {hasPackages ? (
-          <BlueprintMapping
-            packages={mapping?.packages}
-            floors={mapping?.floors}
-            onApplyCommands={applyCommands}
-          />
-        ) : (
-          bp.FloorLedger && (
-            <FloorLedger
-              {...(adaptComponentProps("FloorLedger", bp.FloorLedger) as unknown as React.ComponentProps<typeof FloorLedger>)}
-              activeId={activeFloorId}
-              onSendMessage={sendMessage}
+        <section>
+          <SectionLabel>{hasPackages ? "Mapping" : "Floors"}</SectionLabel>
+          {hasPackages ? (
+            <BlueprintMapping
+              packages={mapping?.packages}
+              floors={mapping?.floors}
+              onApplyCommands={applyCommands}
             />
-          )
-        )}
+          ) : (
+            bp.FloorLedger && (
+              <FloorLedger
+                {...(adaptComponentProps("FloorLedger", bp.FloorLedger) as unknown as React.ComponentProps<typeof FloorLedger>)}
+                activeId={activeFloorId}
+                onSendMessage={sendMessage}
+              />
+            )
+          )}
+        </section>
       </div>
     );
   }

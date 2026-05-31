@@ -45,6 +45,7 @@ import { MassingModel } from "../components/blueprint/MassingModel";
 import { FloorLedger } from "../components/blueprint/FloorLedger";
 import { BlueprintMapping } from "../components/blueprint/BlueprintMapping";
 import { UnmappedWarning } from "../components/blueprint/UnmappedWarning";
+import { PackagePanel } from "../components/blueprint/PackagePanel";
 
 type RegistryComponent = ComponentType<Record<string, unknown>>;
 
@@ -94,6 +95,7 @@ const COMPONENT_REGISTRY: Record<string, RegistryComponent> = {
   FloorLedger: asRegistryComponent(FloorLedger as ComponentType<unknown>),
   BlueprintMapping: asRegistryComponent(BlueprintMapping as ComponentType<unknown>),
   UnmappedWarning: asRegistryComponent(UnmappedWarning as ComponentType<unknown>),
+  PackagePanel: asRegistryComponent(PackagePanel as ComponentType<unknown>),
 };
 
 /**

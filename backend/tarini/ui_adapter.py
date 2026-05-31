@@ -281,3 +281,30 @@ def unmapped_props(model: dict) -> dict:
                 "units": [_unit_base(r) for r in unm],
             })
     return {"floors": out}
+
+
+def package_panel_props(model: dict) -> dict:
+    """Props for PackagePanel — each active package's full details + how many active
+    rooms are mapped to it. No colour (the frontend assigns a palette by index)."""
+    rooms = _active_rooms(model)
+    room_count: dict[str, int] = {}
+    for r in rooms:
+        pid = r.get("package_id")
+        if pid:
+            room_count[pid] = room_count.get(pid, 0) + 1
+    packages = [
+        {
+            "id": p["id"],
+            "name": p["name"],
+            "sharing": p.get("sharing"),
+            "ac": p.get("ac", False),
+            "food": p.get("food", "none"),
+            "furnishing": p.get("furnishing"),
+            "rent": p.get("rent"),
+            "amenities": p.get("amenities", []),
+            "roomCount": room_count.get(p["id"], 0),
+        }
+        for p in model.get("packages", [])
+        if p.get("active", True)
+    ]
+    return {"packages": packages}

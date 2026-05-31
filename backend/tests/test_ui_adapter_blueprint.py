@@ -13,6 +13,7 @@ from tarini.ui_adapter import (
     floor_ledger_props,
     mapping_props,
     unmapped_props,
+    package_panel_props,
 )
 
 
@@ -88,6 +89,27 @@ async def test_mapping_props_packages_and_per_floor_units():
 
 
 # --------------------------------------------------------------------------- unmapped roll-up
+# --------------------------------------------------------------------------- package panel
+async def test_package_panel_props_details_and_room_count():
+    m = (await _built())["model"]
+    out = package_panel_props(m)
+    assert [p["name"] for p in out["packages"]] == ["AC Single"]
+    pkg = out["packages"][0]
+    assert pkg["sharing"] == "single" and pkg["rent"] == 9000
+    assert set(pkg) == {"id", "name", "sharing", "ac", "food", "furnishing", "rent", "amenities", "roomCount"}
+    assert pkg["roomCount"] == 2  # 2 of the 3 ground-floor rooms are mapped to it
+    assert "color" not in str(out)  # colourless — frontend assigns a palette
+
+
+async def test_package_panel_props_excludes_disabled():
+    svc = CommandService(InMemoryPropertyRepository())
+    r = await svc.apply("s", [c.CreatePackage(name="Std", rent=5000)])
+    assert [p["name"] for p in package_panel_props(r["model"])["packages"]] == ["Std"]
+    pid = r["model"]["packages"][0]["id"]
+    r = await svc.apply("s", [c.DisablePackage(package_id=pid)])
+    assert package_panel_props(r["model"])["packages"] == []  # inactive not shown
+
+
 async def test_unmapped_props_only_floors_with_unmapped():
     m = (await _built())["model"]
     out = unmapped_props(m)

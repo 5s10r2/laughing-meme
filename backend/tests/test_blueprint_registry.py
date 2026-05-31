@@ -20,6 +20,7 @@ from tarini.ui_adapter import (
     floor_ledger_props,
     mapping_props,
     unmapped_props,
+    package_panel_props,
 )
 
 
@@ -36,9 +37,9 @@ async def _model() -> dict:
     return r["model"]
 
 
-def test_blueprint_component_set_is_the_four_projected_components():
+def test_blueprint_component_set_is_the_projected_components():
     assert BLUEPRINT_COMPONENTS == frozenset(
-        {"MassingModel", "FloorLedger", "BlueprintMapping", "UnmappedWarning"}
+        {"MassingModel", "FloorLedger", "BlueprintMapping", "UnmappedWarning", "PackagePanel"}
     )
 
 
@@ -55,6 +56,7 @@ async def test_blueprint_props_dispatch_matches_projections():
     assert blueprint_props("FloorLedger", m) == floor_ledger_props(m)
     assert blueprint_props("BlueprintMapping", m) == mapping_props(m)
     assert blueprint_props("UnmappedWarning", m) == unmapped_props(m)
+    assert blueprint_props("PackagePanel", m) == package_panel_props(m)
 
 
 async def test_blueprint_props_none_for_non_blueprint():

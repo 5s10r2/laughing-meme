@@ -17,6 +17,7 @@ from tarini.ui_adapter import (
     floor_ledger_props,
     mapping_props,
     massing_props,
+    package_panel_props,
     unmapped_props,
 )
 
@@ -28,6 +29,7 @@ _PROJECTIONS: dict[str, Callable[[dict], dict]] = {
     "FloorLedger": floor_ledger_props,
     "BlueprintMapping": mapping_props,
     "UnmappedWarning": unmapped_props,
+    "PackagePanel": package_panel_props,
 }
 
 BLUEPRINT_COMPONENTS = frozenset(_PROJECTIONS)

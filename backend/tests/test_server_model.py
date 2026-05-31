@@ -27,9 +27,12 @@ def test_get_model_fresh_session_returns_empty_model(client):
     assert r.status_code == 200
     body = r.json()
     # the snapshot shape the Blueprint consumes
-    assert {"model", "completeness", "version"} <= set(body)
+    assert {"model", "completeness", "version", "blueprint"} <= set(body)
     assert body["version"] == 0
     assert body["completeness"].get("publishable") is False
+    # the per-component projections the panel renders (same shapes as the emit path)
+    assert {"MassingModel", "FloorLedger", "BlueprintMapping", "UnmappedWarning"} <= set(body["blueprint"])
+    assert body["blueprint"]["MassingModel"]["propertyName"] == "Your property"  # empty-model default
 
 
 def test_get_model_unknown_session_is_404(client):

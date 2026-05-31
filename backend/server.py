@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field
 load_dotenv(override=True)
 
 from tarini.agent import _get_command_service, _use_new_experience, opening_prompt
+from tarini.blueprint import BLUEPRINT_COMPONENTS, blueprint_props
 from tarini.db import client as db
 from tarini.session_manager import session_manager
 
@@ -214,12 +215,18 @@ async def get_session(session_id: str, _: None = Depends(require_auth)):
 @app.get("/sessions/{session_id}/model")
 async def get_model(session_id: str, _: None = Depends(require_auth)):
     """Live property model for the Blueprint surface — read straight from the
-    CommandService (no LLM). The UI is a projection of this single source of truth;
-    returns {model, completeness, version, ...} so the client can also reconcile edits."""
+    CommandService (no LLM). The UI is a projection of this single source of truth.
+
+    Returns {model, completeness, version, ...} (the canonical truth, for reconciling
+    edits) plus `blueprint`: the same per-component projections the emit_ui path sends,
+    so the panel renders with the exact components + adapters already in the frontend."""
     session = await db.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    return await _get_command_service().get_model(session_id)
+    snapshot = await _get_command_service().get_model(session_id)
+    model = snapshot.get("model", {})
+    snapshot["blueprint"] = {name: blueprint_props(name, model) for name in BLUEPRINT_COMPONENTS}
+    return snapshot
 
 
 @app.post("/sessions/{session_id}/chat")

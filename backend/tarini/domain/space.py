@@ -130,7 +130,7 @@ class SpaceTree:
         from .offering import Offering
 
         tree = cls.new(data.get("name") or "Property", id_gen)
-        tree.meta = {k: data.get(k) for k in ("owner_name", "type", "location", "gender")}
+        tree.meta = {k: data.get(k) for k in ("name", "owner_name", "type", "location", "gender")}
         tree.version = data.get("version", 0)
 
         # packages → offerings (constructed directly: migrating existing data, not new input)
@@ -175,6 +175,7 @@ class SpaceTree:
                 continue  # orphan room (floor missing) — drop rather than corrupt the tree
             node = tree.add(parent, "room", r.get("name") or "")
             node.status = r.get("status", "active")
+            node.rentable = True  # every PG room is a sellable unit, mapped or not
             sharing = r.get("sharing")
             if sharing:
                 node.sharing = sharing
@@ -184,7 +185,6 @@ class SpaceTree:
             pid = r.get("package_id")
             if pid and pid in pkg_to_offering:
                 node.offering_id = pkg_to_offering[pid]
-                node.rentable = True
 
         return tree
 

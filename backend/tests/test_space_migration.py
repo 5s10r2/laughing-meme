@@ -69,7 +69,7 @@ def _legacy_pg():
 def test_from_legacy_single_block_collapses():
     t = SpaceTree.from_legacy(_legacy_pg(), id_gen=_seq_gen())
     assert t.root().kind == "property" and t.root().label == "Sunrise PG"
-    assert t.meta == {"owner_name": "Ravi", "type": "pg",
+    assert t.meta == {"name": "Sunrise PG", "owner_name": "Ravi", "type": "pg",
                       "location": "HSR, Bangalore", "gender": "male"}
     assert t.version == 7
     # single "Main" block collapses → floors hang directly off the property

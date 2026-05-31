@@ -137,6 +137,37 @@ def test_set_config_and_mark_rentable_unavailable():
     assert s.config == "2bhk" and s.rentable is True and s.status == "unavailable"
 
 
+def test_order_survives_gap_from_remove():
+    # add 3, remove the middle, add 1 more — the newcomer must sort last, no order collision.
+    t = _tree()
+    rs = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="room", count=3))  # "1","2","3"
+    t.apply(sc.RemoveSpace(space_id=rs[1].id))                               # drop "2"
+    new = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="room", labels=["last"]))[0]
+    labels = [s.label for s in t.children(t.root().id)]
+    assert labels == ["1", "3", "last"]
+    orders = [s.order for s in t.children(t.root().id)]
+    assert len(set(orders)) == len(orders)  # all distinct, no collision
+
+
+def test_set_sharing_to_dormitory_clears_stale_capacity():
+    t = _tree()
+    r = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="room", count=1, sharing="double"))[0]
+    assert t.get(r.id).capacity == 2
+    t.apply(sc.SetSharing(space_ids=[r.id], sharing="dormitory"))
+    assert t.get(r.id).capacity is None  # must be set explicitly, not left stale at 2
+
+
+def test_move_appends_after_existing_with_gaps():
+    t = _tree()
+    f1 = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="floor", labels=["A"]))[0]
+    f2 = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="floor", labels=["B"]))[0]
+    keep = t.apply(sc.AddSpaces(parent_id=f2.id, kind="room", count=3))      # orders 0,1,2
+    t.apply(sc.RemoveSpace(space_id=keep[0].id))                             # leaves 1,2
+    moved = t.apply(sc.AddSpaces(parent_id=f1.id, kind="room", labels=["X"]))[0]
+    t.apply(sc.MoveSpace(space_id=moved.id, new_parent_id=f2.id))
+    assert [s.label for s in t.children(f2.id)] == ["2", "3", "X"]  # X appended last
+
+
 def test_apply_rejects_unknown_command():
     t = _tree()
     with pytest.raises(InvariantViolation):

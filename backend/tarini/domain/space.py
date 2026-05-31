@@ -216,12 +216,13 @@ class SpaceTree:
             raise InvariantViolation(f"unknown space kind {kind!r}")
         if not can_contain(parent.kind, kind):
             raise InvariantViolation(f"a {parent.kind} cannot contain a {kind}")
+        kids = self.children(parent_id)
         node = Space(
             id=self._id_gen(kind),
             kind=kind,
             label=label,
             parent_id=parent_id,
-            order=len(self.children(parent_id)),
+            order=max((k.order for k in kids), default=-1) + 1,  # append; survives gaps from removes
             **attrs,
         )
         self.spaces[node.id] = node
@@ -245,7 +246,8 @@ class SpaceTree:
         if not can_contain(new_parent.kind, node.kind):
             raise InvariantViolation(f"a {new_parent.kind} cannot contain a {node.kind}")
         node.parent_id = new_parent_id
-        node.order = len(self.children(new_parent_id)) - 1  # appended; -1 since node now counted
+        siblings = [s for s in self.children(new_parent_id) if s.id != space_id]
+        node.order = max((s.order for s in siblings), default=-1) + 1  # append after existing
 
     # ---- command entry point (mirrors Property.apply) ----
     def apply(self, command) -> object:
@@ -258,9 +260,7 @@ class SpaceTree:
             attrs: dict = {}
             if command.sharing is not None:
                 attrs["sharing"] = command.sharing
-                cap = capacity_for(command.sharing)
-                if cap is not None:
-                    attrs["capacity"] = cap
+                attrs["capacity"] = capacity_for(command.sharing)  # None for dorm → set explicitly
             if command.config is not None:
                 attrs["config"] = command.config
             return [self.add(command.parent_id, command.kind, label, **attrs) for label in labels]
@@ -281,9 +281,7 @@ class SpaceTree:
             for sid in command.space_ids:
                 node = self.get(sid)
                 node.sharing = command.sharing
-                cap = capacity_for(command.sharing)
-                if cap is not None:
-                    node.capacity = cap
+                node.capacity = capacity_for(command.sharing)  # clears for dorm (needs explicit)
             return None
 
         if isinstance(command, sc.SetConfig):

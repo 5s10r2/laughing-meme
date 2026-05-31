@@ -74,15 +74,28 @@ class SpaceTree:
     """A tree of `Space` nodes rooted at a single `property`. Mutations enforce the
     containment grammar; the aggregate owns its structural invariants."""
 
-    def __init__(self, spaces: dict[str, Space], root_id: str, id_gen: IdGen = _default_id_gen) -> None:
+    def __init__(
+        self,
+        spaces: dict[str, Space],
+        root_id: str,
+        id_gen: IdGen = _default_id_gen,
+        offerings: dict | None = None,
+    ) -> None:
         self.spaces = spaces
         self.root_id = root_id
         self._id_gen = id_gen
+        self.offerings: dict = offerings if offerings is not None else {}
 
     @classmethod
     def new(cls, label: str, id_gen: IdGen = _default_id_gen) -> "SpaceTree":
         root = Space(id=id_gen("prop"), kind="property", label=label, parent_id=None)
         return cls({root.id: root}, root.id, id_gen)
+
+    def get_offering(self, offering_id: str):
+        off = self.offerings.get(offering_id)
+        if off is None:
+            raise NotFound(f"no offering {offering_id!r}")
+        return off
 
     # ---- reads ----
     def root(self) -> Space:
@@ -200,6 +213,65 @@ class SpaceTree:
         if isinstance(command, sc.MarkUnavailable):
             for sid in command.space_ids:
                 self.get(sid).status = "unavailable" if command.unavailable else "active"
+            return None
+
+        # ---- offerings ----
+        if isinstance(command, sc.CreateOffering):
+            from .offering import Offering, validate_attrs, validate_billing
+
+            attrs = command.attrs or {}
+            validate_billing(command.billing_basis, command.billing_period)
+            validate_attrs(attrs)
+            off = Offering(
+                id=self._id_gen("off"),
+                name=command.name,
+                price=command.price,
+                billing_basis=command.billing_basis,
+                billing_period=command.billing_period,
+                **attrs,
+            )
+            self.offerings[off.id] = off
+            return off
+
+        if isinstance(command, sc.UpdateOffering):
+            from .offering import validate_attrs, validate_billing
+
+            off = self.get_offering(command.offering_id)
+            validate_billing(command.billing_basis, command.billing_period)
+            validate_attrs(command.attrs or {})
+            if command.name is not None:
+                off.name = command.name
+            if command.price is not None:
+                off.price = command.price
+            if command.billing_basis is not None:
+                off.billing_basis = command.billing_basis
+            if command.billing_period is not None:
+                off.billing_period = command.billing_period
+            for key, value in (command.attrs or {}).items():
+                setattr(off, key, value)
+            return off
+
+        if isinstance(command, sc.DisableOffering):
+            self.get_offering(command.offering_id).active = False
+            return None
+
+        if isinstance(command, sc.DeleteOffering):
+            self.get_offering(command.offering_id)  # NotFound if missing
+            if any(s.offering_id == command.offering_id for s in self.spaces.values()):
+                raise InvariantViolation("cannot delete an offering that is still mapped")
+            del self.offerings[command.offering_id]
+            return None
+
+        if isinstance(command, sc.MapOffering):
+            self.get_offering(command.offering_id)  # NotFound if missing
+            nodes = [self.get(sid) for sid in command.space_ids]  # NotFound if any missing
+            for node in nodes:
+                node.offering_id = command.offering_id
+            return None
+
+        if isinstance(command, sc.UnmapOffering):
+            for sid in command.space_ids:
+                self.get(sid).offering_id = None
             return None
 
         raise InvariantViolation(f"unknown space command {type(command).__name__}")

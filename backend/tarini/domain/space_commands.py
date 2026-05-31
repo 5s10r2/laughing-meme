@@ -64,3 +64,44 @@ class MarkRentable:
 class MarkUnavailable:
     space_ids: list[str]
     unavailable: bool = True
+
+
+# ---- offerings (curated priced templates) ----
+@dataclass(frozen=True)
+class CreateOffering:
+    name: str
+    price: int | None = None
+    billing_basis: str = "per_bed"
+    billing_period: str = "monthly"
+    attrs: dict | None = None  # curated, catalog-validated (see domain.offering)
+
+
+@dataclass(frozen=True)
+class UpdateOffering:
+    offering_id: str
+    name: str | None = None
+    price: int | None = None
+    billing_basis: str | None = None
+    billing_period: str | None = None
+    attrs: dict | None = None  # partial; only listed keys change
+
+
+@dataclass(frozen=True)
+class DisableOffering:
+    offering_id: str
+
+
+@dataclass(frozen=True)
+class DeleteOffering:
+    offering_id: str
+
+
+@dataclass(frozen=True)
+class MapOffering:
+    space_ids: list[str]
+    offering_id: str
+
+
+@dataclass(frozen=True)
+class UnmapOffering:
+    space_ids: list[str]

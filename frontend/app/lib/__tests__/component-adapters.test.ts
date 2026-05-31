@@ -10,19 +10,21 @@ describe("adaptComponentProps — MassingModel", () => {
     expect(result.blocks).toEqual(blocks);
   });
 
-  it("defaults blocks to empty array when missing", () => {
+  it("passes blocks through untouched (the component owns its empty-state)", () => {
+    // The adapter spreads props and does not inject a blocks default — missing
+    // blocks stays undefined; MassingModel itself coerces it.
     const result = adaptComponentProps("MassingModel", {});
-    expect(result.blocks).toEqual([]);
+    expect(result.blocks).toBeUndefined();
   });
 
-  it("accepts state string values", () => {
+  it("preserves an explicit state value", () => {
     const result = adaptComponentProps("MassingModel", { blocks: [], state: "generating" });
     expect(result.state).toBe("generating");
   });
 
-  it("defaults state to idle when missing", () => {
+  it("defaults state to 'settled' when missing (an emit is a settled snapshot)", () => {
     const result = adaptComponentProps("MassingModel", { blocks: [] });
-    expect(result.state).toBe("idle");
+    expect(result.state).toBe("settled");
   });
 });
 
@@ -46,15 +48,15 @@ describe("adaptComponentProps — FloorLedger", () => {
 
 // ── adaptComponentProps — UnmappedWarning ─────────────────────────────────
 
-describe("adaptComponentProps — UnmappedWarning", () => {
-  it("passes count through", () => {
+describe("adaptComponentProps — UnmappedWarning (no adapter — passthrough)", () => {
+  it("passes count through unchanged", () => {
     const result = adaptComponentProps("UnmappedWarning", { count: 3, rooms: [] });
     expect(result.count).toBe(3);
   });
 
-  it("defaults count to 0 when missing", () => {
+  it("leaves missing count undefined (no adapter injects a default)", () => {
     const result = adaptComponentProps("UnmappedWarning", {});
-    expect(result.count).toBe(0);
+    expect(result.count).toBeUndefined();
   });
 });
 

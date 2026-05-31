@@ -8,6 +8,7 @@ import { ChatHeader } from "./chat/ChatHeader";
 import { ChatInput } from "./chat/ChatInput";
 import { MessageBubble } from "./chat/MessageBubble";
 import { QuickReplyChips } from "./ui/QuickReplyChips";
+import { BlueprintPanel } from "./blueprint/BlueprintPanel";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,9 @@ export default function ChatUI() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [quickReplies, setQuickReplies] = useState<QuickReplyOption[] | null>(null);
+  const [blueprintOpen, setBlueprintOpen] = useState(false);
+  // Bumped on every state_snapshot so an open Blueprint refetches the live model.
+  const [modelRev, setModelRev] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { updateFromSnapshot, updateStage } = useOnboardingState();
@@ -181,6 +185,7 @@ export default function ChatUI() {
 
         case "state_snapshot":
           updateFromSnapshot(event.state, event.stage, event.stateVersion);
+          setModelRev((r) => r + 1); // keep an open Blueprint in sync with Tarini's edits
           break;
 
         case "quick_replies":
@@ -335,8 +340,13 @@ export default function ChatUI() {
 
   return (
     <div className={`flex flex-col h-screen bg-bg-deep text-content${USE_NEW_EXPERIENCE ? " lp-theme" : ""}`}>
-      {/* Header — legacy stage rail hidden in the new experience */}
-      <ChatHeader onNewSession={handleNewSession} isStreaming={isStreaming} showStageProgress={!USE_NEW_EXPERIENCE} />
+      {/* Header — legacy stage rail hidden in the new experience; Blueprint button shown there */}
+      <ChatHeader
+        onNewSession={handleNewSession}
+        isStreaming={isStreaming}
+        showStageProgress={!USE_NEW_EXPERIENCE}
+        onOpenBlueprint={USE_NEW_EXPERIENCE ? () => setBlueprintOpen(true) : undefined}
+      />
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
@@ -374,6 +384,15 @@ export default function ChatUI() {
         onSubmit={sendMessage}
         isStreaming={isStreaming}
         disabled={!sessionId}
+      />
+
+      {/* Live Blueprint — on-demand, reads the model directly, updates in place */}
+      <BlueprintPanel
+        open={blueprintOpen}
+        onClose={() => setBlueprintOpen(false)}
+        sessionId={sessionId}
+        sendMessage={sendMessage}
+        refreshKey={modelRev}
       />
     </div>
   );

@@ -13,6 +13,7 @@ what the aggregate actually accepts (add a command to the domain → it appears 
 """
 from __future__ import annotations
 
+import types
 import typing
 from dataclasses import MISSING, fields
 
@@ -28,6 +29,42 @@ class CommandDecodeError(Exception):
 
 def _field_map(cls: type) -> dict:
     return {f.name: f for f in fields(cls)}
+
+
+def _matches(value: object, hint: object) -> bool:
+    """Best-effort runtime type check of a decoded JSON value against a field annotation.
+
+    Handles the shapes the command vocabulary actually uses: str/int/bool, list[str],
+    dict[str, int], and Optional (X | None). `bool` is checked strictly (it's an int
+    subclass, so a bool must not satisfy an int field, nor vice-versa)."""
+    origin = typing.get_origin(hint)
+    if origin in (typing.Union, types.UnionType):
+        return any(_matches(value, arg) for arg in typing.get_args(hint))
+    if hint is type(None):
+        return value is None
+    if origin in (list, set, tuple, frozenset):
+        if not isinstance(value, list):
+            return False
+        args = typing.get_args(hint)
+        elem = args[0] if args else object
+        return all(_matches(v, elem) for v in value)
+    if origin is dict:
+        if not isinstance(value, dict):
+            return False
+        kt, vt = typing.get_args(hint) or (object, object)
+        return all(_matches(k, kt) and _matches(v, vt) for k, v in value.items())
+    if hint is bool:
+        return isinstance(value, bool)
+    if hint is int:
+        return isinstance(value, int) and not isinstance(value, bool)
+    if hint is float:
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if hint in (str, object) or hint is None:
+        return isinstance(value, str) if hint is str else True
+    try:
+        return isinstance(value, hint)  # type: ignore[arg-type]
+    except TypeError:
+        return True
 
 
 def _required_fields(cls: type) -> list[str]:
@@ -65,9 +102,20 @@ def decode_command(payload: dict) -> c.Command:
     if missing:
         raise CommandDecodeError(f"{op}: missing required field(s) {missing}")
 
+    # Validate value TYPES too — field names alone don't stop {"count": "two"} from
+    # decoding and then blowing up at apply-time. This keeps the boundary honest:
+    # nothing downstream sees a value of the wrong shape.
+    hints = typing.get_type_hints(cls)
+    for name, value in args.items():
+        hint = hints.get(name)
+        if hint is not None and not _matches(value, hint):
+            raise CommandDecodeError(
+                f"{op}: field {name!r} has the wrong type (got {type(value).__name__})"
+            )
+
     try:
         return cls(**args)
-    except TypeError as e:  # defensive — shouldn't trigger after the checks above
+    except (TypeError, ValueError) as e:  # defensive — shouldn't trigger after the checks above
         raise CommandDecodeError(f"{op}: {e}")
 
 

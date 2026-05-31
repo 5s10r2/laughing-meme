@@ -28,6 +28,30 @@ def test_decode_set_property():
     assert cmd.type is None  # unspecified optional stays default
 
 
+def test_decode_rejects_wrong_field_types():
+    # field NAMES are valid but VALUES are the wrong type — must fail at the boundary,
+    # not blow up later in Property.apply (the codec guarantees clean input downstream).
+    bad = [
+        {"op": "AddFloors", "count": "two"},                  # int field, str value
+        {"op": "AddFloors", "labels": 123},                   # list[str] field, int value
+        {"op": "AddFloors", "labels": [1, 2]},                # list[str] field, int elements
+        {"op": "SetFloorRooms", "floor_id": "f1", "count": 2, "type_mix": {"single": "x"}},  # dict[str,int]
+        {"op": "CreatePackage", "name": "AC", "ac": "yes"},   # bool field, str value
+        {"op": "SetProperty", "name": 5},                      # str field, int value
+    ]
+    for payload in bad:
+        with pytest.raises(CommandDecodeError):
+            decode_command(payload)
+
+
+def test_decode_accepts_valid_typed_values():
+    # the legitimate shapes must still pass untouched
+    assert decode_command({"op": "AddFloors", "count": 3, "start_index": 1})
+    assert decode_command({"op": "SetFloorRooms", "floor_id": "f1", "count": 4, "type_mix": {"single": 2, "double": 2}})
+    assert decode_command({"op": "CreatePackage", "name": "AC", "ac": True, "rent": 9000, "amenities": ["AC", "WiFi"]})
+    assert decode_command({"op": "AddFloors", "labels": ["G", "1"], "count": None})  # optional None ok
+
+
 def test_decode_command_with_list_and_defaults():
     cmd = decode_command({"op": "CreatePackage", "name": "AC Double", "rent": 9000,
                           "amenities": ["wifi", "ac"]})

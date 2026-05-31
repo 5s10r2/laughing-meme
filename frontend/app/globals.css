@@ -396,3 +396,16 @@ body {
   text-align: center;
   padding: 0 24px;
 }
+
+/* Massing floor as a navigator (Blueprint panel): tappable, with a hover lift. */
+.lp-studio .lp-floor-tappable { cursor: pointer; }
+.lp-studio .lp-floor-tappable:hover { filter: brightness(1.08); }
+.lp-studio .lp-floor-tappable:focus-visible { outline: none; filter: brightness(1.12); }
+
+/* Brief flash on the floor row the massing tap jumped to. */
+@keyframes lpFloorFlash {
+  0%   { box-shadow: 0 0 0 0 var(--accent-500); }
+  15%  { box-shadow: 0 0 0 2px var(--accent-500); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.lp-flash { border-radius: 16px; animation: lpFloorFlash 1.1s ease-out; }

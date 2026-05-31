@@ -67,13 +67,15 @@ export function FloorLedger({ floors, activeId, onSendMessage }: FloorLedgerProp
     // (e.g. server/client experience flags diverge), matching BlueprintMapping.
     <div className="lp-theme flex flex-col gap-2">
       {floors.map((floor) => (
-        <FloorTray
-          key={floor.id}
-          floor={floor}
-          expanded={openId === floor.id}
-          onToggle={() => setOpenId((prev) => (prev === floor.id ? null : floor.id))}
-          onOpen={() => setDetailId(floor.id)}
-        />
+        // data-floor-id: a scroll/flash anchor for the massing-model floor tap.
+        <div key={floor.id} data-floor-id={String(floor.id)}>
+          <FloorTray
+            floor={floor}
+            expanded={openId === floor.id}
+            onToggle={() => setOpenId((prev) => (prev === floor.id ? null : floor.id))}
+            onOpen={() => setDetailId(floor.id)}
+          />
+        </div>
       ))}
 
       <FloorDetailSheet

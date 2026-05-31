@@ -31,14 +31,16 @@ export function BlueprintMapping({
   return (
     <div className="lp-theme space-y-3">
       {floors.map((floor) => (
-        <MappingRow
-          key={floor.floorId}
-          floorLabel={floor.floorLabel}
-          units={floor.units}
-          packages={packages}
-          onSendMessage={onSendMessage}
-          onApplyCommands={onApplyCommands}
-        />
+        // data-floor-id: a scroll/flash anchor for the massing-model floor tap.
+        <div key={floor.floorId} data-floor-id={String(floor.floorId)}>
+          <MappingRow
+            floorLabel={floor.floorLabel}
+            units={floor.units}
+            packages={packages}
+            onSendMessage={onSendMessage}
+            onApplyCommands={onApplyCommands}
+          />
+        </div>
       ))}
     </div>
   );

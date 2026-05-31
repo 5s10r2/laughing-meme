@@ -39,6 +39,10 @@ interface MassingModelProps {
   stats?: { label: string; value: number | string }[];
   state?: MassingState;
   onSendMessage?: (text: string) => void;
+  /** When set, each floor is tappable and reports its ground-relative index
+   *  (0 = ground). The Blueprint uses it to jump to that floor's detail row.
+   *  Omitted in the chat (portrait, not a control surface). */
+  onFloorClick?: (groundIndex: number) => void;
 }
 
 type Pt = [number, number];
@@ -164,6 +168,7 @@ export function MassingModel({
   stats,
   state = "settled",
   onSendMessage,
+  onFloorClick,
 }: MassingModelProps) {
   const reduce = useReducedMotion();
 
@@ -308,6 +313,10 @@ export function MassingModel({
                   <motion.g
                     key={`${genEpoch}-${f.id}`}
                     data-fid={f.id}
+                    className={onFloorClick ? "lp-floor-tappable" : undefined}
+                    onClick={onFloorClick ? () => onFloorClick(f.id) : undefined}
+                    role={onFloorClick ? "button" : undefined}
+                    aria-label={onFloorClick ? `Floor ${f.id + 1} — view details` : undefined}
                     initial={reduce ? false : { opacity: 0, y: f.top + 10 }}
                     animate={{ opacity: 1, y: f.top }}
                     exit={{ opacity: 0, transition: { duration: 0.18 } }}

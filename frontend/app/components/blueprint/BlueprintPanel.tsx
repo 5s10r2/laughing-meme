@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { renderRegisteredComponent } from "../../lib/component-registry";
 import { BlueprintMapping, type BlueprintMappingFloor } from "./BlueprintMapping";
+import { MassingModel } from "./MassingModel";
+import { FloorLedger } from "./FloorLedger";
 import type { MappingPackage } from "./MappingRow";
+import { adaptComponentProps } from "../../lib/component-adapters";
 
 type Props = Record<string, unknown>;
 
@@ -12,6 +15,7 @@ interface ModelResponse {
   blueprint?: Record<string, Props>;
   completeness?: { counts?: Record<string, number> };
   version?: number;
+  model?: { floors?: { id: string | number; index: number }[] };
 }
 
 interface BlueprintPanelProps {
@@ -37,6 +41,9 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   const [data, setData] = useState<ModelResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  // The floor the massing tap is directing attention to (expands its ledger row).
+  const [activeFloorId, setActiveFloorId] = useState<string | number | undefined>(undefined);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     if (!sessionId) return;
@@ -86,6 +93,25 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
     [sessionId, data?.version, load]
   );
 
+  // Massing floor tap → jump to that floor's detail row. The massing reports a
+  // ground-relative index (0 = ground); resolve it to the domain floor id via the
+  // model's floors (sorted ascending), then scroll + flash the matching row.
+  const jumpToFloor = useCallback(
+    (groundIndex: number) => {
+      const sorted = [...(data?.model?.floors ?? [])].sort((a, b) => a.index - b.index);
+      const floor = sorted[groundIndex];
+      if (!floor || !listRef.current) return;
+      setActiveFloorId(floor.id); // expand this floor's ledger row
+      const row = listRef.current.querySelector<HTMLElement>(`[data-floor-id="${floor.id}"]`);
+      if (!row) return;
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+      row.classList.remove("lp-flash");
+      void row.offsetWidth; // restart the animation if re-tapped
+      row.classList.add("lp-flash");
+    },
+    [data?.model?.floors]
+  );
+
   const bp = data?.blueprint ?? {};
   const floors = data?.completeness?.counts?.floors ?? 0;
   const mapping = bp.BlueprintMapping as
@@ -107,8 +133,14 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
     );
   } else {
     body = (
-      <div className="space-y-4">
-        {bp.MassingModel && renderRegisteredComponent("MassingModel", bp.MassingModel, sendMessage)}
+      <div className="space-y-4" ref={listRef}>
+        {bp.MassingModel && (
+          <MassingModel
+            {...(bp.MassingModel as React.ComponentProps<typeof MassingModel>)}
+            state="settled"
+            onFloorClick={jumpToFloor}
+          />
+        )}
         {bp.UnmappedWarning && renderRegisteredComponent("UnmappedWarning", bp.UnmappedWarning, sendMessage)}
         {/* Mapping is the active task once packages exist → editable, in place.
             Before that, show the structure ledger (with drill-down). */}
@@ -119,7 +151,13 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
             onApplyCommands={applyCommands}
           />
         ) : (
-          bp.FloorLedger && renderRegisteredComponent("FloorLedger", bp.FloorLedger, sendMessage)
+          bp.FloorLedger && (
+            <FloorLedger
+              {...(adaptComponentProps("FloorLedger", bp.FloorLedger) as unknown as React.ComponentProps<typeof FloorLedger>)}
+              activeId={activeFloorId}
+              onSendMessage={sendMessage}
+            />
+          )
         )}
       </div>
     );

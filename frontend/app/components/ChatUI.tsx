@@ -37,6 +37,8 @@ export default function ChatUI() {
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  // Live status verb for the thinking composer (set from tool activity).
+  const [activity, setActivity] = useState<string | null>(null);
   const [quickReplies, setQuickReplies] = useState<QuickReplyOption[] | null>(null);
   const [blueprintOpen, setBlueprintOpen] = useState(false);
   // Bumped on every state_snapshot so an open Blueprint refetches the live model.
@@ -163,6 +165,7 @@ export default function ChatUI() {
           break;
 
         case "tool_start":
+          setActivity(event.description || "Working…"); // narrate the real pipeline
           updateStream((m) => ({
             ...m,
             parts: [...m.parts, { type: "tool_activity", tool: event.tool, toolStatus: "running", toolDescription: event.description, toolId: event.id } satisfies MessagePart],
@@ -226,6 +229,7 @@ export default function ChatUI() {
     abortControllerRef.current = controller;
 
     setIsStreaming(true);
+    setActivity("Thinking…");
     setQuickReplies(null); // Clear previous quick replies
 
     // Add user message (skip for the silent opening prompt)
@@ -295,6 +299,7 @@ export default function ChatUI() {
         )
       );
       setIsStreaming(false);
+      setActivity(null);
     }
   }, [sessionId, isStreaming, processEvent]);
 
@@ -384,6 +389,8 @@ export default function ChatUI() {
         onSubmit={sendMessage}
         isStreaming={isStreaming}
         disabled={!sessionId}
+        activity={activity}
+        onStop={() => abortControllerRef.current?.abort()}
       />
 
       {/* Live Blueprint — on-demand, reads the model directly, updates in place */}

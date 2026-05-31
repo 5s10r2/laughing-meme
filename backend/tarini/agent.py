@@ -313,6 +313,24 @@ _TOOL_DESCRIPTIONS_V2 = {
     "emit_ui": None,  # handled specially — no tool indicator shown
 }
 
+
+def _phase_verb(commands: list) -> str:
+    """A domain-grounded status verb for the thinking composer, derived from the
+    command ops so the bar narrates the *real* pipeline (not a generic 'saving')."""
+    ops = {c.get("op") for c in commands if isinstance(c, dict)}
+    if ops & {"MapRooms", "UnmapRooms"}:
+        return "Mapping the rooms..."
+    if ops & {"CreatePackage", "UpdatePackage", "DisablePackage", "DeletePackage"}:
+        return "Setting up packages..."
+    if ops & {"AddFloors", "RenameFloor", "RemoveFloor", "SetFloorRooms",
+              "SetRoomType", "SetNamingPattern", "RenameRoom"}:
+        return "Structuring the floors..."
+    if ops & {"MarkUnavailable"}:
+        return "Updating the rooms..."
+    if ops & {"Publish"}:
+        return "Publishing your listing..."
+    return "Saving your changes..."
+
 # Lazy singleton — survives across turns so the in-memory repo retains state.
 _command_service: CommandService | None = None
 
@@ -499,6 +517,8 @@ async def _stream_chat_v2(
 
             # ── get_model / apply_commands: tool_start → execute → tool_complete ──
             description = _TOOL_DESCRIPTIONS_V2.get(tool_block.name) or f"Running {tool_block.name}..."
+            if tool_block.name == "apply_commands":
+                description = _phase_verb(tool_block.input.get("commands") or [])
             logger.info("[stream_chat_v2] executing tool %s for session %s", tool_block.name, session_id)
             yield {
                 "type": "tool_start",

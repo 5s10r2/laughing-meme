@@ -421,3 +421,42 @@ body {
   letter-spacing: 0.02em;
   color: #6E6A82;
 }
+
+/* ===== Thinking composer (design-system §2.5) — aura ring + live shimmer verbs =====
+   At rest the bar is a calm dock; while the agent works, an indigo aura ignites and
+   the status word narrates the real pipeline (Structuring / Mapping / Setting up …). */
+@property --lp-aura { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.lp-compose { position: relative; border-radius: 12px; }
+.lp-compose .lp-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.6px;
+  background: conic-gradient(from var(--lp-aura), transparent 0deg, #6E68E8 55deg, #A39DF5 110deg, #4B45D6 165deg, transparent 280deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  pointer-events: none;
+  z-index: 2;
+}
+.lp-compose.is-working .lp-ring { opacity: 1; animation: lpAura 3.2s linear infinite; }
+@keyframes lpAura { to { --lp-aura: 360deg; } }
+.lp-seal-breath { animation: lpBreath 2.4s ease-in-out infinite; }
+@keyframes lpBreath { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+.lp-statusword { position: relative; overflow: hidden; }
+.lp-statusword .lp-gw {
+  background: linear-gradient(90deg, var(--text-tertiary) 8%, #4B45D6 42%, #A39DF5 52%, var(--text-tertiary) 88%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lpTextShim 2s linear infinite;
+}
+@keyframes lpTextShim { to { background-position: -220% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .lp-compose.is-working .lp-ring,
+  .lp-seal-breath,
+  .lp-statusword .lp-gw { animation: none; }
+}

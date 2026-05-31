@@ -7,11 +7,21 @@ export interface PackageDetail {
   id: string;
   name: string;
   sharing?: string | null;
+  config?: string | null;
   ac?: boolean;
   food?: string;
   furnishing?: string | null;
   rent?: number | null;
+  billingBasis?: string | null;
+  billingPeriod?: string | null;
   amenities?: string[];
+  services?: string[];
+  // listing terms (null when unset)
+  depositMonths?: number | null;
+  depositAmount?: number | null;
+  lockInMonths?: number | null;
+  noticeDays?: number | null;
+  minStay?: number | null;
   roomCount?: number;
 }
 
@@ -49,11 +59,24 @@ export function PackagePanel({ packages = [], unitNoun = "room", onEdit }: Packa
     <div className="lp-theme space-y-2">
       {packages.map((pkg, i) => {
         const attrs = [
-          pkg.sharing ? cap(pkg.sharing) : null,
+          pkg.sharing ? cap(pkg.sharing) : pkg.config ? pkg.config.toUpperCase() : null,
           pkg.ac ? "AC" : "Non-AC",
           foodLabel(pkg.food),
           pkg.furnishing ? cap(pkg.furnishing.replace(/_/g, " ")) : null,
+          pkg.billingBasis === "per_bed" ? "Per bed" : null,
         ].filter(Boolean) as string[];
+        // listing terms — the India-critical money facts; only shown when set
+        const deposit =
+          pkg.depositMonths != null ? `Deposit ${pkg.depositMonths}mo`
+          : pkg.depositAmount != null ? `Deposit ${rupees(pkg.depositAmount)}`
+          : null;
+        const terms = [
+          deposit,
+          pkg.noticeDays != null ? `Notice ${pkg.noticeDays}d` : null,
+          pkg.lockInMonths != null ? `Lock-in ${pkg.lockInMonths}mo` : null,
+          pkg.minStay != null ? `Min stay ${pkg.minStay}mo` : null,
+        ].filter(Boolean) as string[];
+        const period = pkg.billingPeriod === "weekly" ? "/wk" : pkg.billingPeriod === "daily" ? "/day" : "/mo";
         const rooms = pkg.roomCount ?? 0;
         return (
           <div key={pkg.id} className={CARD}>
@@ -69,7 +92,7 @@ export function PackagePanel({ packages = [], unitNoun = "room", onEdit }: Packa
               {pkg.rent != null && (
                 <span className="text-sm font-semibold text-content shrink-0">
                   {rupees(pkg.rent)}
-                  <span className="text-content-tertiary text-xs font-normal">/mo</span>
+                  <span className="text-content-tertiary text-xs font-normal">{period}</span>
                 </span>
               )}
             </div>
@@ -87,10 +110,17 @@ export function PackagePanel({ packages = [], unitNoun = "room", onEdit }: Packa
               </div>
             )}
 
-            {/* Amenities — secondary to the core attributes, so a lighter, borderless treatment. */}
-            {pkg.amenities && pkg.amenities.length > 0 && (
+            {/* Listing terms — deposit / notice / lock-in / min-stay (the money facts). */}
+            {terms.length > 0 && (
+              <p className="mt-2 text-[11px] font-medium text-content-secondary">
+                {terms.join("  ·  ")}
+              </p>
+            )}
+
+            {/* Amenities + services — secondary to the core attributes, lighter treatment. */}
+            {((pkg.amenities && pkg.amenities.length > 0) || (pkg.services && pkg.services.length > 0)) && (
               <p className="mt-2 text-[11px] text-content-tertiary">
-                {pkg.amenities.join(" · ")}
+                {[...(pkg.amenities ?? []), ...(pkg.services ?? [])].join(" · ")}
               </p>
             )}
 

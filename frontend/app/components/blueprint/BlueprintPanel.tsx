@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { renderRegisteredComponent } from "../../lib/component-registry";
 import { BlueprintMapping, type BlueprintMappingFloor } from "./BlueprintMapping";
 import { MassingModel } from "./MassingModel";
 import { FloorLedger } from "./FloorLedger";
+import { PackagePanel, type PackageDetail } from "./PackagePanel";
+import { OfferingEditSheet } from "./OfferingEditSheet";
 import { PublishChecklist } from "./PublishChecklist";
 import type { MappingPackage } from "./MappingRow";
 import { adaptComponentProps } from "../../lib/component-adapters";
@@ -52,6 +53,8 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   const [activeFloorId, setActiveFloorId] = useState<string | number | undefined>(undefined);
   // Jump-nav: which section is shown (Packages vs Rooms). Avoids the long scroll.
   const [tab, setTab] = useState<BlueprintTab>("packages");
+  // The offering whose edit sheet is open (null = closed).
+  const [editingOfferingId, setEditingOfferingId] = useState<string | null>(null);
   // Re-triggerable scroll signal (set by a massing floor tap; applied post-render).
   const [scrollFloorId, setScrollFloorId] = useState<string | number | null>(null);
   const [scrollNonce, setScrollNonce] = useState(0);
@@ -208,8 +211,13 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
             </div>
 
             {tab === "packages"
-              ? bp.PackagePanel &&
-                renderRegisteredComponent("PackagePanel", bp.PackagePanel, sendMessage)
+              ? (
+                <PackagePanel
+                  packages={(bp.PackagePanel?.packages as PackageDetail[]) ?? []}
+                  unitNoun={unitNoun}
+                  onEdit={treeMode ? setEditingOfferingId : undefined}
+                />
+              )
               : (
                 <BlueprintMapping
                   packages={mapping?.packages}
@@ -228,9 +236,20 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
     );
   }
 
+  const editingOffering =
+    (bp.PackagePanel?.packages as PackageDetail[] | undefined)?.find((p) => p.id === editingOfferingId) ?? null;
+
   return (
-    <BottomSheet open={open} onClose={onClose} title="Building blueprint" className="lp-theme">
-      {body}
-    </BottomSheet>
+    <>
+      <BottomSheet open={open} onClose={onClose} title="Building blueprint" className="lp-theme">
+        {body}
+      </BottomSheet>
+      <OfferingEditSheet
+        offering={editingOffering}
+        open={!!editingOffering}
+        onClose={() => setEditingOfferingId(null)}
+        onApply={applyCommands}
+      />
+    </>
   );
 }

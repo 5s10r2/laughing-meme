@@ -141,6 +141,15 @@ class SpaceTree:
         return tree
 
     @classmethod
+    def from_snapshot(cls, data: dict, id_gen: IdGen = _default_id_gen) -> "SpaceTree":
+        """Load any stored snapshot. A tree snapshot (has 'spaces') round-trips via from_dict;
+        a legacy Property snapshot (floors/rooms/packages, or empty) is migrated via from_legacy.
+        This is the back-compat seam — existing sessions convert on read, no separate step."""
+        if "spaces" in data:
+            return cls.from_dict(data, id_gen)
+        return cls.from_legacy(data, id_gen)
+
+    @classmethod
     def from_legacy(cls, data: dict, id_gen: IdGen = _default_id_gen) -> "SpaceTree":
         """Convert a stored legacy Property snapshot (blocks/floors/rooms/packages) into the
         recursive tree. A single block collapses away; multiple blocks are preserved; packages

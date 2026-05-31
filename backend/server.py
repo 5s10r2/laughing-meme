@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 load_dotenv(override=True)
 
-from tarini.agent import _get_command_service, opening_prompt
+from tarini.agent import get_command_service, opening_prompt
 from tarini.flags import use_new_experience
 from tarini.application.command_codec import (
     CommandDecodeError,
@@ -254,7 +254,7 @@ async def get_model(session_id: str, _: None = Depends(require_auth)):
     session = await db.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    return _with_blueprint(await _get_command_service().get_model(session_id))
+    return _with_blueprint(await get_command_service().get_model(session_id))
 
 
 @app.post("/sessions/{session_id}/commands")
@@ -272,7 +272,7 @@ async def apply_commands(session_id: str, body: CommandsRequest, _: None = Depen
     except CommandDecodeError as e:
         raise HTTPException(status_code=400, detail=str(e))
     try:
-        snapshot = await _get_command_service().apply(
+        snapshot = await get_command_service().apply(
             session_id,
             commands,
             expected_version=body.expected_version,

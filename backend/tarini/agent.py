@@ -371,7 +371,7 @@ def opening_prompt() -> str:
     return INITIAL_PROMPT_V2 if use_new_experience() else INITIAL_PROMPT
 
 
-def _get_command_service():
+def get_command_service():
     """Build (once) the active command service for the new path.
 
     USE_TREE_MODEL on → the recursive-tree service (in-memory repo; tree persistence in
@@ -416,7 +416,7 @@ async def _stream_chat_v2(
     the SSE contract (text / tool_start / tool_complete / component / state_snapshot / done) is
     preserved for the existing frontend."""
     client = _get_anthropic_client()
-    svc = _get_command_service()
+    svc = get_command_service()
     core_prompt = load_system_prompt_v2()
 
     history.append({"role": "user", "content": user_message})

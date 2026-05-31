@@ -88,6 +88,26 @@ async def test_idempotency_key_returns_cached():
 
 
 @pytest.mark.asyncio
+async def test_get_model_first_read_is_idempotent_on_root():
+    # two first-reads of a new session must converge on ONE persisted root_id (not divergent
+    # random roots) — guards the Blueprint-GET-racing-the-first-chat-turn case.
+    svc = _svc()
+    a = await svc.get_model("s")
+    b = await svc.get_model("s")
+    assert a["model"]["root_id"] == b["model"]["root_id"]
+    assert a["version"] == 0 and b["version"] == 0
+
+
+@pytest.mark.asyncio
+async def test_repo_insert_is_once_only():
+    from tarini.domain.space import SpaceTree
+    repo = InMemoryTreeRepository()
+    await repo.save("s", SpaceTree.new("first"), expected_version=None)
+    with pytest.raises(Conflict):
+        await repo.save("s", SpaceTree.new("second"), expected_version=None)  # second create conflicts
+
+
+@pytest.mark.asyncio
 async def test_migrate_on_read_from_legacy_snapshot():
     repo = InMemoryTreeRepository()
     # pre-seed the store with a LEGACY Property snapshot (as an old session would have)

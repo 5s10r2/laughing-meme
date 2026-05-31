@@ -29,8 +29,14 @@ class TreeCommandService:
         if tree is None:
             # Unlike the flat model, the tree needs a stable root id to add under, so a new
             # session is initialised + persisted on first read (the agent always reads first).
+            # Insert semantics + reload-on-conflict: if a concurrent first-read (e.g. a Blueprint
+            # GET /model racing the first chat turn) already created the session, adopt its root
+            # rather than clobbering it with a divergent root_id.
             tree = SpaceTree.new("")
-            await self._repo.save(session_id, tree, expected_version=None)
+            try:
+                await self._repo.save(session_id, tree, expected_version=None)
+            except Conflict:
+                tree = await self._repo.load(session_id) or tree
         return self._snapshot(tree, warnings=[])
 
     async def apply(

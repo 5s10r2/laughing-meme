@@ -19,8 +19,14 @@ class InMemoryTreeRepository:
 
     async def save(self, session_id: str, tree: SpaceTree, *, expected_version: int | None) -> None:
         rec = self._store.get(session_id)
-        current = rec["snapshot"].get("version") if rec and rec.get("snapshot") else None
-        if expected_version is not None and current != expected_version:
+        has_snapshot = bool(rec and rec.get("snapshot"))
+        current = rec["snapshot"].get("version") if has_snapshot else None
+        if expected_version is None:
+            # insert semantics — a session is created once; a racing second create conflicts
+            # (so concurrent first-reads converge on a single persisted root, not divergent ones)
+            if has_snapshot:
+                raise Conflict(f"session already initialised (version {current})")
+        elif current != expected_version:
             raise Conflict(f"expected version {expected_version}, current {current}")
         self._store.setdefault(session_id, {"log": []})["snapshot"] = tree.to_dict()
 

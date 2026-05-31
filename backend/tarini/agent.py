@@ -321,18 +321,23 @@ _TOOL_DESCRIPTIONS_V2 = {
 def _phase_verb(commands: list) -> str:
     """A domain-grounded status verb for the thinking composer, derived from the
     command ops so the bar narrates the *real* pipeline (not a generic 'saving')."""
+    # Recognises BOTH command vocabularies (legacy Property + recursive Space tree) so the
+    # bar narrates on either path. Publish is checked first so a publish batch never falls
+    # through to a structural verb.
     ops = {c.get("op") for c in commands if isinstance(c, dict)}
-    if ops & {"MapRooms", "UnmapRooms"}:
-        return "Mapping the rooms..."
-    if ops & {"CreatePackage", "UpdatePackage", "DisablePackage", "DeletePackage"}:
-        return "Setting up packages..."
-    if ops & {"AddFloors", "RenameFloor", "RemoveFloor", "SetFloorRooms",
-              "SetRoomType", "SetNamingPattern", "RenameRoom"}:
-        return "Structuring the floors..."
-    if ops & {"MarkUnavailable"}:
-        return "Updating the rooms..."
-    if ops & {"Publish"}:
+    if "Publish" in ops:
         return "Publishing your listing..."
+    if ops & {"MapRooms", "UnmapRooms", "MapOffering", "UnmapOffering"}:
+        return "Mapping the rooms..."
+    if ops & {"CreatePackage", "UpdatePackage", "DisablePackage", "DeletePackage",
+              "CreateOffering", "UpdateOffering", "DisableOffering", "DeleteOffering"}:
+        return "Setting up packages..."
+    if ops & {"AddFloors", "RenameFloor", "RemoveFloor", "SetFloorRooms", "SetRoomType",
+              "SetNamingPattern", "RenameRoom", "AddSpaces", "RenameSpace", "RemoveSpace",
+              "MoveSpace", "SetSharing", "SetConfig", "SetCapacity"}:
+        return "Structuring the floors..."
+    if ops & {"MarkUnavailable", "MarkRentable", "SetProperty"}:
+        return "Updating the rooms..."
     return "Saving your changes..."
 
 # Lazy singletons — survive across turns so the in-memory repos retain state.

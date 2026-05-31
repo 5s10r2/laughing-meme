@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 load_dotenv(override=True)
 
-from tarini.agent import _use_new_experience, opening_prompt
+from tarini.agent import _get_command_service, _use_new_experience, opening_prompt
 from tarini.db import client as db
 from tarini.session_manager import session_manager
 
@@ -209,6 +209,17 @@ async def get_session(session_id: str, _: None = Depends(require_auth)):
         "created_at": session.get("created_at"),
         "updated_at": session.get("updated_at"),
     }
+
+
+@app.get("/sessions/{session_id}/model")
+async def get_model(session_id: str, _: None = Depends(require_auth)):
+    """Live property model for the Blueprint surface — read straight from the
+    CommandService (no LLM). The UI is a projection of this single source of truth;
+    returns {model, completeness, version, ...} so the client can also reconcile edits."""
+    session = await db.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return await _get_command_service().get_model(session_id)
 
 
 @app.post("/sessions/{session_id}/chat")

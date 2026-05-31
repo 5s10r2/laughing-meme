@@ -204,6 +204,33 @@ def test_add_spaces_rejects_nonpositive_count():
         t.apply(sc.AddSpaces(parent_id=t.root().id, kind="room", count=0))
 
 
+def test_set_property_updates_meta_and_root_label():
+    t = _tree()
+    t.apply(sc.SetProperty(name="Sunrise PG", type="pg", location="HSR", gender="male",
+                           owner_name="Ravi"))
+    assert t.meta == {"name": "Sunrise PG", "type": "pg", "location": "HSR",
+                      "gender": "male", "owner_name": "Ravi"}
+    assert t.root().label == "Sunrise PG"  # name denormalised onto the root for display
+    # partial update leaves other fields untouched
+    t.apply(sc.SetProperty(location="Koramangala"))
+    assert t.meta["location"] == "Koramangala" and t.meta["name"] == "Sunrise PG"
+
+
+def test_publish_blocks_until_ready_then_succeeds():
+    from tarini.domain.errors import PublishBlocked
+
+    t = _tree()
+    with pytest.raises(PublishBlocked):
+        t.apply(sc.Publish())  # nothing set up yet
+    t.apply(sc.SetProperty(name="Sunrise PG", type="pg", location="HSR"))
+    r = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="room", count=1, sharing="double"))[0]
+    t.apply(sc.MarkRentable(space_ids=[r.id]))
+    off = t.apply(sc.CreateOffering(name="Double", price=8000))
+    t.apply(sc.MapOffering(space_ids=[r.id], offering_id=off.id))
+    t.apply(sc.Publish())
+    assert t.meta["published"] is True
+
+
 def test_apply_rejects_unknown_command():
     t = _tree()
     with pytest.raises(InvariantViolation):

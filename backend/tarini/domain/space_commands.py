@@ -66,6 +66,21 @@ class MarkUnavailable:
     unavailable: bool = True
 
 
+# ---- property-level ----
+@dataclass(frozen=True)
+class SetProperty:
+    name: str | None = None
+    type: str | None = None
+    location: str | None = None
+    gender: str | None = None
+    owner_name: str | None = None
+
+
+@dataclass(frozen=True)
+class Publish:
+    pass
+
+
 # ---- offerings (curated priced templates) ----
 @dataclass(frozen=True)
 class CreateOffering:
@@ -105,3 +120,14 @@ class MapOffering:
 @dataclass(frozen=True)
 class UnmapOffering:
     space_ids: list[str]
+
+
+# The full command vocabulary — keeps the codec in sync with what the aggregate accepts
+# (add a command above → it decodes for free), mirroring domain.commands.Command.
+SpaceCommand = (
+    AddSpaces | RenameSpace | RemoveSpace | MoveSpace
+    | SetSharing | SetConfig | SetCapacity | MarkRentable | MarkUnavailable
+    | SetProperty | Publish
+    | CreateOffering | UpdateOffering | DisableOffering | DeleteOffering
+    | MapOffering | UnmapOffering
+)

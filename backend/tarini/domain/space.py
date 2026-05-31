@@ -15,7 +15,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Callable
 
-from .errors import InvariantViolation, NotFound
+from .errors import InvariantViolation, NotFound, PublishBlocked
 
 IdGen = Callable[[str], str]
 
@@ -330,6 +330,25 @@ class SpaceTree:
         if isinstance(command, sc.MarkUnavailable):
             for sid in command.space_ids:
                 self.get(sid).status = "unavailable" if command.unavailable else "active"
+            return None
+
+        # ---- property-level ----
+        if isinstance(command, sc.SetProperty):
+            for fld in ("name", "type", "location", "gender", "owner_name"):
+                value = getattr(command, fld)
+                if value is not None:
+                    self.meta[fld] = value
+            if command.name is not None:
+                self.root().label = command.name  # denormalised display copy
+            return None
+
+        if isinstance(command, sc.Publish):
+            from .space_completeness import publish_open_items
+
+            blockers = publish_open_items(self)
+            if blockers:
+                raise PublishBlocked("; ".join(blockers))
+            self.meta["published"] = True
             return None
 
         # ---- offerings ----

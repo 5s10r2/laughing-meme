@@ -18,9 +18,13 @@ import typing
 from dataclasses import MISSING, fields
 
 from tarini.domain import commands as c
+from tarini.domain import space_commands as sc
 
-# name -> dataclass, auto-synced with the domain's Command union.
+# name -> dataclass, auto-synced with each domain command union (add a command to the
+# union → it decodes for free). The codec functions take a `command_types` map so the
+# legacy and tree vocabularies share one strict, tested boundary.
 COMMAND_TYPES: dict[str, type] = {t.__name__: t for t in typing.get_args(c.Command)}
+SPACE_COMMAND_TYPES: dict[str, type] = {t.__name__: t for t in typing.get_args(sc.SpaceCommand)}
 
 
 class CommandDecodeError(Exception):
@@ -74,8 +78,9 @@ def _required_fields(cls: type) -> list[str]:
     ]
 
 
-def decode_command(payload: dict) -> c.Command:
+def decode_command(payload: dict, command_types: dict[str, type] | None = None) -> c.Command:
     """Decode one command object into its domain dataclass. Raises CommandDecodeError."""
+    command_types = command_types or COMMAND_TYPES
     if not isinstance(payload, dict):
         raise CommandDecodeError("each command must be a JSON object")
 
@@ -83,10 +88,10 @@ def decode_command(payload: dict) -> c.Command:
     if not op:
         raise CommandDecodeError("command is missing its 'op' field (the command name)")
 
-    cls = COMMAND_TYPES.get(op)
+    cls = command_types.get(op)
     if cls is None:
         raise CommandDecodeError(
-            f"unknown command op {op!r}; valid ops: {sorted(COMMAND_TYPES)}"
+            f"unknown command op {op!r}; valid ops: {sorted(command_types)}"
         )
 
     args = {k: v for k, v in payload.items() if k != "op"}
@@ -119,24 +124,35 @@ def decode_command(payload: dict) -> c.Command:
         raise CommandDecodeError(f"{op}: {e}")
 
 
-def decode_commands(payloads: list) -> list[c.Command]:
+def decode_commands(payloads: list, command_types: dict[str, type] | None = None) -> list[c.Command]:
     """Decode a batch. Fails fast on the first bad command (nothing is applied)."""
     if not isinstance(payloads, list):
         raise CommandDecodeError("'commands' must be a JSON array")
     if not payloads:
         raise CommandDecodeError("'commands' is empty — provide at least one command")
-    return [decode_command(p) for p in payloads]
+    return [decode_command(p, command_types) for p in payloads]
 
 
-def command_catalog_text() -> str:
+def command_catalog_text(command_types: dict[str, type] | None = None) -> str:
     """A compact, never-drifting signature list of the command vocabulary, for the prompt /
     tool description: `CreatePackage(name, sharing?, ac?, food?, furnishing?, rent?, amenities?)`."""
+    command_types = command_types or COMMAND_TYPES
     lines = []
-    required = {name: set(_required_fields(cls)) for name, cls in COMMAND_TYPES.items()}
-    for name, cls in COMMAND_TYPES.items():
-        req = required[name]
-        params = ", ".join(
-            f.name if f.name in req else f"{f.name}?" for f in fields(cls)
-        )
+    for name, cls in command_types.items():
+        req = set(_required_fields(cls))
+        params = ", ".join(f.name if f.name in req else f"{f.name}?" for f in fields(cls))
         lines.append(f"{name}({params})")
     return "\n".join(lines)
+
+
+# ---- tree command vocabulary (thin wrappers over the shared, parameterised core) ----
+def decode_space_command(payload: dict):
+    return decode_command(payload, SPACE_COMMAND_TYPES)
+
+
+def decode_space_commands(payloads: list):
+    return decode_commands(payloads, SPACE_COMMAND_TYPES)
+
+
+def space_command_catalog_text() -> str:
+    return command_catalog_text(SPACE_COMMAND_TYPES)

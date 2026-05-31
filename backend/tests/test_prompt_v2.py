@@ -12,11 +12,19 @@ from tarini.prompts import (
 
 
 # --------------------------------------------------------------------------- the prompt
-def test_v2_prompt_loads_and_is_thin():
+def test_v2_prompt_loads_bounded_and_teaches_the_playbook():
     p = load_system_prompt_v2()
-    # generous ceiling — the design target is ~120-150 lines; guard against regrowth
-    assert len(p.splitlines()) < 160
     assert "Tarini" in p
+    # Principles + a compact playbook — not a 575-line script, not a bare-bones stub.
+    # Bounded so it stays cacheable; the audit established the old <160 ceiling was too thin.
+    assert 120 < len(p.splitlines()) < 240
+    # The restored conversational expertise must be present (the audit's core fixes):
+    assert "SetNamingPattern" in p            # naming protocol — fixes silent 001/101 default
+    for essential in ("AC", "food", "furnishing", "rent"):  # the 4 package gates
+        assert essential in p
+    assert "completeness" in p and "open_items" in p  # non-linear nudge engine
+    for component in ("MassingModel", "QuickReplyChips"):   # emit guidance
+        assert component in p
 
 
 def test_v2_prompt_teaches_the_new_tools_not_the_old():

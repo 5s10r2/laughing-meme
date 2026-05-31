@@ -21,10 +21,19 @@ def test_v2_offers_emit_ui_alongside_get_model_and_apply_commands():
     assert names == ["get_model", "apply_commands", "emit_ui"]
 
 
-def test_v2_emit_ui_enum_is_exactly_the_blueprint_registry():
+def test_v2_emit_ui_enum_is_blueprint_set_plus_quick_replies():
     enum = _emit_ui_def()["input_schema"]["properties"]["component"]["enum"]
-    assert set(enum) == set(BLUEPRINT_COMPONENTS)
-    assert enum == sorted(enum)  # stable order → stable prompt cache
+    # the model-projected blueprint set + the Claude-authored QuickReplyChips
+    assert set(enum) == set(BLUEPRINT_COMPONENTS) | {"QuickReplyChips"}
+    # blueprint names stay sorted+first (stable prompt cache); chips appended last
+    assert enum[:-1] == sorted(BLUEPRINT_COMPONENTS) and enum[-1] == "QuickReplyChips"
+
+
+def test_quick_reply_chips_is_validatable_and_not_a_blueprint_projection():
+    from tarini.blueprint import is_blueprint_component
+    # accepted by the shared validator, but NOT model-projected → Claude's props pass through
+    assert validate_emit_ui("QuickReplyChips", {"options": [{"label": "Men", "value": "Men"}]}) is None
+    assert is_blueprint_component("QuickReplyChips") is False
 
 
 def test_v2_emit_ui_props_are_optional():

@@ -38,6 +38,9 @@ from tarini.blueprint import BLUEPRINT_COMPONENTS
 
 _COMMAND_NAMES = sorted(COMMAND_TYPES)
 _BLUEPRINT_NAMES = sorted(BLUEPRINT_COMPONENTS)
+# Components the v2 path may emit: the model-projected blueprint set (empty props,
+# backend fills) + QuickReplyChips (Claude authors its `options`).
+_EMIT_COMPONENTS = _BLUEPRINT_NAMES + ["QuickReplyChips"]
 
 
 def _err(code: str, message: str, **extra) -> str:
@@ -107,13 +110,11 @@ TOOL_DEFINITIONS_V2 = [
     {
         "name": "emit_ui",
         "description": (
-            "Render a Living Blueprint visual in the chat. These are the primary way to "
-            "show the property taking shape — prefer them over describing structure in "
-            "prose.\n\n"
-            "Props are filled automatically from the saved model, so you do NOT author the "
-            "data — pass an empty props object ({}). Call get_model first so the saved data "
-            "is current, then emit the component whose moment has arrived (you may emit more "
-            "than one in a turn):\n"
+            "Render a component in the chat. Call get_model first so the saved data is "
+            "current; you may emit more than one component in a turn.\n\n"
+            "BLUEPRINT components are projected from the saved model — pass an empty props "
+            "object ({}); the backend fills them, so what you show always matches what's "
+            "saved:\n"
             "- MassingModel — the signature isometric building. Show it after floors are "
             "added or changed, so the user sees their property take shape.\n"
             "- FloorLedger — a top-down list of every floor with its room mix. Show it when "
@@ -121,20 +122,27 @@ TOOL_DEFINITIONS_V2 = [
             "- BlueprintMapping — per-floor room→package assignment. Show it during the "
             "mapping step.\n"
             "- UnmappedWarning — floors with rooms not yet on a package. Show it when rooms "
-            "remain unmapped before publishing."
+            "remain unmapped before publishing.\n\n"
+            "QuickReplyChips is the exception — YOU author its options. Use it for "
+            "low-friction tap-able choices (gender, yes/no, accept a suggestion). Pass "
+            'props {"options": [{"label": "Men", "value": "Men"}, ...]} (2–5 short choices). '
+            "Always ask the question in words too."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "component": {
                     "type": "string",
-                    "enum": _BLUEPRINT_NAMES,
-                    "description": "Which blueprint component to render.",
+                    "enum": _EMIT_COMPONENTS,
+                    "description": "Which component to render.",
                 },
                 "props": {
                     "type": "object",
                     "additionalProperties": True,
-                    "description": "Leave empty ({}). The backend fills props from the model.",
+                    "description": (
+                        "Blueprint components: leave empty ({}) — the backend fills props "
+                        'from the model. QuickReplyChips: pass {"options": [{"label","value"}]}.'
+                    ),
                 },
             },
             "required": ["component"],

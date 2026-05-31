@@ -37,6 +37,8 @@ AVAILABLE_COMPONENTS = {
     "FloorLedger",
     "BlueprintMapping",
     "UnmappedWarning",
+    # QuickReplyChips — Claude-authored options (tap-able choices), used in both paths.
+    "QuickReplyChips",
 }
 
 

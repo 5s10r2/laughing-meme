@@ -43,6 +43,16 @@ def can_contain(parent_kind: str, child_kind: str) -> bool:
     return KIND_RANK[child_kind] > KIND_RANK[parent_kind]
 
 
+# A room's sharing IS its capacity (beds = max tenants). Dormitory/unknown → explicit count.
+_SHARING_CAPACITY: dict[str, int] = {"single": 1, "double": 2, "triple": 3, "quad": 4}
+
+
+def capacity_for(sharing: str | None) -> int | None:
+    """Beds a room holds, derived from its sharing. None when it needs an explicit count
+    (dormitory) or is unknown."""
+    return _SHARING_CAPACITY.get(sharing or "")
+
+
 @dataclass
 class Space:
     id: str
@@ -120,3 +130,76 @@ class SpaceTree:
         for desc in self.descendants(space_id):
             del self.spaces[desc.id]
         del self.spaces[node.id]
+
+    def move(self, space_id: str, new_parent_id: str) -> None:
+        if space_id == self.root_id:
+            raise InvariantViolation("cannot move the property root")
+        node = self.get(space_id)
+        new_parent = self.get(new_parent_id)
+        if new_parent_id == space_id or any(d.id == new_parent_id for d in self.descendants(space_id)):
+            raise InvariantViolation("cannot move a space into itself or its own descendant")
+        if not can_contain(new_parent.kind, node.kind):
+            raise InvariantViolation(f"a {new_parent.kind} cannot contain a {node.kind}")
+        node.parent_id = new_parent_id
+        node.order = len(self.children(new_parent_id)) - 1  # appended; -1 since node now counted
+
+    # ---- command entry point (mirrors Property.apply) ----
+    def apply(self, command) -> object:
+        """Apply one Space command, enforcing the tree's invariants. Returns the new/affected
+        node(s) where useful. Unknown commands raise InvariantViolation (never a leaked error)."""
+        import tarini.domain.space_commands as sc
+
+        if isinstance(command, sc.AddSpaces):
+            labels = command.labels or [str(i + 1) for i in range(command.count)]
+            attrs: dict = {}
+            if command.sharing is not None:
+                attrs["sharing"] = command.sharing
+                cap = capacity_for(command.sharing)
+                if cap is not None:
+                    attrs["capacity"] = cap
+            if command.config is not None:
+                attrs["config"] = command.config
+            return [self.add(command.parent_id, command.kind, label, **attrs) for label in labels]
+
+        if isinstance(command, sc.RenameSpace):
+            self.get(command.space_id).label = command.label
+            return None
+
+        if isinstance(command, sc.RemoveSpace):
+            self.remove(command.space_id)
+            return None
+
+        if isinstance(command, sc.MoveSpace):
+            self.move(command.space_id, command.new_parent_id)
+            return None
+
+        if isinstance(command, sc.SetSharing):
+            for sid in command.space_ids:
+                node = self.get(sid)
+                node.sharing = command.sharing
+                cap = capacity_for(command.sharing)
+                if cap is not None:
+                    node.capacity = cap
+            return None
+
+        if isinstance(command, sc.SetConfig):
+            for sid in command.space_ids:
+                self.get(sid).config = command.config
+            return None
+
+        if isinstance(command, sc.SetCapacity):
+            for sid in command.space_ids:
+                self.get(sid).capacity = command.capacity
+            return None
+
+        if isinstance(command, sc.MarkRentable):
+            for sid in command.space_ids:
+                self.get(sid).rentable = command.rentable
+            return None
+
+        if isinstance(command, sc.MarkUnavailable):
+            for sid in command.space_ids:
+                self.get(sid).status = "unavailable" if command.unavailable else "active"
+            return None
+
+        raise InvariantViolation(f"unknown space command {type(command).__name__}")

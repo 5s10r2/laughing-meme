@@ -85,6 +85,8 @@ class SpaceTree:
         self.root_id = root_id
         self._id_gen = id_gen
         self.offerings: dict = offerings if offerings is not None else {}
+        self.meta: dict = {}      # property-level: owner_name, type, location, gender
+        self.version: int = 0
 
     @classmethod
     def new(cls, label: str, id_gen: IdGen = _default_id_gen) -> "SpaceTree":
@@ -96,6 +98,95 @@ class SpaceTree:
         if off is None:
             raise NotFound(f"no offering {offering_id!r}")
         return off
+
+    # ---- persistence ----
+    def to_dict(self) -> dict:
+        from dataclasses import asdict
+
+        return {
+            "root_id": self.root_id,
+            "meta": dict(self.meta),
+            "version": self.version,
+            "spaces": [asdict(s) for s in self.spaces.values()],
+            "offerings": [asdict(o) for o in self.offerings.values()],
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict, id_gen: IdGen = _default_id_gen) -> "SpaceTree":
+        from .offering import Offering
+
+        spaces = {s["id"]: Space(**s) for s in data.get("spaces", [])}
+        offerings = {o["id"]: Offering(**o) for o in data.get("offerings", [])}
+        tree = cls(spaces, data["root_id"], id_gen, offerings)
+        tree.meta = dict(data.get("meta", {}))
+        tree.version = data.get("version", 0)
+        return tree
+
+    @classmethod
+    def from_legacy(cls, data: dict, id_gen: IdGen = _default_id_gen) -> "SpaceTree":
+        """Convert a stored legacy Property snapshot (blocks/floors/rooms/packages) into the
+        recursive tree. A single block collapses away; multiple blocks are preserved; packages
+        become offerings; room↔package links carry over. Lossless for the live PG model."""
+        from .offering import Offering
+
+        tree = cls.new(data.get("name") or "Property", id_gen)
+        tree.meta = {k: data.get(k) for k in ("owner_name", "type", "location", "gender")}
+        tree.version = data.get("version", 0)
+
+        # packages → offerings (constructed directly: migrating existing data, not new input)
+        pkg_to_offering: dict[str, str] = {}
+        for pk in data.get("packages", []):
+            attrs = {k: pk[k] for k in ("sharing", "furnishing", "food", "amenities") if pk.get(k)}
+            off = Offering(
+                id=id_gen("off"),
+                name=pk.get("name") or "Package",
+                price=pk.get("rent"),
+                billing_basis="per_bed",
+                billing_period="monthly",
+                active=pk.get("active", True),
+                ac=pk.get("ac", False),
+                **attrs,
+            )
+            tree.offerings[off.id] = off
+            pkg_to_offering[pk["id"]] = off.id
+
+        # blocks: a single block collapses into the property root
+        blocks = data.get("blocks", [])
+        multi_block = len(blocks) > 1
+        block_parent: dict[str, str] = {}
+        for b in blocks:
+            if multi_block:
+                block_parent[b["id"]] = tree.add(tree.root_id, "block", b["label"]).id
+            else:
+                block_parent[b["id"]] = tree.root_id
+
+        # floors (ordered by their legacy index)
+        floor_node: dict[str, str] = {}
+        for f in sorted(data.get("floors", []), key=lambda f: f.get("index", 0)):
+            parent = block_parent.get(f.get("block_id"), tree.root_id)
+            node = tree.add(parent, "floor", f["label"])
+            node.status = "active" if f.get("active", True) else "unavailable"
+            floor_node[f["id"]] = node.id
+
+        # rooms
+        for r in data.get("rooms", []):
+            parent = floor_node.get(r.get("floor_id"))
+            if parent is None:
+                continue  # orphan room (floor missing) — drop rather than corrupt the tree
+            node = tree.add(parent, "room", r.get("name") or "")
+            node.status = r.get("status", "active")
+            sharing = r.get("sharing")
+            if sharing:
+                node.sharing = sharing
+                cap = capacity_for(sharing)
+                if cap is not None:
+                    node.capacity = cap
+            pid = r.get("package_id")
+            if pid and pid in pkg_to_offering:
+                node.offering_id = pkg_to_offering[pid]
+                node.rentable = True
+
+        return tree
 
     # ---- reads ----
     def root(self) -> Space:

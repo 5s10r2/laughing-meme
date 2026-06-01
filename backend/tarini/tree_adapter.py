@@ -294,4 +294,14 @@ def tree_live_context(snapshot: dict) -> str:
     if open_items:
         lines.append("Still open before publish:")
         lines.extend(f"- {item}" for item in open_items)
+
+    # Soft nudge — amenities are optional (never a publish blocker), but the operator wants to be
+    # asked. Surface a gentle suggestion once an offering exists with no amenities captured yet, so
+    # the completeness-driven agent offers them instead of racing to the publish gate.
+    offerings = model.get("offerings", {})
+    off_list = list(offerings.values()) if isinstance(offerings, dict) else (offerings or [])
+    active_offerings = [o for o in off_list if o.get("active", True)]
+    if active_offerings and not any(o.get("amenities") for o in active_offerings):
+        lines.append("Suggested next (optional, not a blocker): ask once what amenities the property "
+                     "has, then continue to mapping/publish.")
     return "\n".join(lines)

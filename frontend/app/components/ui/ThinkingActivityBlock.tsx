@@ -10,19 +10,22 @@ interface ThinkingActivityBlockProps {
   isStreaming: boolean;
 }
 
+// Fallback only — the backend already sends a human phrase in `toolDescription`
+// (e.g. "Structuring the floors...", "Reading your property..."). This map is a
+// safety net so a tool with no description never leaks its raw op name.
 const TOOL_PHRASES: Record<string, string> = {
+  get_model: "Reading your property",
+  apply_commands: "Saving your changes",
   get_state: "Checking your progress",
   update_state: "Saving your information",
   advance_stage: "Moving to the next step",
-  emit_ui: "Preparing your view",
-  validate_property_data: "Checking your property details",
-  create_packages: "Setting up your packages",
-  map_rooms: "Mapping your rooms",
-  verify_setup: "Verifying your setup",
 };
 
 function toHumanPhrase(part: ToolActivityPart): string {
-  return TOOL_PHRASES[part.tool] ?? part.tool.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  // Prefer the backend's human-worded description; strip its trailing ellipsis
+  // since we render our own. Never fall back to the raw op name.
+  const desc = part.toolDescription?.trim().replace(/[.…\s]+$/, "");
+  return desc || TOOL_PHRASES[part.tool] || "Working on it";
 }
 
 export function ThinkingActivityBlock({ parts, isStreaming }: ThinkingActivityBlockProps) {

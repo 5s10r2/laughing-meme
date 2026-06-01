@@ -64,14 +64,18 @@ export function MessageBubble({ message, sendMessage }: MessageBubbleProps) {
       {isTarini ? (
         <div className="max-w-[85%] space-y-0">
           {!hasContent ? (
-            /* Typing indicator — no parts yet */
-            <div className="rounded-2xl rounded-tl-sm bg-bg-surface px-4 py-3">
-              <span className="inline-flex gap-1 items-center py-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-content-tertiary animate-bounce [animation-delay:0ms]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-content-tertiary animate-bounce [animation-delay:150ms]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-content-tertiary animate-bounce [animation-delay:300ms]" />
-              </span>
-            </div>
+            // Typing dots only while actively streaming — a finished empty bubble is invisible.
+            // (The finally-block filter in useTarinaChat removes these from state, so this
+            // branch should only ever render transiently while content is still arriving.)
+            message.streaming ? (
+              <div className="rounded-2xl rounded-tl-sm bg-bg-surface px-4 py-3">
+                <span className="inline-flex gap-1 items-center py-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-content-tertiary animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-content-tertiary animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-content-tertiary animate-bounce [animation-delay:300ms]" />
+                </span>
+              </div>
+            ) : null
           ) : (
             <div className="space-y-0.5">
               {toolParts.length > 0 && (

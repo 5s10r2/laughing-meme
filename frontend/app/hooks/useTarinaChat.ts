@@ -276,7 +276,16 @@ export function useTarinaChat(): UseTarinaChatReturn {
       }
     } finally {
       setMessages((prev) =>
-        prev.map((m) => (m.id === streamId ? { ...m, streaming: false } : m))
+        prev
+          .map((m) => (m.id === streamId ? { ...m, streaming: false } : m))
+          // Remove zombie bubbles: if streaming ended with no user-visible content
+          // (empty parts, or only tool_activity parts that ThinkingActivityBlock cleared),
+          // drop the bubble entirely. The model's turn is still in backend history — the
+          // next user message picks up correctly. Avoids the frozen-typing-dots bug.
+          .filter((m) => {
+            if (m.id !== streamId) return true;
+            return m.parts.some((p) => (p.type === "text" && p.text) || p.type === "component");
+          })
       );
       setIsStreaming(false);
       setActivity(null);

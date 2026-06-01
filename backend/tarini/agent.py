@@ -431,6 +431,11 @@ async def _stream_chat_v2(
         logger.exception("[stream_chat_v2] failed to render live context for %s", session_id)
         live_block = "## Current model (live)\n(Call get_model for the current state.)"
 
+    # Track whether any user-visible content (text or component) was emitted this turn.
+    # Used to detect silent turns (model ran tools but produced no response) so they
+    # can be logged and handled gracefully — avoids zombie empty bubbles in the UI.
+    any_visible = False
+
     for _round in range(MAX_TOOL_ROUNDS):
         api_history = _trim_history_for_api(history)
         logger.info(
@@ -458,6 +463,8 @@ async def _stream_chat_v2(
                     async for event in stream:
                         if event.type == "content_block_delta":
                             if event.delta.type == "text_delta":
+                                if event.delta.text:
+                                    any_visible = True
                                 yield {"type": "text", "text": event.delta.text}
                     final_message = await stream.get_final_message()
         except TimeoutError:
@@ -486,6 +493,16 @@ async def _stream_chat_v2(
 
         tool_use_blocks = [b for b in final_message.content if b.type == "tool_use"]
         if final_message.stop_reason != "tool_use" or not tool_use_blocks:
+            if not any_visible:
+                # The model produced no text and no component across this entire turn —
+                # log it so we can track the pattern; the frontend filter will clean up
+                # the empty bubble. (Most common cause: catalog error loops where the
+                # model never recovered to produce a reply before stop_reason=end_turn.)
+                logger.warning(
+                    "[stream_chat_v2] silent turn for session %s — no visible content emitted "
+                    "(stop_reason=%s, content_blocks=%d, round=%d)",
+                    session_id, final_message.stop_reason, len(final_message.content), _round,
+                )
             yield {"type": "done"}
             return
 
@@ -512,6 +529,7 @@ async def _stream_chat_v2(
                                 "[stream_chat_v2] blueprint projection failed for %s (session %s)",
                                 component, session_id,
                             )
+                    any_visible = True
                     yield {
                         "type": "component",
                         "name": component,
@@ -565,8 +583,15 @@ async def _stream_chat_v2(
 
         history.append({"role": "user", "content": tool_results})
 
+    # MAX_TOOL_ROUNDS exhausted: the model ran tools repeatedly without producing
+    # a final text response. Yield an error (not silent done) so the user gets
+    # visible feedback instead of a zombie empty bubble.
     logger.warning("[stream_chat_v2] hit MAX_TOOL_ROUNDS for session %s", session_id)
-    yield {"type": "done"}
+    yield {
+        "type": "error",
+        "message": "I got a bit stuck working on that. Please try again or rephrase your message.",
+        "code": "MAX_TOOL_ROUNDS",
+    }
 
 
 # ---------------------------------------------------------------------------

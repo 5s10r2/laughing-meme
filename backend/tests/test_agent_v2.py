@@ -330,3 +330,49 @@ async def test_v2_bad_command_does_not_crash_stream(new_experience, monkeypatch)
     assert tc["result"]["code"] == "BAD_COMMAND"
     assert "state_snapshot" not in types        # nothing applied → no snapshot
     assert (await new_experience.get_model("s4"))["version"] == 0
+
+
+async def test_v2_max_tool_rounds_yields_error_not_done(new_experience, monkeypatch):
+    """When the model exhausts MAX_TOOL_ROUNDS without producing a text response,
+    the stream must yield an 'error' event (not a silent 'done') so the frontend
+    shows visible feedback instead of a zombie empty bubble."""
+    import tarini.agent as _agent
+
+    # Build MAX_TOOL_ROUNDS rounds that are all pure tool-use with no text.
+    pure_tool_round = {
+        "deltas": [],   # no text delta → any_visible stays False
+        "final": _FinalMessage(
+            content=[_ToolUseBlock("tu1", "get_model", {})],
+            stop_reason="tool_use",
+        ),
+    }
+    rounds = [pure_tool_round] * _agent.MAX_TOOL_ROUNDS
+    monkeypatch.setattr(agent, "_get_anthropic_client", lambda: _FakeClient(rounds))
+
+    events = await _collect("s6", "keep looping", [])
+    types = [e["type"] for e in events]
+
+    # Must end with error, not done
+    assert types[-1] == "error", f"expected 'error' as last event, got {types[-1]!r}"
+    err = events[-1]
+    assert err.get("code") == "MAX_TOOL_ROUNDS"
+    assert "done" not in types
+
+
+async def test_v2_silent_end_turn_still_yields_done(new_experience, monkeypatch):
+    """A model response with stop_reason='end_turn' but no text/component emitted
+    still yields 'done' (the frontend filter handles the empty bubble). The backend
+    should NOT turn this into an error — history is intact for the next turn."""
+    rounds = [
+        {
+            "deltas": [],   # no text at all
+            "final": _FinalMessage(content=[_TextBlock("")], stop_reason="end_turn"),
+        }
+    ]
+    monkeypatch.setattr(agent, "_get_anthropic_client", lambda: _FakeClient(rounds))
+
+    events = await _collect("s7", "silent message", [])
+    types = [e["type"] for e in events]
+
+    assert types[-1] == "done", f"expected 'done', got {types}"
+    assert "error" not in types

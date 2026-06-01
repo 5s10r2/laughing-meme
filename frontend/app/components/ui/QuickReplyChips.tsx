@@ -16,7 +16,7 @@ export function QuickReplyChips({ options, onSendMessage }: QuickReplyChipsProps
 
   function handleSelect(option: QuickReplyOption) {
     setSelected(option.value);
-    onSendMessage?.(option.value);
+    onSendMessage?.(option.label);
   }
 
   return (

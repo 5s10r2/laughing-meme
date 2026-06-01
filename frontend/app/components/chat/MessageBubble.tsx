@@ -1,7 +1,8 @@
 "use client";
 
-import type { Message } from "../../lib/types";
+import type { Message, ToolActivityPart } from "../../lib/types";
 import { MessagePartRenderer } from "./MessagePartRenderer";
+import { ThinkingActivityBlock } from "../ui/ThinkingActivityBlock";
 
 interface MessageBubbleProps {
   message: Message;
@@ -37,6 +38,9 @@ export function MessageBubble({ message, sendMessage }: MessageBubbleProps) {
   }
 
   const isTarini = message.role === "tarini";
+  const toolParts = message.parts.filter((p): p is ToolActivityPart => p.type === "tool_activity");
+  const contentParts = message.parts.filter((p) => p.type !== "tool_activity");
+  const lastComponentIdx = contentParts.reduce((acc, p, i) => (p.type === "component" ? i : acc), -1);
   const hasContent = message.parts.length > 0 && message.parts.some(
     (p) => (p.type === "text" && p.text) || p.type === "component" || p.type === "tool_activity"
   );
@@ -70,8 +74,12 @@ export function MessageBubble({ message, sendMessage }: MessageBubbleProps) {
             </div>
           ) : (
             <div className="space-y-0.5">
-              {message.parts.map((part, i) => {
-                // Text parts get the bubble styling
+              {toolParts.length > 0 && (
+                <ThinkingActivityBlock parts={toolParts} isStreaming={!!message.streaming} />
+              )}
+              {contentParts.map((part, i) => {
+                // One-question guard: skip all but the last component per turn
+                if (part.type === "component" && i !== lastComponentIdx) return null;
                 if (part.type === "text") {
                   if (!part.text) return null;
                   return (
@@ -80,15 +88,12 @@ export function MessageBubble({ message, sendMessage }: MessageBubbleProps) {
                       className="rounded-2xl rounded-tl-sm bg-bg-surface px-4 py-3 text-sm leading-relaxed text-content"
                     >
                       <MessagePartRenderer part={part} sendMessage={sendMessage} />
-                      {/* Streaming cursor — only on last text part while streaming */}
-                      {message.streaming && i === message.parts.length - 1 && (
+                      {message.streaming && i === contentParts.length - 1 && (
                         <span className="inline-block w-0.5 h-3.5 bg-accent-light ml-0.5 animate-pulse" />
                       )}
                     </div>
                   );
                 }
-
-                // Component and tool_activity parts render outside the text bubble
                 return (
                   <div key={i} className="max-w-full">
                     <MessagePartRenderer part={part} sendMessage={sendMessage} />

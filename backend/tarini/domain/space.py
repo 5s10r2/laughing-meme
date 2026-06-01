@@ -57,6 +57,31 @@ def capacity_for(sharing: str | None) -> int | None:
 RENTABLE_KINDS = frozenset({"flat", "room", "bed"})
 
 
+# Property-level gender preference — a fixed, filterable enum (no free text). The agent
+# may say "boys"/"ladies"/"mixed"; we canonicalise on write so stored data stays sane.
+GENDERS = frozenset({"male", "female", "coed"})
+
+_GENDER_ALIASES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("co-ed", "coed", "co ed", "mixed", "unisex", "any", "anyone", "family"), "coed"),
+    (("female", "girl", "women", "ladies"), "female"),
+    (("male", "boy", "men", "gents", "bachelor"), "male"),
+)
+
+
+def normalize_gender(value: str | None) -> str | None:
+    """Canonicalise a free-text gender to the fixed enum (male | female | coed).
+    Returns None for empty/unknown input — the caller decides whether that is an error."""
+    if not value:
+        return None
+    v = value.strip().lower()
+    if not v:
+        return None
+    for needles, canon in _GENDER_ALIASES:
+        if any(t in v for t in needles):
+            return canon
+    return None
+
+
 def _check_sharing(sharing: str | None) -> None:
     from .offering import SHARINGS  # single source of truth for the catalog
 
@@ -351,7 +376,14 @@ class SpaceTree:
 
         # ---- property-level ----
         if isinstance(command, sc.SetProperty):
-            for fld in ("name", "type", "location", "gender", "owner_name"):
+            if command.gender is not None:
+                canon = normalize_gender(command.gender)
+                if canon is None:
+                    raise InvariantViolation(
+                        f"unknown gender {command.gender!r}; use male, female, or coed"
+                    )
+                self.meta["gender"] = canon
+            for fld in ("name", "type", "location", "owner_name"):
                 value = getattr(command, fld)
                 if value is not None:
                     self.meta[fld] = value

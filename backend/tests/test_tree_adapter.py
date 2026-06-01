@@ -54,15 +54,18 @@ def _pg():
 
 
 def _flats():
-    """A flat-building: Ground[G1 2bhk→offering, G2 2bhk unmapped]."""
+    """A flat-building: Ground[G1 2bhk→offering, G2 2bhk unmapped]. Property + offering are
+    fully specified (gender + deposit/notice/lock-in) so only the mapping gap (G2) is open."""
     t = SpaceTree.new("Great Heights", id_gen=_seq_gen())
-    t.meta = {"name": "Great Heights", "type": "flat", "location": "Gurgaon"}
+    t.meta = {"name": "Great Heights", "type": "flat", "location": "Gurgaon", "gender": "coed"}
     g = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="floor", labels=["Ground"]))[0]
     flats = t.apply(sc.AddSpaces(parent_id=g.id, kind="flat", labels=["G1", "G2"], config="2bhk"))
     ids = [f.id for f in flats]
     t.apply(sc.MarkRentable(space_ids=ids))
-    off = t.apply(sc.CreateOffering(name="2BHK Furnished", price=25000, billing_basis="per_unit",
-                                    attrs={"config": "2bhk", "furnishing": "fully_furnished"}))
+    off = t.apply(sc.CreateOffering(
+        name="2BHK Furnished", price=25000, billing_basis="per_unit",
+        attrs={"config": "2bhk", "furnishing": "fully_furnished",
+               "deposit_months": 2, "notice_days": 30, "lock_in_months": 0}))
     t.apply(sc.MapOffering(space_ids=ids[:1], offering_id=off.id))
     return t, ids, off
 
@@ -80,7 +83,7 @@ def test_massing_pg():
 def test_massing_flats_uses_unit_vocab():
     t, _, _ = _flats()
     p = ta.massing_props(t)
-    assert p["meta"] == "Flat · Gurgaon"
+    assert p["meta"] == "Co-ed Flat · Gurgaon"  # gender preference now surfaced in the massing meta
     stats = {s["label"]: s["value"] for s in p["stats"]}
     assert stats == {"Floors": 1, "Flats": 2, "Types": 1}  # rentable kind is flat → "Flats"
 

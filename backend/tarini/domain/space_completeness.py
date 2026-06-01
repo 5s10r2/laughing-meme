@@ -20,6 +20,18 @@ def _tri(any_: bool, all_: bool) -> Status:
     return "partial" if any_ else "empty"
 
 
+def _offering_complete(o) -> bool:
+    """An active offering is fully specified for publishing: priced, with a security
+    deposit, notice period, and lock-in all *answered*. 0 is a valid answer (a zero-deposit
+    PG, or no lock-in) — only None means 'not asked yet', which blocks publish."""
+    return (
+        o.price is not None
+        and (o.deposit_months is not None or o.deposit_amount is not None)
+        and o.notice_days is not None
+        and o.lock_in_months is not None
+    )
+
+
 def _rentable(tree: "SpaceTree") -> list:
     return [s for s in tree.spaces.values() if s.rentable]
 
@@ -34,7 +46,8 @@ def publish_open_items(tree: "SpaceTree") -> list[str]:
 
     for label, value in (("a property name", tree.meta.get("name")),
                          ("a property type", tree.meta.get("type")),
-                         ("a location", tree.meta.get("location"))):
+                         ("a location", tree.meta.get("location")),
+                         ("a gender preference (Boys / Girls / Co-ed)", tree.meta.get("gender"))):
         if not value:
             items.append(f"Needs {label}")
 
@@ -44,8 +57,16 @@ def publish_open_items(tree: "SpaceTree") -> list[str]:
         items.append("No offerings created yet")
 
     for off in tree.offerings.values():
-        if off.active and off.price is None:
+        if not off.active:
+            continue
+        if off.price is None:
             items.append(f"Offering '{off.name}' has no starting rent")
+        if off.deposit_months is None and off.deposit_amount is None:
+            items.append(f"Offering '{off.name}' needs a security deposit (0 if none)")
+        if off.notice_days is None:
+            items.append(f"Offering '{off.name}' needs a notice period")
+        if off.lock_in_months is None:
+            items.append(f"Offering '{off.name}' needs a lock-in period (0 if none)")
 
     unmapped = [s for s in _active_rentable(tree) if not s.offering_id]
     if unmapped:
@@ -55,8 +76,9 @@ def publish_open_items(tree: "SpaceTree") -> list[str]:
 
 
 def compute_completeness(tree: "SpaceTree") -> dict:
-    # property facet
-    fields = [bool(tree.meta.get("name")), bool(tree.meta.get("type")), bool(tree.meta.get("location"))]
+    # property facet — name, type, location, and gender preference
+    fields = [bool(tree.meta.get("name")), bool(tree.meta.get("type")),
+              bool(tree.meta.get("location")), bool(tree.meta.get("gender"))]
     prop = _tri(any(fields), all(fields))
 
     # structure facet — has the inventory been laid out, with sellable units identified?
@@ -64,11 +86,11 @@ def compute_completeness(tree: "SpaceTree") -> dict:
     rentable = _rentable(tree)
     structure = _tri(has_children, bool(rentable))
 
-    # offerings facet — at least one, all active priced
+    # offerings facet — at least one, all active fully specified (price + deposit + notice + lock-in)
     active_offerings = [o for o in tree.offerings.values() if o.active]
     offerings = _tri(
         bool(tree.offerings),
-        bool(active_offerings) and all(o.price is not None for o in active_offerings),
+        bool(active_offerings) and all(_offering_complete(o) for o in active_offerings),
     )
 
     # mapping facet — every active rentable unit mapped to an offering

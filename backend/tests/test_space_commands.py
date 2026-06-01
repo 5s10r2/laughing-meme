@@ -240,13 +240,34 @@ def test_publish_blocks_until_ready_then_succeeds():
     with pytest.raises(PublishBlocked) as exc:
         t.apply(sc.Publish())  # nothing set up yet
     assert isinstance(exc.value.open_items, list) and len(exc.value.open_items) >= 3
-    t.apply(sc.SetProperty(name="Sunrise PG", type="pg", location="HSR"))
+    # gender (P0) + full offering terms (deposit/notice/lock-in) are now required to publish
+    t.apply(sc.SetProperty(name="Sunrise PG", type="pg", location="HSR", gender="male"))
     r = t.apply(sc.AddSpaces(parent_id=t.root().id, kind="room", count=1, sharing="double"))[0]
     t.apply(sc.MarkRentable(space_ids=[r.id]))
-    off = t.apply(sc.CreateOffering(name="Double", price=8000))
+    off = t.apply(sc.CreateOffering(
+        name="Double", price=8000,
+        attrs={"deposit_months": 2, "notice_days": 30, "lock_in_months": 0},
+    ))
     t.apply(sc.MapOffering(space_ids=[r.id], offering_id=off.id))
     t.apply(sc.Publish())
     assert t.meta["published"] is True
+
+
+def test_set_property_canonicalises_gender():
+    """The agent may say 'boys'/'ladies'/'mixed' — the domain stores the canonical enum."""
+    t = _tree()
+    t.apply(sc.SetProperty(gender="Boys"))
+    assert t.meta["gender"] == "male"
+    t.apply(sc.SetProperty(gender="girls only"))
+    assert t.meta["gender"] == "female"
+    t.apply(sc.SetProperty(gender="Co-Ed"))
+    assert t.meta["gender"] == "coed"
+
+
+def test_set_property_rejects_unknown_gender():
+    t = _tree()
+    with pytest.raises(InvariantViolation):
+        t.apply(sc.SetProperty(gender="purple"))
 
 
 def test_apply_rejects_unknown_command():

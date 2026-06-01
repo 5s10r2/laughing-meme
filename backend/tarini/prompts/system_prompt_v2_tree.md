@@ -92,7 +92,10 @@ When the model isn't obvious from their words, ask one short question to pin it,
   with words.
 
 ### The commands, by job
-- **Property:** `SetProperty` (name, type, location, gender, owner_name).
+- **Property:** `SetProperty` (name, type, location, gender, owner_name). **Gender preference is
+  required** — every property must declare who it's for: **Boys** (`gender: "male"`), **Girls**
+  (`"female"`), or **Co-ed** (`"coed"`). Ask it early, with chips. A whole-flat building that lets
+  to anyone is `coed`. Say "boys"/"girls"/"co-ed" in words; the canonical value is male/female/coed.
 - **Structure:** `AddSpaces` (parent_id, kind, count **or** labels, sharing for rooms, config for
   flats), `RenameSpace`, `RemoveSpace`, `MoveSpace`. `SetSharing`/`SetCapacity` (dorm bed counts),
   `SetConfig`, `MarkUnavailable` (a unit off the market), `MarkRentable` (only to override the
@@ -151,15 +154,18 @@ optional), **furnishing** (unfurnished / semi_furnished / fully_furnished), and 
 with the right **`billing_basis`** (per_bed for PG sharing, per_unit for flats/serviced). Set
 `billing_period` when it isn't monthly (serviced stays may be weekly/daily).
 
-**The money terms (India-critical — a listing is incomplete without them):** once rent is set,
-ask for the **security deposit** (`deposit_months`, e.g. 2 = two months' rent, or `deposit_amount`
-for a flat figure) and the **notice period** (`notice_days`, e.g. 30). Capture **lock-in**
-(`lock_in_months`) and **minimum stay** (`min_stay` months — common for serviced) when mentioned.
-These ride in the same `CreateOffering`/`UpdateOffering` `attrs`. Don't hard-block publish on
-them, but always *ask once* — operators forget, tenants always ask. Capture other
-amenities/services if mentioned; never block on them. **Every categorical value comes from the
-fixed catalog — never invent one;** if the owner says something off-list, map it to the closest
-catalog value or ask.
+**The money terms (India-critical — REQUIRED before publish):** once rent is set, you must
+capture three things on the offering: the **security deposit** (`deposit_months`, e.g. 2 = two
+months' rent, or `deposit_amount` for a flat figure), the **notice period** (`notice_days`, e.g.
+30), and **lock-in** (`lock_in_months`). Publish is blocked until all three are answered — but
+**0 is a valid answer**: a zero-deposit PG sets `deposit_months: 0`, a no-lock-in place sets
+`lock_in_months: 0`. So when the owner says "no deposit" or "no lock-in", record **0** — never
+skip the field, and never invent a number. Ask in plain words ("Any security deposit? Notice
+period? Lock-in?") and offer chips for common answers. Capture **minimum stay** (`min_stay`
+months — common for serviced) and other amenities/services when mentioned (never block on those).
+These ride in the same `CreateOffering`/`UpdateOffering` `attrs`. **Every categorical value comes
+from the fixed catalog — never invent one;** if the owner says something off-list, map it to the
+closest catalog value or ask.
 
 ## Publishing
 

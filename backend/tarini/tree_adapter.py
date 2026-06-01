@@ -79,6 +79,29 @@ def _unit_names(units: list) -> list[dict]:
     return [{"id": u.id, "name": u.label} for u in units]
 
 
+def _qualify_labels(units: list) -> list[tuple]:
+    """Return (id, label, category) tuples with unique, human-readable names.
+
+    When rooms were added with the bare per-type-batch fallback ("1","2","3" per
+    AddSpaces call), two batches on one floor produce duplicate labels like
+    "1 2 3 1 2" (doubles then singles).  Detect this and qualify: "D1 D2 D3 S1 S2".
+
+    No-op when all labels are already unique — covers the common case where a
+    naming pattern (e.g. "101–106") has been applied.
+    """
+    raw = [(u.id, u.label, _unit_type(u)) for u in units]
+    labels = [r[1] for r in raw]
+    if len(labels) == len(set(labels)):
+        return raw  # already unique
+    type_seq: dict[str, int] = {}
+    result = []
+    for uid, lbl, cat in raw:
+        type_seq[cat] = type_seq.get(cat, 0) + 1
+        prefix = (cat[0].upper() if cat else "U")
+        result.append((uid, f"{prefix}{type_seq[cat]}", cat))
+    return result
+
+
 def massing_props(tree: SpaceTree) -> dict:
     floors = _floors(tree)
     rentable = _all_rentable(tree)
@@ -120,30 +143,37 @@ def floor_ledger_props(tree: SpaceTree) -> dict:
     out = []
     for f in _floors_top_down(tree):
         units = _rentable_under(tree, f.id)
+        qualified = _qualify_labels(units)
         out.append({
             "id": f.id,
             "name": f.label,
             "rooms": len(units),
             "segments": _mix_segments(units),
-            "nameRange": _name_range([{"name": u.label} for u in units]),
+            "nameRange": _name_range([{"name": lbl} for _, lbl, _ in qualified]),
             "mapped": bool(units) and all(_is_mapped(tree, u) for u in units),
-            "units": [{"id": u.id, "name": u.label, "category": _unit_type(u)} for u in units],
+            "units": [{"id": uid, "name": lbl, "category": cat} for uid, lbl, cat in qualified],
         })
     return {"floors": out, "unitNoun": _unit_noun(tree)}
 
 
 def mapping_props(tree: SpaceTree) -> dict:
     packages = [{"id": o.id, "name": o.name} for o in tree.offerings.values() if o.active]
+    pkg_ids = {o.id for o in tree.offerings.values() if o.active}
     floors = []
     for f in _floors_top_down(tree):
         units = _rentable_under(tree, f.id)
         if not units:
             continue
+        qualified = _qualify_labels(units)
+        unit_map = {u.id: u for u in units}
         floors.append({
             "floorId": f.id,
             "floorLabel": f.label,
-            "units": [{"id": u.id, "name": u.label, "category": _unit_type(u),
-                       "packageId": u.offering_id} for u in units],
+            "units": [
+                {"id": uid, "name": lbl, "category": cat,
+                 "packageId": unit_map[uid].offering_id if unit_map[uid].offering_id in pkg_ids else None}
+                for uid, lbl, cat in qualified
+            ],
         })
     return {"packages": packages, "floors": floors, "unitNoun": _unit_noun(tree)}
 

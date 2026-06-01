@@ -65,6 +65,9 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   const [scrollFloorId, setScrollFloorId] = useState<string | number | null>(null);
   const [scrollNonce, setScrollNonce] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
+  // Kept in sync with adaptedFloors on every render so jumpToFloor (a stable callback)
+  // can resolve floor ids in both flat and tree-mode backends without restating data deps.
+  const adaptedFloorsRef = useRef<LedgerFloor[]>([]);
 
   const load = useCallback(async () => {
     if (!sessionId) return;
@@ -114,23 +117,21 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
     [sessionId, data?.version, load, onEdit]
   );
 
-  // Massing floor tap → jump to that floor's detail row. The massing reports a
-  // ground-relative index (0 = ground); resolve it to the domain floor id via the
-  // model's floors (sorted ascending), then scroll + flash the matching row.
+  // Massing floor tap → drill + scroll to that floor's row. The massing reports a
+  // ground-relative index (0 = ground). We resolve it via adaptedFloorsRef (the projected
+  // FloorLedger floors) which is populated for BOTH flat and tree-mode backends — the
+  // old data.model.floors approach silently did nothing in tree mode.
   const jumpToFloor = useCallback(
     (groundIndex: number) => {
-      // Tap a floor in the model → drill into its units (rename / mark unavailable). Works for
-      // the recursive tree (resolved from the projected ledger). Also keep the legacy scroll for
-      // the flat backend, which carries model.floors.
       setDrillGroundIndex(groundIndex);
-      const sorted = [...(data?.model?.floors ?? [])].sort((a, b) => a.index - b.index);
-      const floor = sorted[groundIndex];
+      // Ledger floors are projected top-down; reversing gives ground-first (index 0 = ground).
+      const floor = [...adaptedFloorsRef.current].reverse()[groundIndex];
       if (!floor) return;
       setActiveFloorId(floor.id);
       setScrollFloorId(floor.id);
       setScrollNonce((n) => n + 1);
     },
-    [data?.model?.floors]
+    [] // adaptedFloorsRef is a stable ref — no dep needed
   );
 
   // Scroll + flash the target floor row AFTER the tab switch has rendered it.
@@ -203,6 +204,8 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   // Adapted ledger floors (colour-injected) — reused by the ledger view and the floor drill.
   const adaptedLedger = bp.FloorLedger ? adaptComponentProps("FloorLedger", bp.FloorLedger) : null;
   const adaptedFloors = (adaptedLedger?.floors as LedgerFloor[] | undefined) ?? [];
+  // Keep the ref in sync so jumpToFloor always reads the latest floors.
+  adaptedFloorsRef.current = adaptedFloors;
   // Massing tap gives a ground-relative index (0 = ground); ledger floors are top-down.
   const drillFloor = drillGroundIndex != null ? ([...adaptedFloors].reverse()[drillGroundIndex] ?? null) : null;
 

@@ -69,6 +69,43 @@ def test_create_offering_rejects_wrong_type():
         t.apply(sc.CreateOffering(name="X", attrs={"carpet_area_sqft": "big"}))  # int field
 
 
+def test_food_optional_is_coerced_to_included():
+    """'optional' was dropped from the food catalog; legacy/stale values coerce to 'included'
+    so existing snapshots keep loading (no migration)."""
+    t, _ = _tree_with_rooms()
+    off = t.apply(sc.CreateOffering(name="Tiffin", attrs={"food": "optional"}))
+    assert off.food == "included"
+    # the two current values still work
+    assert t.apply(sc.CreateOffering(name="A", attrs={"food": "included"})).food == "included"
+    assert t.apply(sc.CreateOffering(name="B", attrs={"food": "none"})).food == "none"
+
+
+def test_premium_amenities_in_catalog():
+    """Real co-living amenities the live audit caught missing are now accepted."""
+    t, _ = _tree_with_rooms()
+    off = t.apply(sc.CreateOffering(
+        name="Premium", attrs={"amenities": ["parking", "gym", "swimming_pool", "sports_court"]}))
+    assert set(off.amenities) == {"parking", "gym", "swimming_pool", "sports_court"}
+
+
+def test_maintenance_amount_accepted():
+    t, _ = _tree_with_rooms()
+    off = t.apply(sc.CreateOffering(name="WithMaint", price=20000, attrs={"maintenance_amount": 2000}))
+    assert off.maintenance_amount == 2000
+
+
+def test_catalog_errors_list_valid_values():
+    """The blind-loop fix: a rejection tells the caller what IS valid, so the agent self-corrects
+    instead of guessing synonyms."""
+    t, _ = _tree_with_rooms()
+    with pytest.raises(InvariantViolation) as exc:
+        t.apply(sc.CreateOffering(name="X", attrs={"amenities": ["jacuzzi"]}))
+    assert "Valid:" in str(exc.value) and "swimming_pool" in str(exc.value)
+    with pytest.raises(InvariantViolation) as exc2:
+        t.apply(sc.CreateOffering(name="Y", attrs={"furnishing": "marble"}))
+    assert "Valid:" in str(exc2.value) and "fully_furnished" in str(exc2.value)
+
+
 # --------------------------------------------------------------------------- update / disable / delete
 def test_update_offering_partial():
     t, _ = _tree_with_rooms()

@@ -19,7 +19,9 @@ from .errors import InvariantViolation
 SHARINGS = frozenset({"single", "double", "triple", "quad", "five_plus", "dormitory"})
 CONFIGS = frozenset({"rk", "studio", "1bhk", "2bhk", "3bhk", "4bhk_plus"})
 FURNISHINGS = frozenset({"unfurnished", "semi_furnished", "fully_furnished"})
-FOODS = frozenset({"none", "included", "optional"})
+# Food is binary: included or not. ("optional" was a third state — dropped; legacy values
+# are coerced to "included" on read, see _LEGACY_ENUM_ALIASES.)
+FOODS = frozenset({"none", "included"})
 BILLING_BASES = frozenset({"per_bed", "per_unit"})
 BILLING_PERIODS = frozenset({"monthly", "weekly", "daily"})
 SERVICES = frozenset(
@@ -30,8 +32,16 @@ AMENITIES = frozenset(
         "wifi", "ac", "geyser", "attached_bathroom", "balcony", "parking", "lift",
         "power_backup", "cctv", "washing_machine", "refrigerator", "tv", "study_table",
         "wardrobe", "hot_water", "drinking_water", "daily_cleaning", "gym", "common_area",
+        # Premium / co-living amenities (real operators have these — see the live audit).
+        "swimming_pool", "sports_court", "recreation_room", "garden", "rooftop", "club_house",
     }
 )
+
+# Enum values that were valid in earlier versions, mapped to their current equivalent so
+# stored snapshots keep loading after a catalog change (no migration needed).
+_LEGACY_ENUM_ALIASES: dict[str, dict[str, str]] = {
+    "food": {"optional": "included"},  # food-optional → food-included (it was available)
+}
 
 # Each curated attribute → how to validate it. Enum fields carry their allowed set;
 # multi fields are subsets of a set; scalar fields carry a python type.
@@ -53,6 +63,7 @@ _SCALAR_FIELDS: dict[str, type] = {
     "lock_in_months": int,
     "notice_days": int,
     "min_stay": int,
+    "maintenance_amount": int,  # monthly maintenance charge (₹), separate from rent
 }
 ATTR_FIELDS = frozenset(_ENUM_FIELDS) | frozenset(_MULTI_FIELDS) | frozenset(_SCALAR_FIELDS)
 
@@ -79,6 +90,7 @@ class Offering:
     lock_in_months: int | None = None
     notice_days: int | None = None
     min_stay: int | None = None
+    maintenance_amount: int | None = None
 
 
 def validate_billing(billing_basis: str | None, billing_period: str | None) -> None:
@@ -95,17 +107,25 @@ def validate_attrs(attrs: dict) -> dict:
     safe: dict = {}
     for key, value in attrs.items():
         if key not in ATTR_FIELDS:
-            raise InvariantViolation(f"unknown offering field {key!r}")
+            raise InvariantViolation(
+                f"unknown offering field {key!r}. Valid fields: {sorted(ATTR_FIELDS)}"
+            )
         if key in _ENUM_FIELDS:
+            value = _LEGACY_ENUM_ALIASES.get(key, {}).get(value, value)  # legacy → current
             if value is not None and value not in _ENUM_FIELDS[key]:
-                raise InvariantViolation(f"{key}={value!r} is not in the catalog")
+                raise InvariantViolation(
+                    f"{key}={value!r} is not in the catalog. Valid: {sorted(_ENUM_FIELDS[key])}"
+                )
             safe[key] = value
         elif key in _MULTI_FIELDS:
             if not isinstance(value, list):
                 raise InvariantViolation(f"{key} must be a list")
             bad = set(value) - _MULTI_FIELDS[key]
             if bad:
-                raise InvariantViolation(f"{key} has values not in the catalog: {sorted(bad)}")
+                raise InvariantViolation(
+                    f"{key} has values not in the catalog: {sorted(bad)}. "
+                    f"Valid: {sorted(_MULTI_FIELDS[key])}"
+                )
             safe[key] = list(value)  # clone — no aliasing into the aggregate
         else:  # scalar
             expected = _SCALAR_FIELDS[key]

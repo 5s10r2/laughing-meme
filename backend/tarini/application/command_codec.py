@@ -154,5 +154,21 @@ def decode_space_commands(payloads: list):
     return decode_commands(payloads, SPACE_COMMAND_TYPES)
 
 
+def offering_attrs_catalog_text() -> str:
+    """The valid `attrs` values for CreateOffering/UpdateOffering, so the model picks catalog
+    values up front instead of guessing synonyms (the live-audit amenities blind-loop)."""
+    from tarini.domain.offering import _ENUM_FIELDS, _MULTI_FIELDS, _SCALAR_FIELDS
+
+    lines = ["", "Offering `attrs` — use ONLY these catalog values (no free text):"]
+    for k, vals in _ENUM_FIELDS.items():
+        lines.append(f"  {k}: {' | '.join(sorted(vals))}")
+    for k, vals in _MULTI_FIELDS.items():
+        lines.append(f"  {k} (pick any): {', '.join(sorted(vals))}")
+    lines.append(f"  numbers: {', '.join(sorted(_SCALAR_FIELDS))}")
+    lines.append("  NOTE: laundry, housekeeping, meals, linen are SERVICES — not amenities.")
+    lines.append("  If an operator names something not in a catalog, say so plainly; never invent a value.")
+    return "\n".join(lines)
+
+
 def space_command_catalog_text() -> str:
-    return command_catalog_text(SPACE_COMMAND_TYPES)
+    return command_catalog_text(SPACE_COMMAND_TYPES) + "\n" + offering_attrs_catalog_text()

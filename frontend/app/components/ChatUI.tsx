@@ -64,8 +64,18 @@ export default function ChatUI() {
   }
 
   function handleBlueprintEdit(summary: string) {
-    notifyBlueprintEdit(summary);
-    setToast(summary);
+    if (!isStreaming) {
+      // Close the panel and let Tarini acknowledge the edit in her own voice.
+      // sendMessage adds a user bubble with the summary and triggers a real AI reply —
+      // the model sees the current (already-updated) state and responds contextually.
+      setBlueprintOpen(false);
+      sendMessage(summary);
+    } else {
+      // A stream is already in flight — we can't send another message yet.
+      // Fall back to the silent event line + toast so the edit isn't lost.
+      notifyBlueprintEdit(summary);
+      setToast(summary);
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -126,7 +136,7 @@ export default function ChatUI() {
       />
 
       {toast && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4">
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex justify-center px-4">
           <div
             role="status"
             className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-content px-4 py-2 text-sm font-medium text-bg-deep shadow-lg"

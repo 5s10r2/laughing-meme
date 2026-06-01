@@ -22,7 +22,12 @@ interface ModelResponse {
   blueprint?: Record<string, Props>;
   completeness?: { counts?: Record<string, number>; publishable?: boolean; open_items?: string[] };
   version?: number;
-  model?: { floors?: { id: string | number; index: number }[] };
+  model?: {
+    floors?: { id: string | number; index: number }[];
+    /** Tree-mode carries root_id; all unknown keys come from the SpaceTree serialisation. */
+    meta?: { published?: boolean };
+    [key: string]: unknown;
+  };
 }
 
 type BlueprintTab = "packages" | "rooms";
@@ -181,6 +186,9 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   const hasStructure = (counts.floors ?? 0) > 0 || (counts.rentable ?? 0) > 0;
   const publishable = data?.completeness?.publishable ?? false;
   const openItems = data?.completeness?.open_items ?? [];
+  // The Publish command sets meta.published on the tree; the /api/model response
+  // carries the full model dict including meta, so we can detect the live state here.
+  const published = data?.model?.meta?.published === true;
   const mapping = bp.BlueprintMapping as
     | { packages?: MappingPackage[]; floors?: BlueprintMappingFloor[] }
     | undefined;
@@ -238,7 +246,19 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
         onFloorClick={jumpToFloor}
       />
     );
-    const checklist = <PublishChecklist items={openItems} publishable={publishable} />;
+    // Publish CTA: close the panel and let Tarini handle the Publish command in voice.
+    // Only wired when the listing is publishable but not yet published.
+    const handlePublish = (!published && publishable && sendMessage)
+      ? () => { onClose(); sendMessage("Publish my listing"); }
+      : undefined;
+    const checklist = (
+      <PublishChecklist
+        items={openItems}
+        publishable={publishable}
+        published={published}
+        onPublish={handlePublish}
+      />
+    );
 
     body = (
       <div className="space-y-4" ref={listRef}>
@@ -309,8 +329,12 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   const editingOffering =
     (bp.PackagePanel?.packages as PackageDetail[] | undefined)?.find((p) => p.id === editingOfferingId) ?? null;
 
-  // Name the job when there's pricing to do; fall back to the neutral title otherwise.
-  const sheetTitle = hasPackages && unmappedUnits > 0 ? "Price your rooms" : "Building blueprint";
+  // Title names the active job: live > pricing > neutral.
+  const sheetTitle = published
+    ? "You're live ✓"
+    : hasPackages && unmappedUnits > 0
+      ? "Price your rooms"
+      : "Building blueprint";
 
   return (
     <>

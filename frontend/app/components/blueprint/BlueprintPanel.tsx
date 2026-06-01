@@ -144,6 +144,30 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
     row.classList.add("lp-flash");
   }, [scrollNonce, scrollFloorId]);
 
+  // Land on the work: when the panel opens and rooms still need pricing, default to
+  // the Rooms tab; otherwise the Packages overview. One-shot per open so a manual
+  // tab switch is never overridden by a later refetch.
+  const tabInitRef = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      tabInitRef.current = false;
+      return;
+    }
+    if (tabInitRef.current || !data) return;
+    tabInitRef.current = true;
+    const m = data.blueprint?.BlueprintMapping as
+      | { packages?: { id: string }[]; floors?: { units?: { packageId?: string }[] }[] }
+      | undefined;
+    if (!m?.packages?.length) {
+      setTab("packages");
+      return;
+    }
+    const pkgIds = new Set(m.packages.map((p) => p.id));
+    const units = (m.floors ?? []).flatMap((f) => f.units ?? []);
+    const unmapped = units.filter((u) => !(u.packageId && pkgIds.has(u.packageId))).length;
+    setTab(unmapped > 0 ? "rooms" : "packages");
+  }, [open, data]);
+
   const bp = data?.blueprint ?? {};
   // singular unit noun (room / flat / bed / unit) — backend-projected; "room" for the
   // legacy shape that doesn't send it, so the panel reads right on either backend.
@@ -160,6 +184,21 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
     | { packages?: MappingPackage[]; floors?: BlueprintMappingFloor[] }
     | undefined;
   const hasPackages = !!mapping?.packages && mapping.packages.length > 0;
+
+  // The full package definitions (carry rent, terms, etc.) — used by the Packages tab
+  // and to enrich the mapping packages so the assign buttons can show the rent.
+  const pkgDetails = (bp.PackagePanel?.packages as PackageDetail[] | undefined) ?? [];
+  const enrichedPackages: MappingPackage[] = (mapping?.packages ?? []).map((p) => {
+    const d = pkgDetails.find((x) => x.id === p.id);
+    return { ...p, rent: d?.rent ?? null, billingPeriod: d?.billingPeriod ?? null };
+  });
+
+  // Building-wide mapping progress — drives the title and the Rooms-tab progress line.
+  const mappingPkgIds = new Set((mapping?.packages ?? []).map((p) => p.id));
+  const mappingUnits = (mapping?.floors ?? []).flatMap((f) => f.units ?? []);
+  const totalUnits = mappingUnits.length;
+  const mappedUnits = mappingUnits.filter((u) => u.packageId && mappingPkgIds.has(u.packageId)).length;
+  const unmappedUnits = totalUnits - mappedUnits;
 
   // Adapted ledger floors (colour-injected) — reused by the ledger view and the floor drill.
   const adaptedLedger = bp.FloorLedger ? adaptComponentProps("FloorLedger", bp.FloorLedger) : null;
@@ -188,26 +227,24 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
       />
     );
 
+    const massing = bp.MassingModel && (
+      <MassingModel
+        {...(bp.MassingModel as React.ComponentProps<typeof MassingModel>)}
+        state="settled"
+        ready={publishable}
+        onFloorClick={jumpToFloor}
+      />
+    );
+    const checklist = <PublishChecklist items={openItems} publishable={publishable} />;
+
     body = (
       <div className="space-y-4" ref={listRef}>
-        {bp.MassingModel && (
-          <MassingModel
-            {...(bp.MassingModel as React.ComponentProps<typeof MassingModel>)}
-            state="settled"
-            ready={publishable}
-            onFloorClick={jumpToFloor}
-          />
-        )}
-
-        {/* Honest "what's left" — subsumes the old single-purpose unmapped warning. */}
-        <PublishChecklist items={openItems} publishable={publishable} />
-
         {hasPackages ? (
           <>
-            {/* Jump-nav: tap to switch sections — no scrolling to find them. */}
+            {/* Jump-nav (sticky): switch sections without scrolling to find them. */}
             <div className="sticky top-0 z-10 -mx-1 bg-bg-surface px-1 py-1">
               <div className="flex gap-1 rounded-xl border border-border bg-bg-elevated p-1">
-                {(["packages", "rooms"] as const).map((t) => (
+                {(["rooms", "packages"] as const).map((t) => (
                   <button
                     key={t}
                     type="button"
@@ -225,27 +262,42 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
               </div>
             </div>
 
-            {tab === "packages"
-              ? (
-                <PackagePanel
-                  packages={(bp.PackagePanel?.packages as PackageDetail[]) ?? []}
-                  unitNoun={unitNoun}
-                  onEdit={treeMode ? setEditingOfferingId : undefined}
-                />
-              )
-              : (
+            {tab === "rooms" ? (
+              // Rooms tab leads with the work — no decorative hero in the way.
+              <>
+                {totalUnits > 0 && (
+                  <p className="px-1 text-[11px] font-mono text-content-secondary">
+                    {mappedUnits} of {totalUnits} {plural(unitNoun, totalUnits)} priced
+                  </p>
+                )}
                 <BlueprintMapping
-                  packages={mapping?.packages}
+                  packages={enrichedPackages}
                   floors={mapping?.floors}
                   unitNoun={unitNoun}
                   treeMode={treeMode}
                   onApplyCommands={applyCommands}
                 />
-              )}
+              </>
+            ) : (
+              // Packages tab is the overview — the massing model + what's-left live here.
+              <>
+                {massing}
+                {checklist}
+                <PackagePanel
+                  packages={pkgDetails}
+                  unitNoun={unitNoun}
+                  onEdit={treeMode ? setEditingOfferingId : undefined}
+                />
+              </>
+            )}
           </>
         ) : (
-          // No packages yet → just the structure ledger (with drill-down).
-          ledger
+          // No packages yet → massing + what's-left + the structure ledger (drill-down).
+          <>
+            {massing}
+            {checklist}
+            {ledger}
+          </>
         )}
       </div>
     );
@@ -254,9 +306,12 @@ export function BlueprintPanel({ open, onClose, sessionId, sendMessage, refreshK
   const editingOffering =
     (bp.PackagePanel?.packages as PackageDetail[] | undefined)?.find((p) => p.id === editingOfferingId) ?? null;
 
+  // Name the job when there's pricing to do; fall back to the neutral title otherwise.
+  const sheetTitle = hasPackages && unmappedUnits > 0 ? "Price your rooms" : "Building blueprint";
+
   return (
     <>
-      <BottomSheet open={open} onClose={onClose} title="Building blueprint" className="lp-theme">
+      <BottomSheet open={open} onClose={onClose} title={sheetTitle} className="lp-theme">
         {body}
       </BottomSheet>
       <OfferingEditSheet

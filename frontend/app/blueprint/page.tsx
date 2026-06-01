@@ -3,7 +3,8 @@
 import { MassingModel } from "../components/blueprint/MassingModel";
 import { FloorComposition, type CompositionSegment } from "../components/blueprint/FloorComposition";
 import { FloorLedger, type LedgerFloor, type FloorUnit } from "../components/blueprint/FloorLedger";
-import { MappingRow, type MappingUnit, type MappingPackage } from "../components/blueprint/MappingRow";
+import { type MappingUnit, type MappingPackage } from "../components/blueprint/MappingRow";
+import { BlueprintMapping } from "../components/blueprint/BlueprintMapping";
 import { UnmappedWarning, type UnmappedFloor } from "../components/blueprint/UnmappedWarning";
 import { TYPE_COLORS } from "../components/blueprint/tokens";
 import { CARD } from "../components/ui/primitives";
@@ -220,9 +221,8 @@ export default function BlueprintStorybookPage() {
           <p className="text-[11px] font-mono uppercase tracking-wider text-content-tertiary mb-3">
             Mapping row (§5.4) — select rooms (or a quick-select), then assign a package; unmapped surfaced
           </p>
-          <MappingRow
-            floorLabel="Floor 2"
-            units={MAP_UNITS}
+          <BlueprintMapping
+            floors={[{ floorId: "f2", floorLabel: "Floor 2", units: MAP_UNITS }]}
             packages={MAP_PACKAGES}
             onSendMessage={(t) => alert(`would send: ${t}`)}
           />

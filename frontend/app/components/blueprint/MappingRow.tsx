@@ -1,23 +1,21 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { cn } from "../../lib/cn";
 import { CARD } from "../ui/primitives";
 import { FloorComposition, type CompositionSegment } from "./FloorComposition";
 import { RoomChip } from "./RoomChip";
-import { cap, plural } from "./tokens";
+import { cap } from "./tokens";
 
 /**
- * MappingRow — assign packages to a floor's rooms (design system §5.4).
+ * MappingRow — one floor's rooms, as selectable chips (design system §5.4).
  *
- * Select rooms (tap chips, or a quick-select), then pick a package; the
- * assignment is sent to Tarini as an intent (view+intent — the AI mutates the
- * model, the UI re-projects). Unmapped rooms are surfaced via a neutral segment
- * in the mix bar and a quick-select, never silently dropped.
- *
- * Built on the keystone: the top bar is FloorComposition re-skinned by PACKAGE
- * (the same primitive the structure stage skins by type), so "different packages
- * in one floor" reads at a glance. Props are trusted (validated upstream).
+ * Presentational: selection lives in the parent {@link BlueprintMapping} so it
+ * spans floors and feeds ONE sticky action bar (the package picker no longer
+ * lives inline per floor). Each chip toggles the global selection; the per-floor
+ * quick-selects ADD this floor's matching rooms to it. The package-mix bar shows
+ * only once a floor has a real mix (≥1 priced) — an all-unpriced bar carries no
+ * proportional information, so it's suppressed to keep the card lean.
  */
 
 export interface MappingUnit {
@@ -32,7 +30,13 @@ export interface MappingPackage {
   name: string;
   /** chip/segment colour; falls back to a palette by index */
   color?: string;
+  /** monthly rent (or per the billing period) — surfaced on the assign buttons */
+  rent?: number | null;
+  /** billing period for the rent suffix (weekly/daily/monthly) */
+  billingPeriod?: string | null;
 }
+
+const UNMAPPED_COLOR = "var(--border-strong)";
 
 interface MappingRowProps {
   floorLabel: string;
@@ -40,75 +44,46 @@ interface MappingRowProps {
   packages: MappingPackage[];
   /** singular noun for the unit (room / flat / bed / unit); backend-projected */
   unitNoun?: string;
-  /** true when the backend is the recursive Space tree → emit MapOffering, not MapRooms */
-  treeMode?: boolean;
-  onSendMessage?: (text: string) => void;
-  /** Direct-edit mode (Blueprint panel): emit a typed command applied instantly
-   *  via the command layer. `summary` is a human note for the chat transcript/toast.
-   *  When absent, falls back to a chat intent (onSendMessage). */
-  onApplyCommands?: (commands: Record<string, unknown>[], summary?: string) => void;
+  /** package id → palette index, for name/colour lookups (owned by the parent) */
+  pkgIndex: Map<string, number>;
+  /** resolve a package id to its colour (owned by the parent so colours agree everywhere) */
+  pkgColor: (id: string) => string;
+  isMapped: (u: MappingUnit) => boolean;
+  /** the parent's cross-floor selection */
+  selected: Set<string | number>;
+  /** toggle one room in the global selection */
+  onToggle: (id: string | number) => void;
+  /** add a set of rooms (a quick-select) to the global selection */
+  onAddIds: (ids: (string | number)[]) => void;
 }
 
-const PKG_PALETTE = [
-  "var(--t-single)",
-  "var(--t-double)",
-  "var(--t-deluxe)",
-  "var(--t-triple)",
-  "#8A7CC0",
-  "#3F8E9B",
-];
-const UNMAPPED_COLOR = "var(--border-strong)";
-
-export function MappingRow({ floorLabel, units, packages, unitNoun = "room", treeMode = false, onSendMessage, onApplyCommands }: MappingRowProps) {
-  const [selected, setSelected] = useState<Set<string | number>>(new Set());
-
-  // The live selection, with ids whose unit re-projected away (LLM-fed) dropped.
-  // Deriving during render replaces a reconciling effect + its extra render pass;
-  // writes still target `selected`, so stale ids simply never surface in reads.
-  const validSelected = useMemo(() => {
-    const ids = new Set(units.map((u) => u.id));
-    let allPresent = true;
-    for (const id of selected) {
-      if (!ids.has(id)) { allPresent = false; break; }
-    }
-    if (allPresent) return selected;
-    const next = new Set<string | number>();
-    for (const id of selected) if (ids.has(id)) next.add(id);
-    return next;
-  }, [selected, units]);
-
-  // A room is "mapped" only if its packageId resolves to a real package; a
-  // dangling reference counts as unmapped (not silently impersonating pkg #0).
-  const pkgIndex = useMemo(() => {
-    const m = new Map<string, number>();
-    packages.forEach((p, i) => m.set(p.id, i));
-    return m;
-  }, [packages]);
-  const isMapped = useCallback(
-    (u: MappingUnit) => !!u.packageId && pkgIndex.has(u.packageId),
-    [pkgIndex]
-  );
-  const pkgColor = useCallback(
-    (id: string) => {
-      const i = pkgIndex.get(id);
-      if (i === undefined) return UNMAPPED_COLOR;
-      return packages[i].color ?? PKG_PALETTE[i % PKG_PALETTE.length];
-    },
-    [pkgIndex, packages]
-  );
-
+export function MappingRow({
+  floorLabel,
+  units,
+  packages,
+  unitNoun = "room",
+  pkgIndex,
+  pkgColor,
+  isMapped,
+  selected,
+  onToggle,
+  onAddIds,
+}: MappingRowProps) {
   const total = units.length;
   const mappedCount = units.filter(isMapped).length;
   const hasUnmapped = mappedCount < total;
+  const selectedHere = units.filter((u) => selected.has(u.id)).length;
+  // A floor with a real mix (≥1 priced) is the only time the proportional bar means
+  // something; while everything is unpriced the bar + legend are pure restatement.
+  const showComposition = mappedCount > 0;
 
-  // distinct room types present → "by type" quick-selects
+  // distinct room types present → "by type" quick-selects (only when mixed)
   const types = useMemo(() => {
     const seen: string[] = [];
     for (const u of units) if (!seen.includes(u.category)) seen.push(u.category);
     return seen;
   }, [units]);
 
-  // package-mix bar (+ an "Unmapped" segment) — FloorComposition re-skinned by package
   const segments = useMemo<CompositionSegment[]>(() => {
     const segs = packages.map((p) => ({
       key: p.id,
@@ -118,145 +93,59 @@ export function MappingRow({ floorLabel, units, packages, unitNoun = "room", tre
     }));
     const unmapped = total - mappedCount;
     if (unmapped > 0) {
-      segs.push({ key: "__unmapped", label: "Unmapped", count: unmapped, color: UNMAPPED_COLOR });
+      segs.push({ key: "__unmapped", label: "Unpriced", count: unmapped, color: UNMAPPED_COLOR });
     }
     return segs;
   }, [packages, units, total, mappedCount, pkgColor]);
 
-  const toggle = useCallback((id: string | number) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const selectUnmapped = useCallback(
-    () => setSelected(new Set(units.filter((u) => !isMapped(u)).map((u) => u.id))),
-    [units, isMapped]
-  );
-  const selectType = useCallback(
-    (category: string) =>
-      setSelected(new Set(units.filter((u) => u.category === category).map((u) => u.id))),
-    [units]
-  );
-  const clear = useCallback(() => setSelected(new Set()), []);
-
-  function assign(pkg: MappingPackage) {
-    const chosen = units.filter((u) => validSelected.has(u.id));
-    if (chosen.length === 0) return;
-    if (onApplyCommands) {
-      // Direct edit — applied instantly via the command layer, no chat round-trip.
-      // The recursive-tree backend speaks MapOffering(space_ids, offering_id); the flat
-      // Property backend speaks MapRooms(room_ids, package_id). Emit to match the active model.
-      const ids = chosen.map((u) => u.id);
-      const summary = `Mapped ${chosen.map((u) => u.name).join(", ")} → ${pkg.name}`;
-      onApplyCommands(
-        treeMode
-          ? [{ op: "MapOffering", space_ids: ids, offering_id: pkg.id }]
-          : [{ op: "MapRooms", room_ids: ids, package_id: pkg.id }],
-        summary
-      );
-    } else {
-      onSendMessage?.(`Assign ${chosen.map((u) => u.name).join(", ")} on ${floorLabel} to ${pkg.name}`);
-    }
-    clear();
-  }
-
   return (
     <div className={CARD}>
-      {/* header */}
+      {/* header — floor + a single status signal (selection count lives in the action bar) */}
       <div className="flex items-baseline justify-between mb-3">
         <p className="text-sm font-semibold text-content">{floorLabel}</p>
         <span className="text-[11px] font-mono text-content-secondary">
-          {validSelected.size > 0 ? `${validSelected.size} selected` : `${mappedCount}/${total} mapped`}
+          {selectedHere > 0 ? `${selectedHere} selected` : `${mappedCount}/${total} priced`}
         </span>
       </div>
 
-      {/* package-mix bar (re-skinned by package) */}
-      <FloorComposition segments={segments} showLegend className="mb-4" />
+      {/* package-mix bar — only once there's an actual mix to show */}
+      {showComposition && <FloorComposition segments={segments} showLegend className="mb-4" />}
 
-      {/* quick-selects */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {hasUnmapped && (
-          <QuickChip onClick={selectUnmapped} accent>
-            Unmapped ({total - mappedCount})
-          </QuickChip>
-        )}
-        {types.length > 1 &&
-          types.map((t) => (
-            <QuickChip key={t} onClick={() => selectType(t)}>
-              {cap(t)}
+      {/* quick-selects — add this floor's matching rooms to the global selection */}
+      {(hasUnmapped || types.length > 1) && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {hasUnmapped && (
+            <QuickChip onClick={() => onAddIds(units.filter((u) => !isMapped(u)).map((u) => u.id))} accent>
+              Select unpriced ({total - mappedCount})
             </QuickChip>
-          ))}
-        {validSelected.size > 0 && <QuickChip onClick={clear}>Clear</QuickChip>}
-      </div>
+          )}
+          {types.length > 1 &&
+            types.map((t) => (
+              <QuickChip key={t} onClick={() => onAddIds(units.filter((u) => u.category === t).map((u) => u.id))}>
+                {cap(t)}
+              </QuickChip>
+            ))}
+        </div>
+      )}
 
-      {/* room chips — selectable */}
-      <div className="flex flex-wrap gap-1.5">
+      {/* room chips — selectable, cross-floor */}
+      <div className="flex flex-wrap gap-2">
         {units.map((u) => {
           const mapped = isMapped(u);
           return (
             <RoomChip
               key={u.id}
               label={u.name}
-              ariaLabel={`${cap(unitNoun)} ${u.name}, ${mapped ? `assigned ${packages[pkgIndex.get(u.packageId!)!].name}` : "unmapped"}`}
+              typeTag={types.length > 1 ? cap(u.category) : undefined}
+              ariaLabel={`${cap(unitNoun)} ${u.name}, ${mapped ? `priced ${packages[pkgIndex.get(u.packageId!)!].name}` : "unpriced"}`}
               dotColor={mapped ? pkgColor(u.packageId!) : null}
-              selected={validSelected.has(u.id)}
+              selected={selected.has(u.id)}
               dashed={!mapped}
-              onClick={() => toggle(u.id)}
+              onClick={() => onToggle(u.id)}
             />
           );
         })}
       </div>
-
-      {/* package picker — appears when rooms are selected */}
-      {validSelected.size > 0 && (
-        <div className="mt-4 pt-3 border-t border-border">
-          {/* Tapping a room reveals what it is + its current package. */}
-          {validSelected.size === 1 && (() => {
-            const u = units.find((x) => validSelected.has(x.id));
-            if (!u) return null;
-            const i = u.packageId ? pkgIndex.get(u.packageId) : undefined;
-            const current = i !== undefined ? packages[i].name : null;
-            return (
-              <p className="text-xs text-content-secondary mb-2">
-                <span className="font-semibold text-content">{u.name}</span>
-                {" · "}{cap(u.category)}
-                {" · "}
-                <span className={current ? "text-content-secondary" : "text-content-tertiary"}>
-                  {current ? `currently ${current}` : "unmapped"}
-                </span>
-              </p>
-            );
-          })()}
-          <p className="text-[11px] text-content-tertiary mb-2">
-            Assign {validSelected.size} {plural(unitNoun, validSelected.size)} to:
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {packages.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => assign(p)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium",
-                  "bg-bg-elevated border border-border text-content cursor-pointer",
-                  "hover:border-border-strong active:scale-95 transition-colors"
-                )}
-              >
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ background: pkgColor(p.id) }}
-                  aria-hidden="true"
-                />
-                {p.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -275,7 +164,7 @@ function QuickChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "px-2.5 py-1 rounded-full text-[11px] font-medium border cursor-pointer transition-colors",
+        "px-3 min-h-[36px] rounded-full text-[11px] font-medium border cursor-pointer transition-colors",
         accent
           ? "text-accent border-border-accent hover:bg-accent/10"
           : "text-content-secondary border-border hover:bg-bg-elevated"

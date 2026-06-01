@@ -13,17 +13,19 @@ import { cn } from "../../lib/cn";
 
 interface RoomChipProps {
   label: string;
+  /** short type tag shown beside the label (e.g. "Double") to disambiguate on mixed floors */
+  typeTag?: string;
   ariaLabel?: string;
-  /** dot colour; null/undefined renders a hollow ring (unmapped / no type) */
+  /** dot colour; null/undefined renders a hollow ring (unpriced / no type) */
   dotColor?: string | null;
   /** selectable chips pass a boolean; plain chips omit it (no aria-pressed) */
   selected?: boolean;
-  /** unmapped styling — dashed border, muted text */
+  /** unpriced styling — bolder surface, since these are the rooms still to act on */
   dashed?: boolean;
   onClick?: () => void;
 }
 
-export function RoomChip({ label, ariaLabel, dotColor, selected, dashed, onClick }: RoomChipProps) {
+export function RoomChip({ label, typeTag, ariaLabel, dotColor, selected, dashed, onClick }: RoomChipProps) {
   return (
     <button
       type="button"
@@ -31,15 +33,17 @@ export function RoomChip({ label, ariaLabel, dotColor, selected, dashed, onClick
       aria-pressed={typeof selected === "boolean" ? selected : undefined}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium",
+        // min-h 44px: a comfortable one-handed mobile tap target
+        "inline-flex items-center gap-1.5 px-3 min-h-[44px] rounded-lg text-sm font-mono font-medium",
         "cursor-pointer transition-colors active:scale-95",
         selected
           ? "bg-accent/10 border border-accent text-content ring-1 ring-accent/20"
           : dashed
-            ? // unmapped: dashed border + hollow dot signal the state; text stays
-              // full-contrast (text-content) since these are the rooms to act on
-              "bg-bg-elevated border border-dashed border-border-strong text-content hover:bg-bg-subtle"
-            : "bg-bg-elevated border border-border text-content hover:border-border-strong"
+            ? // unpriced = the work: a solid, full-contrast surface that reads as "tap me"
+              // (inverted from the old faint dashed treatment — the to-do should be loudest)
+              "bg-bg-elevated border border-border-strong text-content hover:bg-bg-subtle"
+            : // priced = done: quiet down to a calm surface + a colour dot
+              "bg-bg-surface border border-border text-content-secondary hover:border-border-strong"
       )}
     >
       <span
@@ -52,6 +56,9 @@ export function RoomChip({ label, ariaLabel, dotColor, selected, dashed, onClick
         aria-hidden="true"
       />
       {label}
+      {typeTag && (
+        <span className="text-[10px] font-sans font-normal text-content-tertiary">{typeTag}</span>
+      )}
     </button>
   );
 }

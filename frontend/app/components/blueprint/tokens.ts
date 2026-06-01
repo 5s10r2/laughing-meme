@@ -49,3 +49,10 @@ export const cap = (s: string): string => (s ? s[0].toUpperCase() + s.slice(1) :
 
 /** Pluralize a unit noun by count (room→rooms, flat→flats, bed→beds, unit→units). */
 export const plural = (noun: string, n: number): string => `${noun}${n === 1 ? "" : "s"}`;
+
+/** Format a rupee amount with Indian digit grouping (12000 → ₹12,000). */
+export const rupees = (n: number): string => "₹" + n.toLocaleString("en-IN");
+
+/** Billing-period suffix for a price label (weekly → /wk, daily → /day, else /mo). */
+export const periodSuffix = (billingPeriod?: string | null): string =>
+  billingPeriod === "weekly" ? "/wk" : billingPeriod === "daily" ? "/day" : "/mo";

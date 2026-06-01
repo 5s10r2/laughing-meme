@@ -29,6 +29,11 @@ from pydantic import BaseModel, Field
 
 load_dotenv(override=True)
 
+# Initialise Sentry before the app so startup errors are captured too. No-op without SENTRY_DSN.
+from tarini.sentry import init_sentry
+
+init_sentry()
+
 from tarini.agent import get_command_service, opening_prompt
 from tarini.flags import use_new_experience
 from tarini.application.command_codec import (

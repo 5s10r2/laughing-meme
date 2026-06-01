@@ -98,6 +98,8 @@ python -m pytest
 | `ENABLE_UI_COMPONENTS` | — | `true` | Set to `0` for pure-text chat (no generative UI) |
 | `MODEL_NAME` | — | `claude-sonnet-4-20250514` | Override the Claude model |
 | `TARINI_API_KEY` | — | — | Bearer token for API auth (optional) |
+| `SENTRY_DSN` | — | — | Sentry error tracking. Unset = disabled (no-op) |
+| `SENTRY_ENVIRONMENT` | — | `production` | Sentry environment tag |
 
 ### Frontend (Vercel)
 
@@ -106,6 +108,7 @@ python -m pytest
 | `NEXT_PUBLIC_BACKEND_URL` | Backend base URL |
 | `NEXT_PUBLIC_USE_NEW_EXPERIENCE` | Show new-experience UI shell |
 | `TARINI_API_KEY` | Passed as `Authorization: Bearer` to backend |
+| `NEXT_PUBLIC_SENTRY_DSN` | Sentry browser error tracking. Unset = disabled |
 
 ---
 

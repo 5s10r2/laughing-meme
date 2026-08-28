@@ -57,9 +57,22 @@ _client: anthropic.AsyncAnthropic | None = None
 
 
 def _get_anthropic_client() -> anthropic.AsyncAnthropic:
+    """Anthropic client, pointed at the RentOk LLM gateway when one is configured.
+
+    No routing code here on purpose: the SDK already reads ANTHROPIC_BASE_URL, so
+    sending Tarini through the LiteLLM proxy (eazyapp-tech/llm-gateway) for spend
+    attribution and provider fallback is an env-var change, not a deploy. Unset it
+    and calls go straight to Anthropic exactly as before. MODEL_NAME must name a
+    model the gateway serves when a base URL is set.
+    """
     global _client
     if _client is None:
         _client = anthropic.AsyncAnthropic()
+        base_url = os.environ.get("ANTHROPIC_BASE_URL")
+        logger.info(
+            "[agent] Anthropic client ready — model=%s endpoint=%s",
+            MODEL, base_url or "api.anthropic.com (direct)",
+        )
     return _client
 
 

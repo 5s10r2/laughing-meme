@@ -32,7 +32,7 @@ export function PublishChecklist({ items, publishable, published, onPublish }: P
             <Check className="h-4 w-4" strokeWidth={3} />
           </span>
           <div>
-            <p className="text-sm font-semibold text-content">You're live ✓</p>
+            <p className="text-sm font-semibold text-content">You&apos;re live ✓</p>
             <p className="text-[11px] text-content-secondary mt-0.5">
               Your listing is published and visible to operators on RentOK.
             </p>
@@ -53,7 +53,7 @@ export function PublishChecklist({ items, publishable, published, onPublish }: P
           <div>
             <p className="text-sm font-semibold text-content">Ready to publish</p>
             <p className="text-[11px] text-content-tertiary">
-              Everything's set — tap below and Tarini will take it live.
+              Everything&apos;s set — tap below and Tarini will take it live.
             </p>
           </div>
         </div>

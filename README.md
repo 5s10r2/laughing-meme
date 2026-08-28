@@ -168,7 +168,8 @@ tarini/
 | `USE_NEW_EXPERIENCE` | | `false` | redesigned backend (v2 tools, CommandService) |
 | `USE_TREE_MODEL` | | `false` | recursive space tree, needs `USE_NEW_EXPERIENCE` |
 | `ENABLE_UI_COMPONENTS` | | `true` | set `0` for plain-text chat, no generated UI |
-| `MODEL_NAME` | | `claude-sonnet-4-20250514` | override the model |
+| `ANTHROPIC_BASE_URL` | | | route through the LLM gateway, see below. unset means direct to Anthropic |
+| `MODEL_NAME` | | `claude-sonnet-4-20250514` | override the model. must name a gateway-served model when a base URL is set |
 | `TARINI_API_KEY` | | | bearer token for API auth |
 | `SENTRY_DSN` | | | error tracking, unset means disabled |
 
@@ -180,6 +181,23 @@ tarini/
 | `NEXT_PUBLIC_USE_NEW_EXPERIENCE` | new UI shell and Living Blueprint panel |
 | `TARINI_API_KEY` | sent to the backend as `Authorization: Bearer` |
 | `NEXT_PUBLIC_SENTRY_DSN` | browser error tracking |
+
+</details>
+
+<details>
+<summary><b>Running through the RentOk LLM gateway</b></summary>
+
+RentOk runs a LiteLLM proxy ([eazyapp-tech/llm-gateway](https://github.com/eazyapp-tech/llm-gateway)) that gives every caller its own key, budget, rate limit and spend log, and can fail over between providers. Tarini can sit behind it with no code change, because the Anthropic SDK reads the endpoint from the environment:
+
+```
+ANTHROPIC_BASE_URL=https://<proxy-host>     # proxy root, no /v1 suffix
+ANTHROPIC_API_KEY=<litellm virtual key>     # issued for Tarini, with its own budget
+MODEL_NAME=tarini-sonnet                    # a model the proxy serves
+```
+
+Unset `ANTHROPIC_BASE_URL` and calls go straight to Anthropic exactly as before, which is the rollback. The startup log line says which endpoint is live, so you never have to guess.
+
+Two things to know before reading anything into the spend numbers. The proxy's Databricks-routed models carry roughly a 1.4x markup over Anthropic list price, so a Tarini model entry should point at Anthropic directly rather than reusing the engineer-facing Databricks entries. And the gateway's own config records that LiteLLM does not apply cache-tier pricing on that path, billing every prompt token at the full input rate. Tarini leans hard on prompt caching, so the proxy will overstate its cost. Use `usage-benchmark.sql` in the gateway repo for a corrected figure.
 
 </details>
 
